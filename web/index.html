@@ -954,15 +954,14 @@
             animation: toast-spin 3s linear infinite;
         }
         .toast.t-visible .toast-msg { color:#cdd6f4; opacity:1; transform:translateY(0); }
-        /* === exit: text out → height collapses (opacity held by JS) → JS fades === */
-        .toast.t-exit {
-            transition: height 240ms ease-in 0ms;
+        /* === exit: text out → height collapses → JS fades === */
+        .toast.t-visible.t-exit {
+            height: 42px;
+            transition: height 240ms ease-in;
         }
-        .toast.t-exit::before,
-        .toast.t-exit::after {
-            animation: none !important;
-            transition: opacity 150ms ease 240ms;  /* hold until height collapses, then fade */
-            opacity: 0;
+        .toast.t-exit.t-fading {
+            opacity:0;
+            transition: opacity 140ms ease;
         }
         .toast.t-exit .toast-msg {
             transition: opacity 80ms ease, color 60ms ease, transform 100ms ease;
@@ -2669,16 +2668,11 @@
             c.appendChild(el);
 
             function dismissToast() {
-                // Step 1: collapse height, fade text+glow — hold opacity at 1
                 el.classList.add('t-exit');
-                el.classList.remove('t-visible');
-                el.style.opacity = '1';
-                // Step 2: after height done, fade out the whole pill
                 setTimeout(function () {
-                    el.style.transition = 'opacity 180ms ease 50ms';
-                    el.style.opacity = '0';
-                    setTimeout(function () { el.remove(); }, 200);
-                }, 260);
+                    el.classList.add('t-fading');
+                    setTimeout(function () { el.remove(); }, 140);
+                }, 320);
             }
 
             requestAnimationFrame(function () {
