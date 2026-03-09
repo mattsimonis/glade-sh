@@ -1362,6 +1362,7 @@
                     <button class="dbg-btn"        id="dbg-toast-default">Default</button>
                     <button class="dbg-btn blue"   id="dbg-toast-long">Long text</button>
                     <button class="dbg-btn mauve"  id="dbg-toast-many">Spam ×4</button>
+                    <button class="dbg-btn peach"  id="dbg-toast-sticky">Sticky (tap to close)</button>
                 </div>
             </div>
 
@@ -2619,7 +2620,7 @@
         const CHECK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
         const X_SVG     = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
         function toast(msg, type, duration) {
-            duration = duration || 2500;
+            duration = (duration === undefined) ? 2500 : duration;
             const c = document.getElementById('toast-container');
             if (!c) return;
 
@@ -2629,7 +2630,6 @@
             const inner = document.createElement('div');
             inner.className = 'toast-inner';
 
-            // Status icon (large, appears first, anchored above text)
             if (type === 'success' || type === 'error') {
                 const iconEl = document.createElement('div');
                 iconEl.className = 'toast-status-icon';
@@ -2645,14 +2645,24 @@
             el.appendChild(inner);
             c.appendChild(el);
 
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () { el.classList.add('t-visible'); });
-            });
-            setTimeout(function () {
+            function dismissToast() {
                 el.classList.add('t-exit');
                 el.classList.remove('t-visible');
                 setTimeout(function () { el.remove(); }, 320);
-            }, duration);
+            }
+
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { el.classList.add('t-visible'); });
+            });
+
+            if (duration === 0) {
+                // Sticky: tap/click to dismiss
+                el.style.pointerEvents = 'auto';
+                el.style.cursor = 'pointer';
+                el.addEventListener('click', dismissToast, { once: true });
+            } else {
+                setTimeout(dismissToast, duration);
+            }
         }
 
         // ── Terminal text injection ─────────────────────────────────────────────
@@ -4544,6 +4554,7 @@
             document.getElementById('dbg-toast-error').onclick     = function () { toast('Upload failed',   'error'); };
             document.getElementById('dbg-toast-default').onclick   = function () { toast('Something happened'); };
             document.getElementById('dbg-toast-long').onclick      = function () { toast('This is a really quite long toast message to test wrapping', 'success'); };
+            document.getElementById('dbg-toast-sticky').onclick    = function () { toast('Tap me to close', 'success', 0); };
             document.getElementById('dbg-toast-many').onclick      = function () {
                 ['Alpha', 'Bravo', 'Charlie', 'Delta'].forEach(function (n, i) {
                     setTimeout(function () { toast(n, i % 2 === 0 ? 'success' : 'error'); }, i * 350);
