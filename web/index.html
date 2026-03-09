@@ -894,8 +894,11 @@
         .toast {
             --glow-color: #89b4fa;  /* default: blue */
             position:relative;
-            width:min(230px,calc(100vw - 32px)); height:42px;
-            background:#11111b;
+            width:min(132px,calc(100vw - 32px)); height:42px;
+            background:#000000;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
             border:2px solid transparent;
             border-radius:21px;
             opacity:0;
@@ -917,7 +920,7 @@
             mask: var(--_full) no-clip subtract, var(--_full) padding-box;
             pointer-events:none;
             opacity:0;
-            transition: opacity 350ms ease 120ms;
+            transition: opacity 300ms ease;  /* fades in with the pill */
         }
         /* success: green → teal → mint shades */
         .toast.t-success::before, .toast.t-success::after {
@@ -934,25 +937,38 @@
         /* Glow layer = blurred copy */
         .toast::after { filter:blur(7px); }
         .toast-msg {
-            position:absolute; bottom:10px; left:0; right:0;
+            position:absolute; bottom:6px; left:0; right:0;
             text-align:center;
-            font-size:13px; font-family:var(--font-mono); font-weight:500;
+            font-size:10px; font-family:var(--font-mono); font-weight:500;
             color:transparent; white-space:nowrap;
             opacity:0; transform:translateY(5px);
             transition: color 150ms ease 500ms, opacity 200ms ease 480ms, transform 220ms ease 470ms;
         }
-        /* === visible === */
-        .toast.t-visible                     { height:72px; opacity:1; }
+        /* === visible: glow spins in, height drops, text fades up === */
+        .toast.t-visible {
+            height:72px; opacity:1;
+        }
         .toast.t-visible::before,
-        .toast.t-visible::after              { opacity:1; animation:toast-spin 3s linear infinite; }
-        .toast.t-visible .toast-msg          { color:#cdd6f4; opacity:1; transform:translateY(0); }
-        /* === exit === */
+        .toast.t-visible::after {
+            opacity:1;
+            animation: toast-spin 3s linear infinite;
+        }
+        .toast.t-visible .toast-msg { color:#cdd6f4; opacity:1; transform:translateY(0); }
+        /* === exit: text+glow out → height collapses → fade === */
         .toast.t-exit {
-            transition: height 200ms ease-in 60ms, opacity 240ms ease 40ms;
+            transition:
+                height  240ms ease-in 0ms,
+                opacity 180ms ease 220ms;   /* starts after height is done */
         }
         .toast.t-exit::before,
-        .toast.t-exit::after { animation:none !important; transition:opacity 80ms ease; opacity:0; }
-        .toast.t-exit .toast-msg { transition:opacity 70ms ease, color 60ms ease, transform 100ms ease; }
+        .toast.t-exit::after {
+            animation: none !important;
+            transition: opacity 150ms ease;
+            opacity: 0;
+        }
+        .toast.t-exit .toast-msg {
+            transition: opacity 80ms ease, color 60ms ease, transform 100ms ease;
+        }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
