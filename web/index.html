@@ -2319,8 +2319,8 @@
         }
 
         // ── Keyboard toolbar toggle ──────────────────────────────────────────────
-        const IC_COMPACT = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 8h18"/><path d="M3 16h18"/></svg>';
-        const IC_FULL    = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 6h18"/><path d="M3 11h18"/><path d="M3 16h18"/></svg>';
+        const IC_COMPACT = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h8"/><path d="M3 12h8"/><path d="M3 19h8"/><path d="m15 5 3 3 3-3"/><path d="m15 19 3-3 3 3"/></svg>';
+        const IC_FULL    = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h8"/><path d="M3 12h8"/><path d="M3 19h8"/><path d="m15 8 3-3 3 3"/><path d="m15 16 3 3 3-3"/></svg>';
         function updateModeToggleBtn() {
             const btn = document.getElementById('kb-mode-toggle');
             if (!btn) return;
