@@ -2675,7 +2675,7 @@
                 el.style.opacity = '1';
                 // Step 2: after height done, fade out the whole pill
                 setTimeout(function () {
-                    el.style.transition = 'opacity 180ms ease';
+                    el.style.transition = 'opacity 180ms ease 50ms';
                     el.style.opacity = '0';
                     setTimeout(function () { el.remove(); }, 200);
                 }, 260);
