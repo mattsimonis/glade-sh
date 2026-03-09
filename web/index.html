@@ -2081,10 +2081,12 @@
             // ABC / keyboard toggle
             const backBtn = document.createElement('button');
             backBtn.className = 'sb-btn sb-back';
-            if (keyboardState === 'custom') {
+            if (keyboardState === 'custom' || keyboardState === 'hidden') {
                 backBtn.innerHTML = IC.grid;
-                backBtn.setAttribute('aria-label', 'Standard keyboard');
-                backBtn.addEventListener('click', function () { setKeyboardState('standard'); });
+                backBtn.setAttribute('aria-label', keyboardState === 'hidden' ? 'Show keyboard' : 'Standard keyboard');
+                backBtn.addEventListener('click', function () {
+                    setKeyboardState(keyboardState === 'hidden' ? 'custom' : 'standard');
+                });
             } else {
                 backBtn.textContent = 'ABC';
                 backBtn.setAttribute('aria-label', 'Custom keyboard');
