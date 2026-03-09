@@ -876,42 +876,65 @@
         .dbg-btn.peach  { background:rgba(250,179,135,0.12); color:#fab387; border:1px solid rgba(250,179,135,0.25); }
         #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:#a6adc8; background:#11111b; border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
 
-        /* ── Toast / Dynamic Island bloom ────────────────────── */
-        /* Container anchors at env(safe-area-inset-top) — the bottom edge of the
-           island. Toasts start with translateY(-120%) so they're tucked behind
-           the island hardware, then spring down. Exit retracts back up. */
+        /* ── Toast / Dynamic Island embrace ──────────────────── */
+        /* The card sits at top:11px (exact island Y) with a near-black bg
+           matching the island hardware. The island hardware visually merges
+           into the card top. A 37px spacer pushes content below the cutout.
+           Card expands outward from island-width; height animated via CSS
+           grid 0fr→1fr trick (the only way to animate height:auto in CSS). */
         #toast-container {
-            position:fixed; top:env(safe-area-inset-top, 0px); left:50%; transform:translateX(-50%);
-            z-index:300; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;
+            position:fixed; top:11px; left:50%; transform:translateX(-50%);
+            z-index:300; display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none;
         }
         .toast {
-            display:inline-flex; align-items:center; gap:8px;
-            padding:10px 18px; min-width:126px; max-width:min(320px, calc(100vw - 32px));
-            border-radius:22px; background:#313244; color:transparent;
-            font-size:13px; font-family:var(--font-mono); font-weight:500;
-            white-space:nowrap; overflow:hidden; justify-content:center;
-            box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 1px #45475a;
+            width:126px; max-width:calc(100vw - 32px);
+            background:#060608; border-radius:24px; overflow:hidden;
+            box-shadow:0 20px 60px rgba(0,0,0,0.8);
+            transform-origin:top center;
             transition:
-                transform      500ms cubic-bezier(0.34,1.56,0.64,1),
-                min-width      500ms cubic-bezier(0.34,1.56,0.64,1),
-                color          200ms ease 260ms,
-                opacity        200ms ease;
-            opacity:0; transform:translateY(-120%) scaleX(0.65); transform-origin:top center;
+                width          520ms cubic-bezier(0.34,1.56,0.64,1),
+                border-radius  480ms cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow     400ms ease,
+                opacity        200ms ease,
+                transform      520ms cubic-bezier(0.34,1.56,0.64,1);
+            opacity:0; transform:scale(0.88);
         }
+        /* spacer = island height; its dark bg merges with physical island hardware */
+        .toast-island-pad { height:37px; }
+        /* grid trick: animate body height to auto */
+        .toast-body-wrap {
+            display:grid; grid-template-rows:0fr;
+            transition:grid-template-rows 440ms cubic-bezier(0.34,1.56,0.64,1) 50ms;
+        }
+        .toast-body {
+            min-height:0; overflow:hidden;
+            display:flex; align-items:center; gap:10px;
+            padding:0 20px; font-size:14px; font-family:var(--font-mono); font-weight:500;
+            color:transparent; white-space:nowrap;
+            transition:color 180ms ease 300ms, padding-bottom 440ms cubic-bezier(0.34,1.56,0.64,1) 50ms;
+            padding-bottom:0;
+        }
+        /* === visible === */
         .toast.t-visible {
-            opacity:1; color:#cdd6f4;
-            transform:translateY(6px) scaleX(1);
-            min-width:180px; justify-content:flex-start;
+            width:min(340px,calc(100vw - 32px)); border-radius:44px;
+            opacity:1; transform:scale(1);
+            box-shadow:0 24px 64px rgba(0,0,0,0.85),0 6px 24px rgba(0,0,0,0.5);
         }
+        .toast.t-visible .toast-body-wrap { grid-template-rows:1fr; }
+        .toast.t-visible .toast-body { color:#cdd6f4; padding-bottom:20px; }
+        .toast.t-success.t-visible .toast-body { color:#a6e3a1; }
+        .toast.t-error.t-visible   .toast-body { color:#f38ba8; }
+        /* === exit: collapse back to island === */
         .toast.t-exit {
             transition:
-                transform  300ms ease-in,
-                min-width  300ms ease-in,
-                color      100ms ease,
-                opacity    200ms ease 60ms;
+                width         300ms ease-in,
+                border-radius 280ms ease-in,
+                box-shadow    200ms ease,
+                opacity       220ms ease 80ms,
+                transform     300ms ease-in;
         }
-        .toast.t-success.t-visible { color:#a6e3a1; }
-        .toast.t-error.t-visible   { color:#f38ba8; }
+        .toast.t-exit .toast-body-wrap { transition:grid-template-rows 260ms ease-in; }
+        .toast.t-exit .toast-body      { transition:color 80ms ease, padding-bottom 260ms ease-in; }
         .toast-icon { flex-shrink:0; }
 
         /* ── Settings sections ───────────────────────────────── */
@@ -2597,25 +2620,44 @@
         }
 
         // ── Toast ───────────────────────────────────────────────────────────────
-        const CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-        const X_SVG     = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+        const CHECK_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+        const X_SVG     = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
         function toast(msg, type, duration) {
-            duration = duration || 2000;
+            duration = duration || 2500;
             const c = document.getElementById('toast-container');
             if (!c) return;
-            const el = document.createElement('div');
+
+            // Structure:
+            //  .toast > .toast-island-pad (37px spacer, merges with hardware island)
+            //         > .toast-body-wrap  (grid 0fr→1fr for height:auto animation)
+            //             > .toast-body   (icon + text)
+            const el   = document.createElement('div');
             el.className = 'toast' + (type ? ' t-' + type : '');
+
+            const pad  = document.createElement('div');
+            pad.className = 'toast-island-pad';
+            el.appendChild(pad);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'toast-body-wrap';
+
+            const body = document.createElement('div');
+            body.className = 'toast-body';
             if (type === 'success' || type === 'error') {
                 const icon = document.createElement('span');
                 icon.className = 'toast-icon';
                 icon.innerHTML = type === 'success' ? CHECK_SVG : X_SVG;
-                el.appendChild(icon);
+                body.appendChild(icon);
             }
             const txt = document.createElement('span');
             txt.textContent = msg;
-            el.appendChild(txt);
+            body.appendChild(txt);
+
+            wrap.appendChild(body);
+            el.appendChild(wrap);
             c.appendChild(el);
-            // double-rAF: ensure initial styles are painted before transition fires
+
+            // double-rAF: ensure initial styles paint before transition fires
             requestAnimationFrame(function () {
                 requestAnimationFrame(function () { el.classList.add('t-visible'); });
             });
