@@ -876,10 +876,10 @@
         .dbg-btn.peach  { background:rgba(250,179,135,0.12); color:#fab387; border:1px solid rgba(250,179,135,0.25); }
         #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:#a6adc8; background:#11111b; border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
 
-        /* ── Toast — glow pill below Dynamic Island ──────────── */
-        /* Appears below island (top:52px = 11+37+4). Starts as a thin
-           126px sliver matching island width. Width springs out first,
-           then height expands down to reveal text. Glow pulses while open. */
+        /* ── Toast — glow pill aligned with Dynamic Island ───── */
+        /* Sits at top:11px (same as island). Fixed height (42px min) — no
+           height animation. Width springs from island-width (126px) to full,
+           then text fades in. Glow pulses while open. */
         @keyframes glow-success {
             0%,100% { box-shadow:0 0 8px 2px rgba(166,227,161,.45),0 0 32px 8px rgba(166,227,161,.18); }
             50%     { box-shadow:0 0 22px 7px rgba(166,227,161,.8),0 0 60px 16px rgba(166,227,161,.35); }
@@ -893,18 +893,17 @@
             50%     { box-shadow:0 0 22px 7px rgba(137,180,250,.8),0 0 60px 16px rgba(137,180,250,.35); }
         }
         #toast-container {
-            position:fixed; top:52px; left:50%; transform:translateX(-50%);
+            position:fixed; top:11px; left:50%; transform:translateX(-50%);
             z-index:9999; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none;
         }
         .toast {
             position:relative;
-            width:126px; height:5px; max-width:calc(100vw - 32px);
-            background:#11111b; border-radius:6px; overflow:hidden;
+            width:126px; min-height:42px; max-width:calc(100vw - 32px);
+            background:#11111b; border-radius:21px; overflow:hidden;
             opacity:0;
             transition:
-                width         520ms cubic-bezier(0.34,1.56,0.64,1) 0ms,
-                height        380ms cubic-bezier(0.34,1.56,0.64,1) 430ms,
-                border-radius 320ms ease 410ms,
+                width         520ms cubic-bezier(0.34,1.56,0.64,1),
+                border-radius 400ms cubic-bezier(0.34,1.56,0.64,1),
                 opacity       130ms ease;
         }
         .toast-msg {
@@ -912,29 +911,28 @@
             display:flex; align-items:center; justify-content:center;
             font-size:13px; font-family:var(--font-mono); font-weight:500;
             color:transparent; white-space:nowrap; padding:0 18px;
-            opacity:0; transform:translateY(5px);
-            transition:color 150ms ease 680ms, opacity 200ms ease 660ms, transform 230ms ease 650ms;
+            opacity:0; transform:translateY(4px);
+            transition:color 150ms ease 420ms, opacity 200ms ease 400ms, transform 220ms ease 390ms;
         }
-        /* === visible: width then height === */
+        /* === visible: only width springs === */
         .toast.t-visible {
-            width:min(230px,calc(100vw - 32px)); height:44px;
-            border-radius:22px; opacity:1;
+            width:min(230px,calc(100vw - 32px));
+            border-radius:21px; opacity:1;
             animation:glow-default 2.2s ease-in-out infinite;
         }
-        .toast.t-visible .toast-msg         { color:#cdd6f4; opacity:1; transform:translateY(0); }
-        .toast.t-success.t-visible          { animation-name:glow-success; }
-        .toast.t-error.t-visible            { animation-name:glow-error; }
-        /* === exit: text vanishes → height collapses → width snaps back === */
+        .toast.t-visible .toast-msg  { color:#cdd6f4; opacity:1; transform:translateY(0); }
+        .toast.t-success.t-visible   { animation-name:glow-success; }
+        .toast.t-error.t-visible     { animation-name:glow-error; }
+        /* === exit: text vanishes then width snaps back === */
         .toast.t-exit {
             animation:none !important;
             transition:
-                height        220ms ease-in 0ms,
-                width         300ms ease-in 170ms,
-                border-radius 240ms ease-in 170ms,
+                width         300ms ease-in 80ms,
+                border-radius 260ms ease-in 80ms,
                 box-shadow    180ms ease,
-                opacity       240ms ease 80ms;
+                opacity       240ms ease 60ms;
         }
-        .toast.t-exit .toast-msg { transition:opacity 80ms ease, color 60ms ease, transform 120ms ease; }
+        .toast.t-exit .toast-msg { transition:opacity 70ms ease, color 60ms ease, transform 100ms ease; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
