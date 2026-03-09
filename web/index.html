@@ -844,6 +844,38 @@
         #img-overlay-actions button:last-child { color:#a6e3a1; }
         #img-overlay-status { font-size:11px; color:#a6adc8; text-align:center; min-height:16px; }
 
+        /* ── Debug panel ──────────────────────────────────────── */
+        #debug-panel {
+            position:fixed; inset:0; z-index:400; display:flex; flex-direction:column; justify-content:flex-end;
+            background:rgba(17,17,27,0.6); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+            opacity:0; pointer-events:none; transition:opacity 200ms ease;
+        }
+        #debug-panel.open { opacity:1; pointer-events:auto; }
+        #debug-sheet {
+            background:#181825; border-radius:20px 20px 0 0; border-top:1px solid #313244;
+            max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+            transform:translateY(100%); transition:transform 320ms cubic-bezier(0.32,0.72,0,1);
+            padding-bottom:calc(16px + env(safe-area-inset-bottom));
+        }
+        #debug-panel.open #debug-sheet { transform:translateY(0); }
+        #debug-sheet-handle { width:36px; height:4px; background:#45475a; border-radius:2px; margin:12px auto 4px; }
+        #debug-sheet-title { font-size:15px; font-weight:700; color:#cba6f7; font-family:var(--font-mono); text-align:center; padding:8px 20px 16px; border-bottom:1px solid #313244; }
+        .dbg-section { padding:14px 16px 0; }
+        .dbg-section-label { font-size:10px; font-weight:700; color:#6c7086; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
+        .dbg-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+        .dbg-btn {
+            padding:7px 14px; border-radius:10px; border:none; font-size:12px; font-family:var(--font-mono);
+            font-weight:600; cursor:pointer; flex-shrink:0;
+            background:#313244; color:#cdd6f4; transition:background 120ms;
+        }
+        .dbg-btn:active { background:#45475a; }
+        .dbg-btn.green  { background:rgba(166,227,161,0.12); color:#a6e3a1; border:1px solid rgba(166,227,161,0.25); }
+        .dbg-btn.red    { background:rgba(243,139,168,0.12); color:#f38ba8; border:1px solid rgba(243,139,168,0.25); }
+        .dbg-btn.blue   { background:rgba(137,180,250,0.12); color:#89b4fa; border:1px solid rgba(137,180,250,0.25); }
+        .dbg-btn.mauve  { background:rgba(203,166,247,0.12); color:#cba6f7; border:1px solid rgba(203,166,247,0.25); }
+        .dbg-btn.peach  { background:rgba(250,179,135,0.12); color:#fab387; border:1px solid rgba(250,179,135,0.25); }
+        #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:#a6adc8; background:#11111b; border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
+
         /* ── Toast / Dynamic Island bloom ────────────────────── */
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
@@ -1303,6 +1335,57 @@
 
     <!-- Toast container -->
     <div id="toast-container"></div>
+
+    <!-- Debug panel — open via long-press on status indicator or Ctrl+Shift+D -->
+    <div id="debug-panel">
+        <div id="debug-sheet">
+            <div id="debug-sheet-handle"></div>
+            <div id="debug-sheet-title">🛠 Debug Panel</div>
+
+            <div class="dbg-section">
+                <div class="dbg-section-label">Toasts</div>
+                <div class="dbg-row">
+                    <button class="dbg-btn green"  id="dbg-toast-success">✓ Success</button>
+                    <button class="dbg-btn red"    id="dbg-toast-error">✗ Error</button>
+                    <button class="dbg-btn"        id="dbg-toast-default">Default</button>
+                    <button class="dbg-btn blue"   id="dbg-toast-long">Long text</button>
+                    <button class="dbg-btn mauve"  id="dbg-toast-many">Spam ×4</button>
+                </div>
+            </div>
+
+            <div class="dbg-section">
+                <div class="dbg-section-label">Connection State</div>
+                <div class="dbg-row">
+                    <button class="dbg-btn green"  id="dbg-conn-connected">Connected</button>
+                    <button class="dbg-btn peach"  id="dbg-conn-reconnecting">Reconnecting</button>
+                    <button class="dbg-btn red"    id="dbg-conn-disconnected">Disconnected</button>
+                </div>
+            </div>
+
+            <div class="dbg-section">
+                <div class="dbg-section-label">Path Footer</div>
+                <div class="dbg-row">
+                    <button class="dbg-btn blue"  id="dbg-path-show">Show fake path</button>
+                    <button class="dbg-btn"       id="dbg-path-hide">Hide</button>
+                </div>
+            </div>
+
+            <div class="dbg-section">
+                <div class="dbg-section-label">Haptic</div>
+                <div class="dbg-row">
+                    <button class="dbg-btn" id="dbg-haptic-light">Light</button>
+                    <button class="dbg-btn" id="dbg-haptic-medium">Medium</button>
+                    <button class="dbg-btn" id="dbg-haptic-error">Error pattern</button>
+                </div>
+            </div>
+
+            <div class="dbg-section">
+                <div class="dbg-section-label">State</div>
+                <button class="dbg-btn blue" id="dbg-refresh-state" style="margin-bottom:10px">↺ Refresh</button>
+            </div>
+            <pre id="debug-state-dump">—</pre>
+        </div>
+    </div>
 
     <script>
     (function () {
@@ -4380,6 +4463,89 @@
             // Load projects after layout/snippets ready
             await loadProjects();
             startActivityPoll();
+        })();
+
+        // ── Debug panel ─────────────────────────────────────────────────────────
+        (function () {
+            const panel   = document.getElementById('debug-panel');
+            const stateDump = document.getElementById('debug-state-dump');
+
+            function openDebug() {
+                panel.classList.add('open');
+                refreshState();
+            }
+            function closeDebug() { panel.classList.remove('open'); }
+
+            function refreshState() {
+                stateDump.textContent = [
+                    'connectionState : ' + connectionState,
+                    'reconnectInProgress: ' + reconnectInProgress,
+                    'currentProjectId : ' + (currentProjectId || '(none)'),
+                    'keyboardState    : ' + keyboardState,
+                    'keyboardMode     : ' + keyboardMode,
+                    'consecutiveFails : ' + consecutiveFailures,
+                    'xtermTextarea    : ' + (xtermTextarea ? 'found' : 'null'),
+                    'userAgent        : ' + navigator.userAgent.slice(0, 60) + '…',
+                ].join('\n');
+            }
+
+            // Trigger: long-press status indicator (500ms) or Ctrl+Shift+D
+            let dbgLongTimer = null;
+            statusIndicator.addEventListener('touchstart', function () {
+                dbgLongTimer = setTimeout(openDebug, 600);
+            }, { passive: true });
+            statusIndicator.addEventListener('touchend',   function () { clearTimeout(dbgLongTimer); }, { passive: true });
+            statusIndicator.addEventListener('touchmove',  function () { clearTimeout(dbgLongTimer); }, { passive: true });
+            statusIndicator.addEventListener('mousedown',  function () { dbgLongTimer = setTimeout(openDebug, 600); });
+            statusIndicator.addEventListener('mouseup',    function () { clearTimeout(dbgLongTimer); });
+            document.addEventListener('keydown', function (e) {
+                if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); panel.classList.contains('open') ? closeDebug() : openDebug(); }
+            });
+
+            // Close on backdrop click
+            panel.addEventListener('click', function (e) {
+                if (e.target === panel) closeDebug();
+            });
+
+            // Toast tests
+            document.getElementById('dbg-toast-success').onclick   = function () { toast('Project saved',  'success'); };
+            document.getElementById('dbg-toast-error').onclick     = function () { toast('Upload failed',   'error'); };
+            document.getElementById('dbg-toast-default').onclick   = function () { toast('Something happened'); };
+            document.getElementById('dbg-toast-long').onclick      = function () { toast('This is a really quite long toast message to test wrapping', 'success'); };
+            document.getElementById('dbg-toast-many').onclick      = function () {
+                ['Alpha', 'Bravo', 'Charlie', 'Delta'].forEach(function (n, i) {
+                    setTimeout(function () { toast(n, i % 2 === 0 ? 'success' : 'error'); }, i * 350);
+                });
+            };
+
+            // Connection state tests
+            document.getElementById('dbg-conn-connected').onclick     = function () { consecutiveFailures = 0; setConnectionState('connected'); };
+            document.getElementById('dbg-conn-reconnecting').onclick  = function () { reconnectInProgress = false; consecutiveFailures = MAX_FAIL_RECONNECTING; setConnectionState('reconnecting'); };
+            document.getElementById('dbg-conn-disconnected').onclick  = function () { reconnectInProgress = false; consecutiveFailures = MAX_FAIL_DISCONNECTED; setConnectionState('disconnected'); };
+
+            // Path footer tests
+            document.getElementById('dbg-path-show').onclick = function () {
+                const pfText = document.getElementById('path-footer-text');
+                const pfEl   = document.getElementById('path-footer');
+                if (pfText) pfText.textContent = '/Users/matt/Dev/copilot-sync/web';
+                if (pfEl)   pfEl.classList.add('pf-visible');
+                repositionShortcutBar();
+            };
+            document.getElementById('dbg-path-hide').onclick = function () {
+                const pfText = document.getElementById('path-footer-text');
+                const pfEl   = document.getElementById('path-footer');
+                if (pfText) pfText.textContent = '';
+                if (pfEl)   pfEl.classList.remove('pf-visible');
+                repositionShortcutBar();
+            };
+
+            // Haptic tests
+            document.getElementById('dbg-haptic-light').onclick  = function () { haptic(10); };
+            document.getElementById('dbg-haptic-medium').onclick = function () { haptic(40); };
+            document.getElementById('dbg-haptic-error').onclick  = function () { haptic([50,30,50]); };
+
+            // State refresh
+            document.getElementById('dbg-refresh-state').onclick = refreshState;
         })();
 
         startTerminalPoll();
