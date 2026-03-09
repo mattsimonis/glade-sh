@@ -878,13 +878,13 @@
 
         /* ── Toast / Dynamic Island embrace ──────────────────── */
         /* Pill sits at top:11px (island Y). #060608 bg matches hardware island.
-           Both width AND height spring open simultaneously — icon scales up in
-           the visible area below the cutout, text reveals beneath it.
-           Content uses `justify-content:flex-end` so it anchors to the bottom
-           of the pill; the top 37px merges with the hardware island. */
+           Both width AND height spring open simultaneously.
+           Content in two absolute zones:
+           - Icon: top:5px, left:14px — in the 37px island band, left overhang
+           - Text: bottom:12px, centered — in the expansion below the island */
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
-            z-index:300; display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none;
+            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none;
         }
         .toast {
             position:relative;
@@ -899,30 +899,26 @@
                 opacity       180ms ease;
             opacity:0;
         }
-        /* Row layout: icon LEFT of island hardware, text flows right.
-           Pill is 230px wide centered; island is 126px wide centered.
-           Each side overhangs by ~52px — icon lands in the left overhang,
-           right up against the island's left edge. */
-        .toast-inner {
-            position:absolute;
-            bottom:13px; left:16px; right:16px;
-            display:flex; flex-direction:row; align-items:center; gap:10px;
-        }
+        /* Icon: pinned top-left in the 37px island band (left overhang visible beyond hardware).
+           (37 - 26) / 2 ≈ 5px from top. 14px from left puts it in the ~52px left overhang.
+           Text: pinned to bottom center of expanded pill. */
+        .toast-inner { position:absolute; inset:0; }
         .toast-status-icon {
-            flex-shrink:0; line-height:0; color:transparent;
+            position:absolute; left:14px; top:5px; line-height:0; color:transparent;
             transform:scale(0.3);
-            transition:color 140ms ease 300ms, transform 300ms cubic-bezier(0.34,1.56,0.64,1) 280ms;
+            transition:color 140ms ease 310ms, transform 300ms cubic-bezier(0.34,1.56,0.64,1) 290ms;
         }
         .toast-msg {
-            font-size:13px; font-family:var(--font-mono); font-weight:500;
+            position:absolute; bottom:12px; left:0; right:0;
+            text-align:center; font-size:13px; font-family:var(--font-mono); font-weight:500;
             color:transparent; white-space:nowrap; line-height:1;
-            opacity:0; transform:translateX(-6px);
-            transition:color 140ms ease 350ms, opacity 200ms ease 330ms, transform 240ms ease 320ms;
+            opacity:0; transform:translateY(4px);
+            transition:color 140ms ease 360ms, opacity 200ms ease 340ms, transform 240ms ease 330ms;
         }
         /* === visible === */
-        .toast.t-visible { width:min(230px,calc(100vw - 32px)); height:88px; border-radius:40px; opacity:1; box-shadow:0 24px 64px rgba(0,0,0,0.85); }
+        .toast.t-visible { width:min(230px,calc(100vw - 32px)); height:84px; border-radius:40px; opacity:1; box-shadow:0 24px 64px rgba(0,0,0,0.85); }
         .toast.t-visible .toast-status-icon { transform:scale(1); }
-        .toast.t-visible .toast-msg         { color:#cdd6f4; opacity:1; transform:translateX(0); }
+        .toast.t-visible .toast-msg         { color:#cdd6f4; opacity:1; transform:translateY(0); }
         .toast.t-success.t-visible .toast-status-icon { color:#a6e3a1; }
         .toast.t-error.t-visible   .toast-status-icon { color:#f38ba8; }
         /* === exit: spring back to island === */
@@ -935,7 +931,7 @@
                 opacity       220ms ease 80ms;
         }
         .toast.t-exit .toast-status-icon { transition:color 60ms ease, transform 200ms ease-in; }
-        .toast.t-exit .toast-msg         { transition:color 60ms ease, opacity 180ms ease, transform 200ms ease-in; }
+        .toast.t-exit .toast-msg         { transition:color 60ms ease, opacity 100ms ease, transform 180ms ease-in; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
