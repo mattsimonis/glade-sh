@@ -876,62 +876,65 @@
         .dbg-btn.peach  { background:rgba(250,179,135,0.12); color:#fab387; border:1px solid rgba(250,179,135,0.25); }
         #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:#a6adc8; background:#11111b; border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
 
-        /* ── Toast / Dynamic Island embrace ──────────────────── */
-        /* Pill sits at top:11px (island Y). #060608 bg matches hardware island.
-           Both width AND height spring open simultaneously.
-           Content in two absolute zones:
-           - Icon: top:5px, left:14px — in the 37px island band, left overhang
-           - Text: bottom:12px, centered — in the expansion below the island */
+        /* ── Toast — glow pill below Dynamic Island ──────────── */
+        /* Appears below island (top:52px = 11+37+4). Starts as a thin
+           126px sliver matching island width. Width springs out first,
+           then height expands down to reveal text. Glow pulses while open. */
+        @keyframes glow-success {
+            0%,100% { box-shadow:0 0 8px 2px rgba(166,227,161,.45),0 0 32px 8px rgba(166,227,161,.18); }
+            50%     { box-shadow:0 0 22px 7px rgba(166,227,161,.8),0 0 60px 16px rgba(166,227,161,.35); }
+        }
+        @keyframes glow-error {
+            0%,100% { box-shadow:0 0 8px 2px rgba(243,139,168,.45),0 0 32px 8px rgba(243,139,168,.18); }
+            50%     { box-shadow:0 0 22px 7px rgba(243,139,168,.8),0 0 60px 16px rgba(243,139,168,.35); }
+        }
+        @keyframes glow-default {
+            0%,100% { box-shadow:0 0 8px 2px rgba(137,180,250,.45),0 0 32px 8px rgba(137,180,250,.18); }
+            50%     { box-shadow:0 0 22px 7px rgba(137,180,250,.8),0 0 60px 16px rgba(137,180,250,.35); }
+        }
         #toast-container {
-            position:fixed; top:11px; left:50%; transform:translateX(-50%);
-            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none;
+            position:fixed; top:52px; left:50%; transform:translateX(-50%);
+            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none;
         }
         .toast {
             position:relative;
-            width:126px; height:37px; max-width:calc(100vw - 32px);
-            background:#060608; border-radius:24px; overflow:hidden;
-            box-shadow:0 16px 48px rgba(0,0,0,0.7);
-            transition:
-                width         520ms cubic-bezier(0.34,1.56,0.64,1),
-                height        520ms cubic-bezier(0.34,1.56,0.64,1),
-                border-radius 480ms cubic-bezier(0.34,1.56,0.64,1),
-                box-shadow    350ms ease,
-                opacity       180ms ease;
+            width:126px; height:5px; max-width:calc(100vw - 32px);
+            background:#11111b; border-radius:6px; overflow:hidden;
             opacity:0;
-        }
-        /* Icon: pinned top-left in the 37px island band (left overhang visible beyond hardware).
-           (37 - 26) / 2 ≈ 5px from top. 14px from left puts it in the ~52px left overhang.
-           Text: pinned to bottom center of expanded pill. */
-        .toast-inner { position:absolute; inset:0; }
-        .toast-status-icon {
-            position:absolute; left:14px; top:5px; line-height:0; color:transparent;
-            transform:scale(0.3);
-            transition:color 140ms ease 310ms, transform 300ms cubic-bezier(0.34,1.56,0.64,1) 290ms;
+            transition:
+                width         520ms cubic-bezier(0.34,1.56,0.64,1) 0ms,
+                height        380ms cubic-bezier(0.34,1.56,0.64,1) 430ms,
+                border-radius 320ms ease 410ms,
+                opacity       130ms ease;
         }
         .toast-msg {
-            position:absolute; bottom:12px; left:0; right:0;
-            text-align:center; font-size:13px; font-family:var(--font-mono); font-weight:500;
-            color:transparent; white-space:nowrap; line-height:1;
-            opacity:0; transform:translateY(4px);
-            transition:color 140ms ease 360ms, opacity 200ms ease 340ms, transform 240ms ease 330ms;
+            position:absolute; inset:0;
+            display:flex; align-items:center; justify-content:center;
+            font-size:13px; font-family:var(--font-mono); font-weight:500;
+            color:transparent; white-space:nowrap; padding:0 18px;
+            opacity:0; transform:translateY(5px);
+            transition:color 150ms ease 680ms, opacity 200ms ease 660ms, transform 230ms ease 650ms;
         }
-        /* === visible === */
-        .toast.t-visible { width:min(230px,calc(100vw - 32px)); height:84px; border-radius:40px; opacity:1; box-shadow:0 24px 64px rgba(0,0,0,0.85); }
-        .toast.t-visible .toast-status-icon { transform:scale(1); }
+        /* === visible: width then height === */
+        .toast.t-visible {
+            width:min(230px,calc(100vw - 32px)); height:44px;
+            border-radius:22px; opacity:1;
+            animation:glow-default 2.2s ease-in-out infinite;
+        }
         .toast.t-visible .toast-msg         { color:#cdd6f4; opacity:1; transform:translateY(0); }
-        .toast.t-success.t-visible .toast-status-icon { color:#a6e3a1; }
-        .toast.t-error.t-visible   .toast-status-icon { color:#f38ba8; }
-        /* === exit: spring back to island === */
+        .toast.t-success.t-visible          { animation-name:glow-success; }
+        .toast.t-error.t-visible            { animation-name:glow-error; }
+        /* === exit: text vanishes → height collapses → width snaps back === */
         .toast.t-exit {
+            animation:none !important;
             transition:
-                width         300ms ease-in,
-                height        300ms ease-in,
-                border-radius 280ms ease-in,
+                height        220ms ease-in 0ms,
+                width         300ms ease-in 170ms,
+                border-radius 240ms ease-in 170ms,
                 box-shadow    180ms ease,
-                opacity       220ms ease 80ms;
+                opacity       240ms ease 80ms;
         }
-        .toast.t-exit .toast-status-icon { transition:color 60ms ease, transform 200ms ease-in; }
-        .toast.t-exit .toast-msg         { transition:color 60ms ease, opacity 100ms ease, transform 180ms ease-in; }
+        .toast.t-exit .toast-msg { transition:opacity 80ms ease, color 60ms ease, transform 120ms ease; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
@@ -2627,28 +2630,16 @@
             const el = document.createElement('div');
             el.className = 'toast' + (type ? ' t-' + type : '');
 
-            const inner = document.createElement('div');
-            inner.className = 'toast-inner';
-
-            if (type === 'success' || type === 'error') {
-                const iconEl = document.createElement('div');
-                iconEl.className = 'toast-status-icon';
-                iconEl.innerHTML = type === 'success' ? CHECK_SVG : X_SVG;
-                inner.appendChild(iconEl);
-            }
-
             const msgEl = document.createElement('div');
             msgEl.className = 'toast-msg';
             msgEl.textContent = msg;
-            inner.appendChild(msgEl);
-
-            el.appendChild(inner);
+            el.appendChild(msgEl);
             c.appendChild(el);
 
             function dismissToast() {
                 el.classList.add('t-exit');
                 el.classList.remove('t-visible');
-                setTimeout(function () { el.remove(); }, 320);
+                setTimeout(function () { el.remove(); }, 520);
             }
 
             requestAnimationFrame(function () {
@@ -2656,7 +2647,6 @@
             });
 
             if (duration === 0) {
-                // Sticky: tap/click to dismiss
                 el.style.pointerEvents = 'auto';
                 el.style.cursor = 'pointer';
                 el.addEventListener('click', dismissToast, { once: true });
