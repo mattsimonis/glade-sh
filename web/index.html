@@ -876,58 +876,83 @@
         .dbg-btn.peach  { background:rgba(250,179,135,0.12); color:#fab387; border:1px solid rgba(250,179,135,0.25); }
         #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:#a6adc8; background:#11111b; border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
 
-        /* ── Toast — glow pill aligned with Dynamic Island ───── */
-        /* Full width from the start. Fades in with glow, then height
-           expands downward to reveal message text. No width animation. */
-        @keyframes glow-success {
-            0%,100% { box-shadow:0 0 8px 2px rgba(166,227,161,.45),0 0 32px 8px rgba(166,227,161,.18); }
-            50%     { box-shadow:0 0 22px 7px rgba(166,227,161,.8),0 0 60px 16px rgba(166,227,161,.35); }
+        /* ── Toast — rotating conic border glow ──────────────── */
+        /* Technique from Ana Tudor: two pseudo-elements share a rotating
+           conic gradient. ::before = the border strip (masked to border-box
+           minus padding-box). ::after = same, blurred = the glow.
+           Only height animates (42px → 76px). No width animation. */
+        @property --toast-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
         }
-        @keyframes glow-error {
-            0%,100% { box-shadow:0 0 8px 2px rgba(243,139,168,.45),0 0 32px 8px rgba(243,139,168,.18); }
-            50%     { box-shadow:0 0 22px 7px rgba(243,139,168,.8),0 0 60px 16px rgba(243,139,168,.35); }
-        }
-        @keyframes glow-default {
-            0%,100% { box-shadow:0 0 8px 2px rgba(137,180,250,.45),0 0 32px 8px rgba(137,180,250,.18); }
-            50%     { box-shadow:0 0 22px 7px rgba(137,180,250,.8),0 0 60px 16px rgba(137,180,250,.35); }
-        }
+        @keyframes toast-spin { to { --toast-angle: 1turn; } }
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
             z-index:9999; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none;
         }
         .toast {
+            --glow-color: #89b4fa;  /* default: blue */
             position:relative;
-            width:min(230px,calc(100vw - 32px)); height:37px; max-width:calc(100vw - 32px);
-            background:#11111b; border-radius:21px; overflow:hidden;
+            width:min(230px,calc(100vw - 32px)); height:42px;
+            background:#11111b;
+            border:2px solid transparent;
+            border-radius:21px;
             opacity:0;
-            transition:
-                height  420ms cubic-bezier(0.34,1.56,0.64,1) 180ms,
-                opacity 200ms ease;
+            transition: height 400ms cubic-bezier(0.34,1.56,0.64,1) 160ms, opacity 220ms ease;
         }
+        .toast.t-success { --glow-color: #a6e3a1; }
+        .toast.t-error   { --glow-color: #f38ba8; }
+        /* Shared pseudo setup */
+        .toast::before, .toast::after {
+            --_full: conic-gradient(red 0 0);
+            content: '';
+            position:absolute; inset:-2px;
+            border:2px solid transparent;
+            border-radius:inherit;
+            /* default: blue shades */
+            background:
+                conic-gradient(from var(--toast-angle),
+                    #74c7ec, #89b4fa, #b4befe, #cba6f7, #89b4fa, #74c7ec) border-box;
+            mask: var(--_full) no-clip subtract, var(--_full) padding-box;
+            pointer-events:none;
+            opacity:0;
+            transition: opacity 350ms ease 120ms;
+        }
+        /* success: green → teal → mint shades */
+        .toast.t-success::before, .toast.t-success::after {
+            background:
+                conic-gradient(from var(--toast-angle),
+                    #94e2d5, #a6e3a1, #d4f0d2, #a6e3a1, #94e2d5, #76c7b8) border-box;
+        }
+        /* error: red → peach → pink shades */
+        .toast.t-error::before, .toast.t-error::after {
+            background:
+                conic-gradient(from var(--toast-angle),
+                    #f38ba8, #fab387, #f5c2e7, #fab387, #f38ba8, #e07090) border-box;
+        }
+        /* Glow layer = blurred copy */
+        .toast::after { filter:blur(7px); }
         .toast-msg {
-            position:absolute; inset:0;
-            display:flex; align-items:center; justify-content:center;
+            position:absolute; bottom:10px; left:0; right:0;
+            text-align:center;
             font-size:13px; font-family:var(--font-mono); font-weight:500;
-            color:transparent; white-space:nowrap; padding:0 18px;
-            opacity:0; transform:translateY(6px);
-            transition:color 150ms ease 500ms, opacity 200ms ease 480ms, transform 240ms ease 470ms;
+            color:transparent; white-space:nowrap;
+            opacity:0; transform:translateY(5px);
+            transition: color 150ms ease 500ms, opacity 200ms ease 480ms, transform 220ms ease 470ms;
         }
-        /* === visible: glow fades in with opacity, then height drops === */
-        .toast.t-visible {
-            height:62px; opacity:1;
-            animation:glow-default 2.2s ease-in-out infinite;
-        }
-        .toast.t-visible .toast-msg  { color:#cdd6f4; opacity:1; transform:translateY(0); }
-        .toast.t-success.t-visible   { animation-name:glow-success; }
-        .toast.t-error.t-visible     { animation-name:glow-error; }
-        /* === exit: text out → height collapses → opacity fades === */
+        /* === visible === */
+        .toast.t-visible                     { height:72px; opacity:1; }
+        .toast.t-visible::before,
+        .toast.t-visible::after              { opacity:1; animation:toast-spin 3s linear infinite; }
+        .toast.t-visible .toast-msg          { color:#cdd6f4; opacity:1; transform:translateY(0); }
+        /* === exit === */
         .toast.t-exit {
-            animation:none !important;
-            transition:
-                height  220ms ease-in 80ms,
-                opacity 260ms ease 60ms;
+            transition: height 200ms ease-in 60ms, opacity 240ms ease 40ms;
         }
-        .toast.t-exit .toast-msg { transition:opacity 80ms ease, color 60ms ease, transform 100ms ease; }
+        .toast.t-exit::before,
+        .toast.t-exit::after { animation:none !important; transition:opacity 80ms ease; opacity:0; }
+        .toast.t-exit .toast-msg { transition:opacity 70ms ease, color 60ms ease, transform 100ms ease; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
