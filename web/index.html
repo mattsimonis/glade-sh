@@ -1317,6 +1317,7 @@
             <div style="margin-top:8px;font-size:11px;color:#6c7086;line-height:1.5">
                 Catppuccin Mocha · Berkeley Mono · ttyd 1.7.7
             </div>
+            <button class="settings-btn-full" id="settings-debug-btn" style="margin-top:14px;background:rgba(203,166,247,0.1);color:#cba6f7;border:1px solid rgba(203,166,247,0.2)">🛠 Debug Panel</button>
         </div>
     </div>
 </div>
@@ -4489,15 +4490,25 @@
                 ].join('\n');
             }
 
-            // Trigger: long-press status indicator (500ms) or Ctrl+Shift+D
+            // Trigger: long-press status indicator (600ms), long-press settings nav btn, or Ctrl+Shift+D
             let dbgLongTimer = null;
-            statusIndicator.addEventListener('touchstart', function () {
-                dbgLongTimer = setTimeout(openDebug, 600);
-            }, { passive: true });
-            statusIndicator.addEventListener('touchend',   function () { clearTimeout(dbgLongTimer); }, { passive: true });
-            statusIndicator.addEventListener('touchmove',  function () { clearTimeout(dbgLongTimer); }, { passive: true });
-            statusIndicator.addEventListener('mousedown',  function () { dbgLongTimer = setTimeout(openDebug, 600); });
-            statusIndicator.addEventListener('mouseup',    function () { clearTimeout(dbgLongTimer); });
+            function startLongPress() { dbgLongTimer = setTimeout(openDebug, 600); }
+            function cancelLongPress() { clearTimeout(dbgLongTimer); }
+
+            statusIndicator.addEventListener('touchstart', startLongPress, { passive: true });
+            statusIndicator.addEventListener('touchend',   cancelLongPress, { passive: true });
+            statusIndicator.addEventListener('touchmove',  cancelLongPress, { passive: true });
+            statusIndicator.addEventListener('mousedown',  startLongPress);
+            statusIndicator.addEventListener('mouseup',    cancelLongPress);
+
+            const navSettingsBtn = document.getElementById('nav-settings-btn');
+            navSettingsBtn.addEventListener('touchstart', startLongPress, { passive: true });
+            navSettingsBtn.addEventListener('touchend',   cancelLongPress, { passive: true });
+            navSettingsBtn.addEventListener('touchmove',  cancelLongPress, { passive: true });
+            navSettingsBtn.addEventListener('mousedown',  startLongPress);
+            navSettingsBtn.addEventListener('mouseup',    cancelLongPress);
+
+            document.getElementById('settings-debug-btn').addEventListener('click', openDebug);
             document.addEventListener('keydown', function (e) {
                 if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); panel.classList.contains('open') ? closeDebug() : openDebug(); }
             });
