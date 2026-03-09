@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-copilot-sync API — projects, snippets, keyboard layout
+copilot-sync API — projects, snippets, keyboard layout, image uploads
 
 Runs inside the ttyd Docker container on port 7683.
 Manages project lifecycle: tmux sessions + ttyd child processes.
@@ -24,19 +24,27 @@ Routes:
   DELETE /api/snippets/:id
   GET    /api/settings/layout
   PUT    /api/settings/layout
+  POST   /api/upload-image              upload base64 image -> {path, url, filename}
+  GET    /api/uploads                   list recent uploads (last 10)
+  GET    /api/uploads/:filename         serve uploaded file
+  GET    /api/export                    export interactions as JSON
 """
 
+import base64
 import json
+import mimetypes
 import os
 import sqlite3
 import subprocess
 import threading
 import uuid
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 from socketserver import ThreadingTCPServer
 
-DB_PATH = os.environ.get("DB_PATH", "/root/.copilot-sync/db/history.db")
-PORT    = int(os.environ.get("PORT", "7683"))
+DB_PATH      = os.environ.get("DB_PATH", "/root/.copilot-sync/db/history.db")
+PORT         = int(os.environ.get("PORT", "7683"))
+UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.copilot-sync/uploads")
 
 PORT_POOL = list(range(7690, 7700))
 
@@ -87,6 +95,18 @@ def ensure_tables():
                 sort_order  INTEGER DEFAULT 0,
                 created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
                 last_active DATETIME
+            );
+            CREATE TABLE IF NOT EXISTS interactions (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id   TEXT,
+                timestamp    DATETIME DEFAULT CURRENT_TIMESTAMP,
+                subcommand   TEXT NOT NULL DEFAULT '',
+                prompt       TEXT,
+                response     TEXT,
+                cwd          TEXT,
+                exit_code    INTEGER,
+                duration_ms  INTEGER,
+                raw_log_path TEXT
             );
         """)
         conn.commit()
@@ -254,6 +274,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._get_layout()
         if p == ["api", "settings", "compact-layout"]:
             return self._get_compact_layout()
+        if p == ["api", "uploads"]:
+            return self._list_uploads()
+        if len(p) == 3 and p[:2] == ["api", "uploads"]:
+            return self._serve_upload(p[2])
+        if p == ["api", "export"]:
+            return self._export_interactions()
         self.send_json(404, {"error": "not found"})
 
     def do_POST(self):
@@ -268,6 +294,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._new_shell(p[2])
         if p == ["api", "snippets"]:
             return self._create_snippet()
+        if p == ["api", "upload-image"]:
+            return self._upload_image()
         self.send_json(404, {"error": "not found"})
 
     def do_PUT(self):
@@ -523,6 +551,82 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             conn.close()
         self.send_json(200, {"ok": True})
+
+    def _upload_image(self):
+        data = self.read_json()
+        b64  = data.get("data", "")
+        mime = data.get("type", "image/png")
+        ext_map = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
+        ext  = ext_map.get(mime, "png")
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
+        ts       = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        short_id = str(uuid.uuid4()).replace("-", "")[:8]
+        filename = f"img-{ts}-{short_id}.{ext}"
+        path     = os.path.join(UPLOADS_DIR, filename)
+        try:
+            with open(path, "wb") as f:
+                f.write(base64.b64decode(b64))
+        except Exception as e:
+            return self.send_json(400, {"error": str(e)})
+        self.send_json(200, {
+            "path":     path,
+            "url":      f"/api/uploads/{filename}",
+            "filename": filename,
+        })
+
+    def _serve_upload(self, filename):
+        # Only allow simple filenames — no path traversal
+        if "/" in filename or "\\" in filename or ".." in filename:
+            return self.send_json(400, {"error": "invalid filename"})
+        path = os.path.join(UPLOADS_DIR, filename)
+        if not os.path.isfile(path):
+            return self.send_json(404, {"error": "not found"})
+        mime, _ = mimetypes.guess_type(filename)
+        mime = mime or "application/octet-stream"
+        with open(path, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _list_uploads(self):
+        if not os.path.isdir(UPLOADS_DIR):
+            return self.send_json(200, [])
+        entries = []
+        for name in os.listdir(UPLOADS_DIR):
+            fpath = os.path.join(UPLOADS_DIR, name)
+            if not os.path.isfile(fpath):
+                continue
+            stat = os.stat(fpath)
+            entries.append({
+                "filename":   name,
+                "url":        f"/api/uploads/{name}",
+                "created_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                "size":       stat.st_size,
+            })
+        entries.sort(key=lambda e: e["created_at"], reverse=True)
+        self.send_json(200, entries[:10])
+
+    def _export_interactions(self):
+        conn = open_db()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM interactions ORDER BY timestamp DESC LIMIT 500"
+            ).fetchall()
+        except Exception:
+            rows = []
+        finally:
+            conn.close()
+        data = [dict(r) for r in rows]
+        body = json.dumps(data, indent=2).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Disposition", "attachment; filename=copilot-history.json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     # -- settings --
 

@@ -53,7 +53,6 @@
 
         /* ── Terminal ──────────────────────────────────────────── */
         #terminal-container { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; flex-direction: column; }
-        #terminal-container.has-shortcut-bar { padding-bottom: 70px; }
         #path-footer {
             position:fixed; left:0; right:0; height:22px; z-index:58;
             display:flex; align-items:center; padding:0 10px;
@@ -351,7 +350,10 @@
         .panel-view { width:calc(100%/4); flex-shrink:0; display:flex; flex-direction:column; height:100%; overflow-y:auto; overflow-x:hidden; touch-action: pan-y; }
 
         /* ── Keyboard toolbar ─────────────────────────────────── */
-        #kb-toolbar { display:flex; align-items:center; padding:3px 6px 2px; flex-shrink:0; min-height:28px; }
+        #kb-toolbar { display:flex; align-items:center; padding:3px 6px 2px; flex-shrink:0; min-height:28px;
+                      transition:height 150ms ease, padding 150ms ease, opacity 150ms ease; overflow:hidden; }
+        /* Hide toolbar in normal mode — compact/full toggle lives in shortcut bar instead */
+        #panel:not(.edit-mode) #kb-toolbar { height:0 !important; min-height:0 !important; padding-top:0 !important; padding-bottom:0 !important; opacity:0; }
         #kb-mode-toggle {
             display:flex; align-items:center; gap:5px; padding:3px 8px; height:22px;
             background:#313244; border:none; border-radius:5px; color:#6c7086;
@@ -792,6 +794,76 @@
             #panel, #bottom-nav, #shortcut-bar { display:none !important; }
             #status-indicator { top:12px; right:12px; }
         }
+
+        /* ── Image paste overlay ──────────────────────────────── */
+        #img-overlay {
+            position:fixed; inset:0; z-index:200; display:flex; align-items:flex-end; justify-content:center;
+            background:rgba(17,17,27,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+            padding:0 0 20px 0;
+            opacity:0; pointer-events:none; transition:opacity 200ms;
+        }
+        #img-overlay.io-visible { opacity:1; pointer-events:auto; }
+        #img-overlay-card {
+            background:#1e1e2e; border:1px solid #313244; border-radius:16px;
+            padding:16px; width:min(320px, 90vw); position:relative;
+            transform:translateY(20px); transition:transform 200ms cubic-bezier(0.32,0.72,0,1);
+            box-shadow:0 8px 40px rgba(0,0,0,0.5);
+        }
+        #img-overlay.io-visible #img-overlay-card { transform:translateY(0); }
+        #img-overlay-close {
+            position:absolute; top:10px; right:10px; width:28px; height:28px;
+            background:#313244; border:none; border-radius:50%; color:#cdd6f4;
+            font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+        }
+        #img-overlay-preview {
+            width:100%; max-height:200px; object-fit:contain; border-radius:8px;
+            background:#11111b; display:block; margin-bottom:10px;
+        }
+        #img-overlay-path {
+            font-family:var(--font-mono); font-size:10px; color:#6c7086; word-break:break-all;
+            padding:6px 8px; background:#11111b; border-radius:6px; margin-bottom:10px;
+        }
+        #img-overlay-actions { display:flex; gap:8px; margin-bottom:8px; }
+        #img-overlay-actions button {
+            flex:1; padding:8px; background:#313244; border:none; border-radius:8px;
+            color:#cdd6f4; font-size:12px; cursor:pointer; transition:background 120ms;
+        }
+        #img-overlay-actions button:active { background:#45475a; }
+        #img-overlay-actions button:first-child { color:#89b4fa; }
+        #img-overlay-actions button:last-child { color:#a6e3a1; }
+        #img-overlay-status { font-size:11px; color:#a6adc8; text-align:center; min-height:16px; }
+
+        /* ── Toast notifications ─────────────────────────────── */
+        #toast-container { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+        .toast { background:#313244; color:#cdd6f4; padding:8px 16px; border-radius:20px; font-size:12px; white-space:nowrap; opacity:0; transform:translateY(-8px); transition:opacity 200ms, transform 200ms; box-shadow:0 4px 20px rgba(0,0,0,0.4); border:1px solid #45475a; }
+        .toast.t-visible { opacity:1; transform:translateY(0); }
+        .toast.t-success { border-color:#a6e3a1; color:#a6e3a1; }
+        .toast.t-error   { border-color:#f38ba8; color:#f38ba8; }
+
+        /* ── Settings sections ───────────────────────────────── */
+        .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
+        .settings-section:last-child { border-bottom:none; }
+        .settings-section-title { font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#6c7086; margin-bottom:10px; }
+        .settings-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; }
+        .settings-label { font-size:13px; color:#a6adc8; }
+        .settings-value { font-size:13px; color:#cdd6f4; font-family:var(--font-mono); }
+        .settings-btn-full { width:100%; padding:10px; border:none; border-radius:8px; font-size:13px; cursor:pointer; margin-top:8px; transition:background 120ms; }
+        .settings-btn-primary { background:#313244; color:#89b4fa; }
+        .settings-btn-export  { background:#313244; color:#f38ba8; }
+        .settings-btn-full:active { background:#45475a; }
+
+        /* ── Grid skeleton shimmer ───────────────────────────── */
+        @keyframes shimmer { 0%{opacity:0.4} 50%{opacity:0.8} 100%{opacity:0.4} }
+        .grid-skeleton { height:72px; background:#1e1e2e; border-radius:12px; animation:shimmer 1.2s infinite; margin-bottom:8px; }
+
+        /* ── Keyboard key ripple ─────────────────────────────── */
+        .kb-btn { position:relative; overflow:hidden; }
+        .kb-btn::after { content:''; position:absolute; inset:0; background:rgba(205,214,244,0.08); border-radius:inherit; opacity:0; transform:scale(0.6); transition:opacity 300ms, transform 300ms; pointer-events:none; }
+        .kb-btn:active::after { opacity:1; transform:scale(1); transition:none; }
+
+        /* ── Connection state pulse ──────────────────────────── */
+        @keyframes conn-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+        .conn-reconnecting .conn-dot { animation:conn-pulse 1s infinite; }
     </style>
 </head>
 <body>
@@ -1117,7 +1189,70 @@
                 </div>
             </div>
         </div>
+
+        <!-- Server section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Server</div>
+            <div class="settings-row" id="settings-server-status">
+                <span class="settings-label">Status</span>
+                <span class="settings-value" id="settings-status-val">—</span>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Version</span>
+                <span class="settings-value">1.0.0</span>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Projects</span>
+                <span class="settings-value" id="settings-project-count">—</span>
+            </div>
+        </div>
+
+        <!-- History section -->
+        <div class="settings-section">
+            <div class="settings-section-title">History</div>
+            <div class="settings-row">
+                <span class="settings-label">Interactions</span>
+                <span class="settings-value" id="settings-interaction-count">—</span>
+            </div>
+            <button class="settings-btn-full settings-btn-export" id="settings-export-btn">Export JSON</button>
+        </div>
+
+        <!-- Uploaded Images section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Uploaded Images</div>
+            <div id="settings-uploads-list" style="margin-top:8px;">
+                <span style="color:#6c7086;font-size:12px;">No uploads yet</span>
+            </div>
+        </div>
+
+        <!-- About section -->
+        <div class="settings-section">
+            <div class="settings-section-title">About</div>
+            <div class="settings-row">
+                <span class="settings-label">Copilot Sync</span>
+                <span class="settings-value" style="color:#6c7086">v1.0.0</span>
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:#6c7086;line-height:1.5">
+                Catppuccin Mocha · Berkeley Mono · ttyd 1.7.7
+            </div>
+        </div>
     </div>
+</div>
+    <div id="img-overlay" style="display:none">
+        <div id="img-overlay-card">
+            <button id="img-overlay-close" aria-label="Close">×</button>
+            <img id="img-overlay-preview" src="" alt="Pasted image">
+            <div id="img-overlay-path"></div>
+            <div id="img-overlay-actions">
+                <button id="img-overlay-copy-path">Copy path</button>
+                <button id="img-overlay-insert-path">Insert path</button>
+            </div>
+            <div id="img-overlay-status"></div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container"></div>
 
     <script>
     (function () {
@@ -1146,6 +1281,7 @@
             arrowRight: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m12 5 7 7-7 7"/><path d="M5 12h14"/></svg>',
             bot:        '<rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 15h.01"/><path d="M16 15h.01"/>',
             search:     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m10 8 4 4-4 4"/></svg>',
+            imagePaste: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><line x1="16" y1="5" x2="16" y2="11"/><line x1="19" y1="8" x2="13" y2="8"/></svg>',
         };
 
         // ── State ───────────────────────────────────────────────────────────────
@@ -1949,6 +2085,16 @@
             }
             shortcutBar.appendChild(backBtn);
 
+            // Compact / Full keyboard toggle — only in custom mode (toolbar is hidden in normal mode)
+            if (keyboardState === 'custom') {
+                const kbLayoutBtn = sbBtn(
+                    keyboardMode === 'compact' ? IC_FULL : IC_COMPACT,
+                    keyboardMode === 'compact' ? 'Full keyboard' : 'Compact keyboard',
+                    function () { setKeyboardMode(keyboardMode === 'compact' ? 'full' : 'compact'); haptic(5); }
+                );
+                kbLayoutBtn.style.opacity = '0.7';
+            }
+
             sbSep();
 
             // Palette (search / command history)
@@ -2016,6 +2162,11 @@
                 if (trackpadActive) deactivateTrackpad();
             }, { passive: true });
             shortcutBar.appendChild(spaceBtn);
+
+            sbSep();
+
+            // Image paste
+            sbBtn(IC.imagePaste, 'Paste image', function () { pasteImageFromClipboard(); });
         }
 
         // ── Keyboard rendering ──────────────────────────────────────────────────
@@ -2194,6 +2345,37 @@
                 const compactMeta = document.getElementById('settings-compact-meta');
                 if (fullMeta)    fullMeta.textContent    = layout.rows.length + ' rows';
                 if (compactMeta) compactMeta.textContent = compactLayout.rows.length + ' rows';
+
+                // Server health
+                fetch('/api/health').then(function(r) { return r.json(); }).then(function() {
+                    const el = document.getElementById('settings-status-val');
+                    if (el) { el.textContent = 'Online'; el.style.color = '#a6e3a1'; }
+                }).catch(function() {
+                    const el = document.getElementById('settings-status-val');
+                    if (el) { el.textContent = 'Offline'; el.style.color = '#f38ba8'; }
+                });
+                // Project count
+                fetch('/api/projects').then(function(r) { return r.json(); }).then(function(arr) {
+                    const el = document.getElementById('settings-project-count');
+                    if (el) el.textContent = arr.length;
+                }).catch(function(){});
+                // Interaction count
+                fetch('/api/export').then(function(r) { return r.json(); }).then(function(arr) {
+                    const el = document.getElementById('settings-interaction-count');
+                    if (el) el.textContent = arr.length;
+                }).catch(function(){});
+                // Uploads list
+                fetch('/api/uploads').then(function(r) { return r.json(); }).then(function(arr) {
+                    const el = document.getElementById('settings-uploads-list');
+                    if (!el) return;
+                    if (!arr.length) { el.innerHTML = '<span style="color:#6c7086;font-size:12px">No uploads yet</span>'; return; }
+                    el.innerHTML = arr.slice(0, 5).map(function(u) {
+                        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #313244">' +
+                            '<span style="font-size:11px;font-family:var(--font-mono);color:#89b4fa">' + u.filename + '</span>' +
+                            '<span style="font-size:10px;color:#6c7086">' + Math.round(u.size / 1024) + 'KB</span>' +
+                            '</div>';
+                    }).join('');
+                }).catch(function(){});
             }
             function closeSettings() { overlay.classList.remove('open'); }
 
@@ -2229,6 +2411,9 @@
                 if (keyboardMode === 'compact') renderKeyboard();
                 closeSettings();
             });
+            document.getElementById('settings-export-btn').addEventListener('click', function () {
+                window.open('/api/export', '_blank');
+            });
         })();
 
         // Cancel edit mode when tapping outside the panel
@@ -2255,7 +2440,7 @@
                 if (terminalInstance && typeof terminalInstance.getSelection === 'function') text = terminalInstance.getSelection();
                 if (!text) { try { text = iframe.contentWindow.getSelection().toString(); } catch (e) {} }
                 if (!text) { const s = window.getSelection(); if (s) text = s.toString(); }
-                if (text) { await navigator.clipboard.writeText(text); flashButton(copyBtn, 'flash-green'); }
+                if (text) { await navigator.clipboard.writeText(text); flashButton(copyBtn, 'flash-green'); toast('Copied', 'success'); }
             } catch (err) { console.warn('Copy failed:', err); }
         }
         async function handlePaste() {
@@ -2272,7 +2457,110 @@
                 } catch (e) {}
                 if (!sent) { for (const ch of text) sendKey(ch); }
                 flashButton(pasteBtn, 'flash-blue'); haptic(10);
+                toast('Pasted', 'success');
             } catch (err) { console.warn('Paste failed:', err); }
+        }
+
+        // ── Toast ───────────────────────────────────────────────────────────────
+        function toast(msg, type, duration) {
+            duration = duration || 2000;
+            const c = document.getElementById('toast-container');
+            if (!c) return;
+            const el = document.createElement('div');
+            el.className = 'toast' + (type ? ' t-' + type : '');
+            el.textContent = msg;
+            c.appendChild(el);
+            requestAnimationFrame(function() { el.classList.add('t-visible'); });
+            setTimeout(function() {
+                el.classList.remove('t-visible');
+                setTimeout(function() { el.remove(); }, 220);
+            }, duration);
+        }
+
+        // ── Terminal text injection ─────────────────────────────────────────────
+        function sendTextToTerminal(text) {
+            const ws = findTerminalWS();
+            if (ws && ws.readyState === WebSocket.OPEN) { ws.send('0' + text); return; }
+            if (terminalInstance && typeof terminalInstance.input === 'function') { terminalInstance.input(text, false); }
+        }
+
+        // ── Image paste ─────────────────────────────────────────────────────────
+        async function pasteImageFromClipboard() {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.read) throw new Error('no clipboard API');
+                const items = await navigator.clipboard.read();
+                for (const item of items) {
+                    const imgType = item.types.find(function(t) { return t.startsWith('image/'); });
+                    if (imgType) {
+                        const blob = await item.getType(imgType);
+                        await uploadImageBlob(blob, imgType);
+                        return;
+                    }
+                }
+            } catch (e) {}
+            // Fallback: file picker
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async function() {
+                if (!this.files[0]) return;
+                await uploadImageBlob(this.files[0], this.files[0].type);
+            };
+            input.click();
+        }
+
+        async function uploadImageBlob(blob, mimeType) {
+            showImageOverlay(URL.createObjectURL(blob), 'Uploading\u2026', null);
+            try {
+                const reader = new FileReader();
+                const b64 = await new Promise(function(res, rej) {
+                    reader.onload = function(e) { res(e.target.result.split(',')[1]); };
+                    reader.onerror = rej;
+                    reader.readAsDataURL(blob);
+                });
+                const resp = await fetch('/api/upload-image', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({data: b64, type: mimeType}),
+                });
+                if (!resp.ok) throw new Error('upload failed');
+                const result = await resp.json();
+                showImageOverlay(URL.createObjectURL(blob), result.path, result.path);
+            } catch (e) {
+                const statusEl = document.getElementById('img-overlay-status');
+                if (statusEl) statusEl.textContent = 'Upload failed. Try again.';
+            }
+        }
+
+        function showImageOverlay(imgSrc, pathText, injectPath) {
+            const overlay   = document.getElementById('img-overlay');
+            const preview   = document.getElementById('img-overlay-preview');
+            const pathEl    = document.getElementById('img-overlay-path');
+            const statusEl  = document.getElementById('img-overlay-status');
+            if (!overlay) return;
+            preview.src       = imgSrc;
+            pathEl.textContent  = pathText;
+            statusEl.textContent = injectPath ? 'Image saved on server' : '';
+            overlay.style.display = 'flex';
+            requestAnimationFrame(function() { overlay.classList.add('io-visible'); });
+
+            document.getElementById('img-overlay-close').onclick = function() {
+                overlay.classList.remove('io-visible');
+                setTimeout(function() { overlay.style.display = 'none'; }, 200);
+            };
+            document.getElementById('img-overlay-copy-path').onclick = function() {
+                if (!injectPath) return;
+                navigator.clipboard.writeText(injectPath).catch(function(){});
+                statusEl.textContent = 'Path copied!';
+                toast('Path copied', 'success');
+                setTimeout(function() { statusEl.textContent = ''; }, 2000);
+            };
+            document.getElementById('img-overlay-insert-path').onclick = function() {
+                if (!injectPath) return;
+                sendTextToTerminal(injectPath);
+                overlay.classList.remove('io-visible');
+                setTimeout(function() { overlay.style.display = 'none'; }, 200);
+            };
         }
 
         // ── Key editor sheet ────────────────────────────────────────────────────
@@ -2846,9 +3134,14 @@
         }
 
         // ── Project grid overlay ───────────────────────────────────────────────
-        function openProjectGrid() {
-            renderProjectGrid();
+        async function openProjectGrid() {
+            const grid = document.getElementById('project-grid-cards');
+            if (grid) {
+                grid.innerHTML = '<div class="grid-skeleton"></div><div class="grid-skeleton"></div><div class="grid-skeleton"></div>';
+            }
             document.getElementById('project-grid-overlay').classList.add('open');
+            try { projects = await apiJson('/api/projects'); } catch (e) {}
+            renderProjectGrid();
         }
 
         function closeProjectGrid() {
