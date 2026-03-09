@@ -2040,10 +2040,17 @@
 
             if (keyboardState === 'hidden') {
                 shortcutBar.style.bottom = navH + 'px';
-                if (pathFooterEl) pathFooterEl.style.bottom = (navH + 44) + 'px';
             } else {
                 shortcutBar.style.bottom = (navH + panelH + pfH) + 'px';
-                if (pathFooterEl) pathFooterEl.style.bottom = (navH + panelH) + 'px';
+            }
+            // Park footer off-screen when empty so translateY(105%) can't bleed into the keyboard panel
+            if (pathFooterEl) {
+                if (pfHasContent) {
+                    const pfBottom = keyboardState === 'hidden' ? (navH + 44) : (navH + panelH);
+                    pathFooterEl.style.bottom = pfBottom + 'px';
+                } else {
+                    pathFooterEl.style.bottom = '-50px';
+                }
             }
             shortcutBar.classList.add('sb-visible');
             // Only make footer visible when it has content
