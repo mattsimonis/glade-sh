@@ -896,7 +896,7 @@
                 <span class="status-dot connected" id="status-dot"></span>
                 <span id="status-text">Connected</span>
             </div>
-            <div id="reconnect-overlay">
+            <div id="reconnect-overlay" tabindex="-1">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fab387" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                     <path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
@@ -3022,6 +3022,7 @@
             renderProjectTabs();
             stopShellPoll();
             document.getElementById('shell-tabs-bar').innerHTML = '';
+            reconnectInProgress = false; // project switch supersedes any in-flight reconnect
             // Reset cached terminal references — they belong to the old ttyd page
             terminalInstance = null;
             xtermTextarea = null;
@@ -3896,16 +3897,19 @@
             termPollTimer = setInterval(function () {
                 if (findTerminal() || attempts > 40) {
                     clearInterval(termPollTimer);
+                    reconnectInProgress = false;
                     if (xtermTextarea) setConnectionState('connected');
                 }
                 attempts++;
             }, 500);
         }
         function forceReconnect() {
+            if (reconnectInProgress) return; // already in flight
+            reconnectInProgress = true;
             consecutiveFailures = 0;
             // Use currentProjectId or fall back to last known project from localStorage
             const pid = currentProjectId || localStorage.getItem('lastProjectId');
-            if (!pid) { location.reload(); return; }
+            if (!pid) { reconnectInProgress = false; location.reload(); return; }
             if (reconnectTitle) reconnectTitle.textContent = 'Reconnecting\u2026';
             terminalInstance = null; xtermTextarea = null; selListenerAdded = false;
             // Call /start (idempotent) to ensure ttyd is alive, then do a true iframe reload.
@@ -3921,14 +3925,19 @@
                     iframe.src = 'about:blank';
                     requestAnimationFrame(function () { iframe.src = url || '/'; startTerminalPoll(); });
                 });
+            // Safety: clear the flag after 30s in case everything silently fails
+            setTimeout(function () { reconnectInProgress = false; }, 30000);
         }
         reconnectOverlay.addEventListener('click', function () {
             if (connectionState !== 'connected') forceReconnect();
         });
         reconnectOverlay.addEventListener('touchend', function (e) {
             e.preventDefault();
-            if (connectionState !== 'connected') forceReconnect();
+            forceReconnect();
         }, { passive: false });
+        reconnectOverlay.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); forceReconnect(); }
+        });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && connectionState !== 'connected') { e.preventDefault(); forceReconnect(); }
         });
@@ -3953,8 +3962,9 @@
                 reconnectOverlay.classList.add('visible');
                 reconnectOverlay.classList.toggle('disconnected', state === 'disconnected');
                 reconnectTitle.textContent = state === 'disconnected' ? 'Disconnected' : 'Reconnecting...';
-                reconnectHint.textContent  = 'Tap to reconnect';
+                reconnectHint.textContent  = 'Tap or press Enter to reconnect';
                 if (state === 'disconnected') haptic([50,30,50]);
+                setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
             } else {
                 reconnectOverlay.classList.remove('visible', 'disconnected');
             }
@@ -3964,8 +3974,10 @@
                 statusFadeTimer = setTimeout(function () { statusIndicator.classList.add('fade-out'); }, 4000);
         }
         let consecutiveFailures = 0;
+        let reconnectInProgress = false;
         const MAX_FAIL_RECONNECTING = 2, MAX_FAIL_DISCONNECTED = 6;
         function checkConnection() {
+            if (reconnectInProgress) return; // don't fight an active reconnect
             try {
                 const doc = iframe.contentWindow && iframe.contentWindow.document;
                 if (doc && doc.body && doc.body.children.length > 0) {
@@ -3978,6 +3990,7 @@
         }
         setInterval(checkConnection, 2000);
         iframe.addEventListener('load', function () {
+            if (iframe.src === 'about:blank' || !iframe.src || iframe.src === location.origin + '/') return; // skip blank navigations
             setTimeout(function () { consecutiveFailures = 0; setConnectionState('connected'); findTerminal(); }, 500);
             // Retry wireOsc7 — WebSocket may not be open immediately after iframe load
             let osc7Attempts = 0;
