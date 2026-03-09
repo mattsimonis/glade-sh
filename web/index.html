@@ -963,7 +963,7 @@
         .toast.t-exit::before,
         .toast.t-exit::after {
             animation: none !important;
-            transition: opacity 150ms ease;
+            transition: opacity 150ms ease 240ms;  /* hold until height collapses, then fade */
             opacity: 0;
         }
         .toast.t-exit .toast-msg {
