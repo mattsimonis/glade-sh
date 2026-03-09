@@ -1,0 +1,2 @@
+# Short Catppuccin Mocha prompt: ~/path ❯
+PS1='\[\e[38;2;203;166;247m\]\w\[\e[0m\] \[\e[38;2;137;180;250m\]❯\[\e[0m\] '

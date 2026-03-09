@@ -1,0 +1,38 @@
+export ZSH="$HOME/.oh-my-zsh"
+
+# Minimal prompt — path is shown in the web UI footer via OSC 7
+ZSH_THEME=""
+PROMPT='> '
+RPROMPT=''
+
+plugins=(
+  git
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+  extract
+  z
+)
+
+source $ZSH/oh-my-zsh.sh
+
+# ── OSC 7 — report CWD to the web UI footer on every prompt ──────────────────
+# Consumed by xterm.js parser.registerOscHandler(7, ...) in index.html
+_osc7_report() {
+  printf "\033]7;file://%s%s\033\\" "${HOST:-localhost}" "$PWD"
+}
+
+# ── Hooks ─────────────────────────────────────────────────────────────────────
+precmd() {
+  _osc7_report
+  if [[ -n "$TMUX" ]]; then
+    tmux rename-window "$(basename "$PWD")" 2>/dev/null
+  fi
+}
+preexec() {
+  if [[ -n "$TMUX" ]]; then
+    tmux rename-window "${${1%% *}##*/}" 2>/dev/null
+  fi
+}
+
+# copilot-sync wrapper — intercepts gh copilot calls and logs to SQLite
+[ -f /root/.copilot-sync/bin/copilot-wrap ] && source /root/.copilot-sync/bin/copilot-wrap

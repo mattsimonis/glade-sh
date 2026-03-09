@@ -1,0 +1,36 @@
+# Copilot Sync — web container file server
+# Serves the HTML wrapper and static assets for caddy-proxy to front.
+# Mounted into the copilot-sync-web container at /etc/caddy/Caddyfile.
+
+:7682 {
+	# API proxy — routes to ttyd container (API runs there now)
+	handle /api/* {
+		reverse_proxy copilot-sync-ttyd:7683
+	}
+
+	# Assets (fonts, etc.) — long cache, they never change
+	handle /assets/* {
+		root * /srv
+		file_server
+	}
+
+	# HTML wrapper — never cache so mobile browsers always get latest
+	handle {
+		root * /srv/web
+		file_server
+		try_files {path} /index.html
+	}
+
+	header {
+		-X-Frame-Options
+		X-Content-Type-Options nosniff
+	}
+
+	# No-cache for HTML, long cache for assets
+	@html {
+		path / /index.html
+	}
+	header @html Cache-Control "no-cache, no-store, must-revalidate"
+	header @html Pragma "no-cache"
+}
+

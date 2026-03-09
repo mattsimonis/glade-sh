@@ -1,0 +1,57 @@
+# Copilot Sync — Docker Compose
+#
+# Services:
+#   ttyd — terminal server + API (project lifecycle, snippets, layout)
+#   web  — Caddy file-server for the HTML wrapper and assets
+#
+# The api service has been merged into the ttyd container.
+# Caddy reverse proxy is a separate standalone container (caddy-proxy on shared_web).
+# Add the ai.home block from services/Caddyfile to your standalone Caddy's Caddyfile.
+#
+# Prerequisites:
+#   - ~/.config/gh/ must contain valid gh CLI auth tokens (run `gh auth login` first)
+#   - ~/.copilot-sync/ must exist with web/, assets/, db/ populated (run install.sh first)
+#   - Docker network 'shared_web' must exist: docker network create shared_web
+#   - ai.home DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
+#   - TLS cert for ai.home in your Caddy certs directory (see services/Caddyfile)
+#
+# Usage:
+#   docker compose up -d        # start (or restart) all services
+#   docker compose build ttyd   # rebuild after Dockerfile/api changes
+#   # Then visit https://ai.home from any device on your local network
+
+services:
+  ttyd:
+    build: .
+    container_name: copilot-sync-ttyd
+    # No ports needed — caddy-proxy handles external access via shared_web
+    volumes:
+      - ~/.copilot-sync:/root/.copilot-sync
+      - ~/.config/gh:/root/.config/gh
+      - copilot_bin:/root/.local/share/gh
+      - /Volumes/Photos/Dev:/mnt/dev
+    environment:
+      - TERM=xterm-256color
+      - COPILOT_SYNC_DIR=/root/.copilot-sync
+    restart: unless-stopped
+    networks:
+      - shared_web
+
+  web:
+    image: caddy:2-alpine
+    container_name: copilot-sync-web
+    # No ports needed — caddy-proxy handles external access via shared_web
+    volumes:
+      - ./services/web.Caddyfile:/etc/caddy/Caddyfile:ro
+      - ~/.copilot-sync/web:/srv/web:ro
+      - ~/.copilot-sync/assets:/srv/assets:ro
+    restart: unless-stopped
+    networks:
+      - shared_web
+
+networks:
+  shared_web:
+    external: true
+
+volumes:
+  copilot_bin:

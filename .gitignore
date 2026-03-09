@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyk
+.Python
+*.pyc
+
+# Backups
+*.bak
+*.swp
+*.orig
+
+# Runtime / local state
+logs/raw/*.log
+db/history.db
+*.db-wal
+*.db-shm
+
+# Fonts (licensed — do not commit)
+assets/fonts/*.ttf
+assets/fonts/*.otf
+assets/fonts/*.woff
+assets/fonts/*.woff2
+
+# Credentials / secrets
+.env
+*.pem
+*.key
+
+# IDE
+.vscode/
+.idea/

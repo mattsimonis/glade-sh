@@ -1,0 +1,44 @@
+# Copilot Sync — Caddy block for caddy-proxy (standalone container)
+#
+# Add this block to your Caddy project's Caddyfile, then generate a cert
+# with mkcert (same CA already used for fizzy.home and yoto.home):
+#
+#   cd /Volumes/Photos/Dev/caddy
+#   mkcert ai.home
+#   mv ai.home.pem certs/ai.home.pem
+#   mv ai.home-key.pem certs/ai.home-key.pem
+#   docker restart caddy-proxy
+#
+# Both copilot-sync-ttyd and copilot-sync-web must be on the shared_web network.
+# DNS: add an A record for ai.home in Pi-hole pointing to the Mac Mini's LAN IP.
+
+ai.home {
+	# ── Dynamic ttyd port routing: /ttyd/{port}/... → copilot-sync-ttyd:{port} ──
+	@ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
+	handle @ttyd_proxy {
+		uri strip_prefix /ttyd/{http.regexp.tport.1}
+
+		reverse_proxy copilot-sync-ttyd:{http.regexp.tport.1} {
+			header_up X-Forwarded-Proto {scheme}
+			flush_interval -1
+			transport http {
+				versions 1.1
+				read_timeout  0
+				write_timeout 0
+			}
+		}
+	}
+
+	# ── HTML wrapper + static assets ─────────────────────────────────
+	handle {
+		reverse_proxy copilot-sync-web:7682
+	}
+
+	tls /etc/caddy/certs/ai.home.pem /etc/caddy/certs/ai.home-key.pem
+
+	header {
+		-X-Frame-Options
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
