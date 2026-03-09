@@ -1,2 +1,8 @@
-# Short Catppuccin Mocha prompt: ~/path ❯
-PS1='\[\e[38;2;203;166;247m\]\w\[\e[0m\] \[\e[38;2;137;180;250m\]❯\[\e[0m\] '
+# Minimal prompt — path is shown in the web UI footer via OSC 7
+PS1='> '
+
+# ── OSC 7 — report CWD to the web UI footer on every prompt ──────────────────
+_osc7_report() {
+  printf '\033]7;file://%s%s\033\\' "$(hostname)" "$PWD"
+}
+PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }_osc7_report"

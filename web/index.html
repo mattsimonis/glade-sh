@@ -863,7 +863,6 @@
 
         /* ── Connection state pulse ──────────────────────────── */
         @keyframes conn-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
-        .conn-reconnecting .conn-dot { animation:conn-pulse 1s infinite; }
     </style>
 </head>
 <body>
@@ -1167,28 +1166,29 @@
             </button>
         </div>
         <div class="settings-body">
-            <div class="settings-section-label">Keyboard Layouts</div>
-            <div class="settings-card">
-                <div class="settings-card-info">
-                    <span class="settings-card-name">Full Keyboard</span>
-                    <span class="settings-card-meta" id="settings-full-meta">7 rows</span>
+            <div class="settings-section">
+                <div class="settings-section-title">Keyboard Layouts</div>
+                <div class="settings-card">
+                    <div class="settings-card-info">
+                        <span class="settings-card-name">Full Keyboard</span>
+                        <span class="settings-card-meta" id="settings-full-meta">7 rows</span>
+                    </div>
+                    <div class="settings-card-actions">
+                        <button class="settings-btn" id="settings-edit-full">Edit</button>
+                        <button class="settings-btn settings-btn-danger" id="settings-reset-full">Reset</button>
+                    </div>
                 </div>
-                <div class="settings-card-actions">
-                    <button class="settings-btn" id="settings-edit-full">Edit</button>
-                    <button class="settings-btn settings-btn-danger" id="settings-reset-full">Reset</button>
+                <div class="settings-card">
+                    <div class="settings-card-info">
+                        <span class="settings-card-name">Compact Keyboard</span>
+                        <span class="settings-card-meta" id="settings-compact-meta">4 rows</span>
+                    </div>
+                    <div class="settings-card-actions">
+                        <button class="settings-btn" id="settings-edit-compact">Edit</button>
+                        <button class="settings-btn settings-btn-danger" id="settings-reset-compact">Reset</button>
+                    </div>
                 </div>
             </div>
-            <div class="settings-card">
-                <div class="settings-card-info">
-                    <span class="settings-card-name">Compact Keyboard</span>
-                    <span class="settings-card-meta" id="settings-compact-meta">4 rows</span>
-                </div>
-                <div class="settings-card-actions">
-                    <button class="settings-btn" id="settings-edit-compact">Edit</button>
-                    <button class="settings-btn settings-btn-danger" id="settings-reset-compact">Reset</button>
-                </div>
-            </div>
-        </div>
 
         <!-- Server section -->
         <div class="settings-section">
@@ -3005,6 +3005,14 @@
             // Reset cached terminal references — they belong to the old ttyd page
             terminalInstance = null;
             xtermTextarea = null;
+            // Reset OSC 7 wire so new iframe's WebSocket gets wired on load
+            window._osc7Wired = false;
+            // Clear stale path footer from previous project
+            const pfText = document.getElementById('path-footer-text');
+            if (pfText) pfText.textContent = '';
+            const pfEl = document.getElementById('path-footer');
+            if (pfEl) pfEl.classList.remove('pf-visible');
+            repositionShortcutBar();
             // Start project & get port
             try {
                 const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
