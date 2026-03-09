@@ -844,12 +844,51 @@
         #img-overlay-actions button:last-child { color:#a6e3a1; }
         #img-overlay-status { font-size:11px; color:#a6adc8; text-align:center; min-height:16px; }
 
-        /* ── Toast notifications ─────────────────────────────── */
-        #toast-container { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
-        .toast { background:#313244; color:#cdd6f4; padding:8px 16px; border-radius:20px; font-size:12px; white-space:nowrap; opacity:0; transform:translateY(-8px); transition:opacity 200ms, transform 200ms; box-shadow:0 4px 20px rgba(0,0,0,0.4); border:1px solid #45475a; }
-        .toast.t-visible { opacity:1; transform:translateY(0); }
-        .toast.t-success { border-color:#a6e3a1; color:#a6e3a1; }
-        .toast.t-error   { border-color:#f38ba8; color:#f38ba8; }
+        /* ── Toast / Dynamic Island bloom ────────────────────── */
+        #toast-container {
+            position:fixed; top:11px; left:50%; transform:translateX(-50%);
+            z-index:300; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;
+        }
+        .toast {
+            display:inline-flex; align-items:center; gap:8px;
+            padding:9px 12px; min-width:126px; max-width:min(320px, calc(100vw - 32px));
+            border-radius:50px; background:#181825; color:transparent;
+            font-size:13px; font-family:var(--font-mono); font-weight:500;
+            white-space:nowrap; overflow:hidden; justify-content:center;
+            box-shadow:0 4px 16px rgba(0,0,0,0.4);
+            /* bloom-in: spring overshoot on shape, delayed color reveal */
+            transition:
+                padding        500ms cubic-bezier(0.34,1.56,0.64,1),
+                min-width      500ms cubic-bezier(0.34,1.56,0.64,1),
+                border-radius  500ms cubic-bezier(0.34,1.56,0.64,1),
+                background     300ms ease,
+                color          200ms ease 260ms,
+                box-shadow     400ms ease,
+                transform      500ms cubic-bezier(0.34,1.56,0.64,1),
+                opacity        250ms ease;
+            opacity:0; transform:scale(0.6); transform-origin:top center;
+        }
+        .toast.t-visible {
+            padding:11px 18px; min-width:180px; border-radius:22px;
+            background:#313244; color:#cdd6f4;
+            box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 1px #45475a;
+            transform:scale(1) translateY(4px); opacity:1; justify-content:flex-start;
+        }
+        /* faster ease-in snap back to island */
+        .toast.t-exit {
+            transition:
+                padding       300ms ease-in,
+                min-width     300ms ease-in,
+                border-radius 300ms ease-in,
+                background    200ms ease,
+                color         100ms ease,
+                box-shadow    200ms ease,
+                transform     300ms ease-in,
+                opacity       200ms ease 50ms;
+        }
+        .toast.t-success.t-visible { color:#a6e3a1; }
+        .toast.t-error.t-visible   { color:#f38ba8; }
+        .toast-icon { flex-shrink:0; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
@@ -2482,18 +2521,32 @@
         }
 
         // ── Toast ───────────────────────────────────────────────────────────────
+        const CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+        const X_SVG     = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
         function toast(msg, type, duration) {
             duration = duration || 2000;
             const c = document.getElementById('toast-container');
             if (!c) return;
             const el = document.createElement('div');
             el.className = 'toast' + (type ? ' t-' + type : '');
-            el.textContent = msg;
+            if (type === 'success' || type === 'error') {
+                const icon = document.createElement('span');
+                icon.className = 'toast-icon';
+                icon.innerHTML = type === 'success' ? CHECK_SVG : X_SVG;
+                el.appendChild(icon);
+            }
+            const txt = document.createElement('span');
+            txt.textContent = msg;
+            el.appendChild(txt);
             c.appendChild(el);
-            requestAnimationFrame(function() { el.classList.add('t-visible'); });
-            setTimeout(function() {
+            // double-rAF: ensure initial styles are painted before transition fires
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { el.classList.add('t-visible'); });
+            });
+            setTimeout(function () {
+                el.classList.add('t-exit');
                 el.classList.remove('t-visible');
-                setTimeout(function() { el.remove(); }, 220);
+                setTimeout(function () { el.remove(); }, 320);
             }, duration);
         }
 
@@ -3576,21 +3629,8 @@
             } catch(e) {}
         }
         function showCopyToast(text) {
-            let t = document.getElementById('copy-toast');
-            if (!t) {
-                t = document.createElement('div');
-                t.id = 'copy-toast';
-                t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);' +
-                    'background:#313244;color:#a6e3a1;border:1px solid rgba(166,227,161,0.25);' +
-                    'border-radius:8px;padding:6px 14px;font-size:12px;font-family:var(--font-mono);' +
-                    'z-index:9999;pointer-events:none;transition:opacity 300ms;white-space:nowrap;';
-                document.body.appendChild(t);
-            }
-            const preview = text.length > 32 ? text.slice(0, 32) + '…' : text;
-            t.textContent = '✓ Copied: ' + preview;
-            t.style.opacity = '1';
-            clearTimeout(t._timer);
-            t._timer = setTimeout(function() { t.style.opacity = '0'; }, 1800);
+            const preview = text.length > 32 ? text.slice(0, 32) + '\u2026' : text;
+            toast('Copied: ' + preview, 'success', 1800);
         }
         function updateTrackpad(x, y) {
             const dx = x - trackpadAnchorX, dy = y - trackpadAnchorY;
