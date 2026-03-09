@@ -889,7 +889,7 @@
         @keyframes toast-spin { to { --toast-angle: 1turn; } }
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
-            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none;
+            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:0; pointer-events:none;
         }
         .toast {
             --glow-color: #89b4fa;  /* default: blue */
@@ -902,7 +902,8 @@
             border:2px solid transparent;
             border-radius:21px;
             opacity:0;
-            transition: height 400ms cubic-bezier(0.34,1.56,0.64,1) 160ms, opacity 220ms ease;
+            margin-bottom:10px;
+            transition: height 400ms cubic-bezier(0.34,1.56,0.64,1) 160ms, opacity 220ms ease, margin-bottom 200ms ease;
         }
         .toast.t-success { --glow-color: #a6e3a1; }
         .toast.t-error   { --glow-color: #f38ba8; }
@@ -2671,7 +2672,13 @@
                 el.classList.add('t-exit');
                 setTimeout(function () {
                     el.classList.add('t-fading');
-                    setTimeout(function () { el.remove(); }, 140);
+                    setTimeout(function () {
+                        // Slide siblings up smoothly before removing
+                        el.style.transition = 'height 180ms ease, margin-bottom 180ms ease';
+                        el.style.height = '0';
+                        el.style.marginBottom = '0';
+                        setTimeout(function () { el.remove(); }, 190);
+                    }, 140);
                 }, 320);
             }
 
