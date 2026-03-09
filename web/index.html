@@ -877,65 +877,59 @@
         #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:#a6adc8; background:#11111b; border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
 
         /* ── Toast / Dynamic Island embrace ──────────────────── */
-        /* The card sits at top:11px (exact island Y) with a near-black bg
-           matching the island hardware. The island hardware visually merges
-           into the card top. A 37px spacer pushes content below the cutout.
-           Card expands outward from island-width; height animated via CSS
-           grid 0fr→1fr trick (the only way to animate height:auto in CSS). */
+        /* Pill sits at top:11px (island Y). #060608 bg matches hardware island.
+           Both width AND height spring open simultaneously — icon scales up in
+           the visible area below the cutout, text reveals beneath it.
+           Content uses `justify-content:flex-end` so it anchors to the bottom
+           of the pill; the top 37px merges with the hardware island. */
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
             z-index:300; display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none;
         }
         .toast {
-            width:126px; max-width:calc(100vw - 32px);
+            position:relative;
+            width:126px; height:37px; max-width:calc(100vw - 32px);
             background:#060608; border-radius:24px; overflow:hidden;
-            box-shadow:0 20px 60px rgba(0,0,0,0.8);
-            transform-origin:top center;
+            box-shadow:0 16px 48px rgba(0,0,0,0.7);
             transition:
-                width          520ms cubic-bezier(0.34,1.56,0.64,1),
-                border-radius  480ms cubic-bezier(0.34,1.56,0.64,1),
-                box-shadow     400ms ease,
-                opacity        200ms ease,
-                transform      520ms cubic-bezier(0.34,1.56,0.64,1);
-            opacity:0; transform:scale(0.88);
+                width         520ms cubic-bezier(0.34,1.56,0.64,1),
+                height        520ms cubic-bezier(0.34,1.56,0.64,1),
+                border-radius 480ms cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow    350ms ease,
+                opacity       180ms ease;
+            opacity:0;
         }
-        /* spacer = island height; its dark bg merges with physical island hardware */
-        .toast-island-pad { height:37px; }
-        /* grid trick: animate body height to auto */
-        .toast-body-wrap {
-            display:grid; grid-template-rows:0fr;
-            transition:grid-template-rows 440ms cubic-bezier(0.34,1.56,0.64,1) 50ms;
+        .toast-inner {
+            position:absolute; inset:0;
+            display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+            padding:0 20px 14px; gap:7px;
         }
-        .toast-body {
-            min-height:0; overflow:hidden;
-            display:flex; align-items:center; gap:10px;
-            padding:0 20px; font-size:14px; font-family:var(--font-mono); font-weight:500;
-            color:transparent; white-space:nowrap;
-            transition:color 180ms ease 300ms, padding-bottom 440ms cubic-bezier(0.34,1.56,0.64,1) 50ms;
-            padding-bottom:0;
+        .toast-status-icon {
+            line-height:0; color:transparent;
+            transform:scale(0.4); transition:color 150ms ease 310ms, transform 280ms cubic-bezier(0.34,1.56,0.64,1) 290ms;
+        }
+        .toast-msg {
+            font-size:13px; font-family:var(--font-mono); font-weight:500;
+            color:transparent; white-space:nowrap; text-align:center; line-height:1;
+            transform:translateY(6px); transition:color 150ms ease 370ms, transform 250ms ease 350ms;
         }
         /* === visible === */
-        .toast.t-visible {
-            width:min(340px,calc(100vw - 32px)); border-radius:44px;
-            opacity:1; transform:scale(1);
-            box-shadow:0 24px 64px rgba(0,0,0,0.85),0 6px 24px rgba(0,0,0,0.5);
-        }
-        .toast.t-visible .toast-body-wrap { grid-template-rows:1fr; }
-        .toast.t-visible .toast-body { color:#cdd6f4; padding-bottom:20px; }
-        .toast.t-success.t-visible .toast-body { color:#a6e3a1; }
-        .toast.t-error.t-visible   .toast-body { color:#f38ba8; }
-        /* === exit: collapse back to island === */
+        .toast.t-visible { width:min(230px,calc(100vw - 32px)); height:96px; border-radius:40px; opacity:1; box-shadow:0 24px 64px rgba(0,0,0,0.85); }
+        .toast.t-visible .toast-status-icon { transform:scale(1); }
+        .toast.t-visible .toast-msg         { color:#cdd6f4; transform:translateY(0); }
+        .toast.t-success.t-visible .toast-status-icon { color:#a6e3a1; }
+        .toast.t-error.t-visible   .toast-status-icon { color:#f38ba8; }
+        /* === exit: spring back to island === */
         .toast.t-exit {
             transition:
                 width         300ms ease-in,
+                height        300ms ease-in,
                 border-radius 280ms ease-in,
-                box-shadow    200ms ease,
-                opacity       220ms ease 80ms,
-                transform     300ms ease-in;
+                box-shadow    180ms ease,
+                opacity       220ms ease 80ms;
         }
-        .toast.t-exit .toast-body-wrap { transition:grid-template-rows 260ms ease-in; }
-        .toast.t-exit .toast-body      { transition:color 80ms ease, padding-bottom 260ms ease-in; }
-        .toast-icon { flex-shrink:0; }
+        .toast.t-exit .toast-status-icon { transition:color 60ms ease, transform 220ms ease-in; }
+        .toast.t-exit .toast-msg         { transition:color 60ms ease, transform 220ms ease-in; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid #313244; }
@@ -2620,44 +2614,35 @@
         }
 
         // ── Toast ───────────────────────────────────────────────────────────────
-        const CHECK_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-        const X_SVG     = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+        const CHECK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+        const X_SVG     = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
         function toast(msg, type, duration) {
             duration = duration || 2500;
             const c = document.getElementById('toast-container');
             if (!c) return;
 
-            // Structure:
-            //  .toast > .toast-island-pad (37px spacer, merges with hardware island)
-            //         > .toast-body-wrap  (grid 0fr→1fr for height:auto animation)
-            //             > .toast-body   (icon + text)
-            const el   = document.createElement('div');
+            const el = document.createElement('div');
             el.className = 'toast' + (type ? ' t-' + type : '');
 
-            const pad  = document.createElement('div');
-            pad.className = 'toast-island-pad';
-            el.appendChild(pad);
+            const inner = document.createElement('div');
+            inner.className = 'toast-inner';
 
-            const wrap = document.createElement('div');
-            wrap.className = 'toast-body-wrap';
-
-            const body = document.createElement('div');
-            body.className = 'toast-body';
+            // Status icon (large, appears first, anchored above text)
             if (type === 'success' || type === 'error') {
-                const icon = document.createElement('span');
-                icon.className = 'toast-icon';
-                icon.innerHTML = type === 'success' ? CHECK_SVG : X_SVG;
-                body.appendChild(icon);
+                const iconEl = document.createElement('div');
+                iconEl.className = 'toast-status-icon';
+                iconEl.innerHTML = type === 'success' ? CHECK_SVG : X_SVG;
+                inner.appendChild(iconEl);
             }
-            const txt = document.createElement('span');
-            txt.textContent = msg;
-            body.appendChild(txt);
 
-            wrap.appendChild(body);
-            el.appendChild(wrap);
+            const msgEl = document.createElement('div');
+            msgEl.className = 'toast-msg';
+            msgEl.textContent = msg;
+            inner.appendChild(msgEl);
+
+            el.appendChild(inner);
             c.appendChild(el);
 
-            // double-rAF: ensure initial styles paint before transition fires
             requestAnimationFrame(function () {
                 requestAnimationFrame(function () { el.classList.add('t-visible'); });
             });
