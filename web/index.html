@@ -358,7 +358,7 @@
             will-change:transform, opacity;
         }
         #panel-slider { display:flex; width:400%; height:100%; will-change:transform; }
-        .panel-view { width:calc(100%/4); flex-shrink:0; display:flex; flex-direction:column; height:100%; overflow-y:auto; overflow-x:hidden; touch-action: pan-y; }
+        .panel-view { width:calc(100%/3); flex-shrink:0; display:flex; flex-direction:column; height:100%; overflow-y:auto; overflow-x:hidden; touch-action: pan-y; }
 
         /* ── Keyboard toolbar ─────────────────────────────────── */
         #kb-toolbar { display:flex; align-items:center; padding:3px 6px 2px; flex-shrink:0; min-height:28px;
@@ -1077,7 +1077,7 @@
                 </div>
             </div>
 
-            <div id="pv-copilot" class="panel-view" style="display:none"></div>
+            <div id="pv-copilot" class="panel-view" style="display:none;width:0;flex-shrink:0"></div>
           </div><!-- /#panel-slider -->
         </div><!-- /#panel -->
 
@@ -1097,9 +1097,6 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             </button>
             <!-- bot = copilot tab removed; AI toggle is in the shortcut bar -->
-            <button class="nav-btn" id="nav-projects-btn" aria-label="Projects">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-            </button>
             <div class="nav-divider"></div>
             <!-- settings gear -->
             <button class="nav-btn" id="nav-settings-btn" aria-label="Settings">
