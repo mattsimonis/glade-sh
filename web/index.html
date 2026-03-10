@@ -3082,12 +3082,13 @@
                 tile.addEventListener('touchend', function(e) {
                     e.preventDefault(); // suppress synthetic click that follows touchend
                     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-                    if (longPressed) { longPressed = false; return; }
+                    if (longPressed) { return; } // leave longPressed=true; click handler clears it
                     sendSnippetCommand(snip);
                 }, { passive: false });
-                // Desktop: click to run, right-click for context menu
+                // Desktop: click to run, right-click for context menu.
+                // Also absorbs the iOS synthetic click that fires after a long-press touchend.
                 tile.addEventListener('click', function(e) {
-                    if (longPressed) return;
+                    if (longPressed) { longPressed = false; return; }
                     sendSnippetCommand(snip);
                 });
                 tile.addEventListener('contextmenu', function(e) {
@@ -3325,11 +3326,11 @@
                 card.addEventListener('touchend', function(e) {
                     e.preventDefault();
                     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-                    if (longPressed) { longPressed = false; return; }
+                    if (longPressed) { return; } // leave longPressed=true; click handler clears it
                     openLogViewer(log.project, log.file, log.display_name, log.active);
                 }, { passive: false });
                 card.addEventListener('click', function() {
-                    if (longPressed) return;
+                    if (longPressed) { longPressed = false; return; }
                     openLogViewer(log.project, log.file, log.display_name, log.active);
                 });
                 card.addEventListener('contextmenu', function(e) {
