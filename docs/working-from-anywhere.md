@@ -1,7 +1,7 @@
 # Working From Anywhere — Roost Setup Guide
 
 Your Mac Mini runs the hub. Every device reaches it through Tailscale.
-The terminal is a ttyd session inside Docker. `gh copilot` runs there.
+The terminal is a ttyd session inside Docker — your tools run there.
 
 The gap: your project files live on your laptop, not the Mac Mini.
 This doc closes that gap.
@@ -57,7 +57,7 @@ You'll enter your laptop password once. After that — no passwords.
    ssh matt@matts-macbook
    cd ~/Dev/my-project
    ```
-3. You're now on your laptop. `gh copilot suggest` works with full project context.
+3. You're now on your laptop. Your tools work with full project context.
 4. When done: `exit` returns you to the Mac Mini shell.
 
 ### Create a project shortcut for it
@@ -186,20 +186,15 @@ caffeinate -i
 
 ---
 
-## What gh copilot Needs to Work Well
+## CLI Tools Over SSH
 
-`gh copilot suggest` and `gh copilot explain` are most useful when:
+Tools installed in your Roost container (via `config/packages.sh`) are available in the Mac Mini terminal. When you SSH into your laptop, you use the laptop's own tools instead.
 
-1. **You're in the project directory** — Copilot uses the CWD as context hint
-2. **You're authenticated** — `gh auth status` should show your account
-3. **The shell is clean** — no broken pipe errors, no weird prompts
+If you install `gh` on both machines:
+- On Mac Mini: `gh auth login` inside the Docker container
+- On laptop: `gh auth login` on the laptop itself
 
-If you're SSH'd into your laptop, `gh copilot` runs on the laptop (using the laptop's `gh auth`). Make sure `gh copilot` is installed on the laptop too:
-```sh
-gh extension install github/gh-copilot
-```
-
-If you want `gh copilot` to run on the Mac Mini (even for laptop projects), you can work from the Mac Mini and use git or rsync to access files.
+Any tool works the same pattern — install where you need it.
 
 ---
 
@@ -209,7 +204,6 @@ If you want `gh copilot` to run on the Mac Mini (even for laptop projects), you 
 |-----|--------|-----|
 | Project files on laptop | ✅ Solved | SSH into laptop from hub (Option 1) |
 | Second project | ✅ Solved | Same SSH workflow or clone |
-| gh copilot on laptop | Action needed | `gh extension install github/gh-copilot` on laptop |
 | Laptop stays awake | Action needed | Disable sleep-on-lid-close or use `caffeinate` |
 | SSH key from Mac Mini | Action needed | `ssh-copy-id` (one-time, 2 minutes) |
 | Tailscale on all devices | Assumed done | Already set up |
@@ -223,7 +217,7 @@ Run through this before you go to bed:
 - [ ] Enable Remote Login on your laptop (System Settings → Sharing)
 - [ ] From the Mac Mini terminal: `ssh-keygen` then `ssh-copy-id matt@matts-macbook`  
 - [ ] Test: from Mac Mini terminal, `ssh matt@matts-macbook` — should connect without password
-- [ ] `cd ~/Dev/your-project && gh copilot suggest "hello"` — should work
+- [ ] `cd ~/Dev/your-project` — your files and tools should be accessible
 - [ ] Add a shell alias so you can one-word connect tomorrow
 - [ ] Set your laptop to not sleep when plugged in (if you want to SSH into it overnight)
 - [ ] On your phone, open the Roost UI and confirm you can see your projects
@@ -238,9 +232,9 @@ That's it. Laptop stays on the desk. You pick up your phone and keep working.
 - Is your laptop on Tailscale? Check the Tailscale app on your laptop.
 - Try the IP address: `ssh matt@100.x.x.x` (find it in Tailscale admin)
 
-**`gh copilot` says not authenticated**
-- On laptop: `gh auth login`
-- On Mac Mini: `docker exec -it roost-ttyd gh auth login`
+**Tools not found after SSH**
+- SSH connects to your laptop, which has its own tools. Install what you need there.
+- To use Mac Mini tools, work from the Mac Mini terminal and sync files (Option 2).
 
 **Files out of sync between laptop and Mac Mini**
 - Option 1 (SSH) doesn't have this problem — you're editing directly on the laptop

@@ -64,7 +64,6 @@ The UI is a single-file PWA styled in Catppuccin Mocha with a mobile keyboard to
 | Standalone `caddy-proxy` container | Pre-existing; handles TLS for all `*.home` domains |
 | Pi-hole | Provides `ai.home` DNS record |
 | Tailscale | For remote access outside the home network |
-| GitHub account *(optional, for gh CLI)* | `gh auth login` inside the container for Copilot |
 | Berkeley Mono Nerd Font `.woff2` or `.ttf` *(optional)* | Licensed; must be supplied by you |
 
 ---
@@ -167,21 +166,21 @@ The UI falls back to JetBrains Mono → Fira Code → system monospace if the fo
 make setup
 ```
 
-This creates the Docker network, builds and starts the containers, then drops you into `gh auth login`. Auth tokens are stored in `~/.config/gh` (volume-mounted — survives container rebuilds).
+This creates the Docker network, builds and starts the containers.
 
 If the container was already running when you cloned:
 ```bash
 make build    # rebuild image
-make auth     # authenticate gh CLI
 ```
 
-### 6. Shell integration on the host (optional, for local logging)
+### 6. Custom packages (optional)
 
-If you want `gh copilot` calls from the host shell (outside Docker) to be logged:
+To add tools to the container image (gh CLI, Node.js, pip packages, etc.), edit `config/packages.sh` and rebuild:
 
 ```bash
-./install.sh
-source ~/.zshrc
+cp config/packages.sh.example config/packages.sh
+# Uncomment the sections you want, then:
+make build
 ```
 
 ---
@@ -372,7 +371,6 @@ make restart     # restart ttyd only (picks up api.py changes — no rebuild nee
 make build       # full rebuild (only needed after Dockerfile / config/ changes)
 make logs        # tail logs for all services
 make shell       # open a Zsh shell inside the container
-make auth        # run gh auth login inside the container
 make ps          # show container status
 ```
 
@@ -390,7 +388,6 @@ Runtime data lives outside the repo in `~/.roost/`:
 |---|---|---|
 | `~/.roost/` | `/root/.roost` | SQLite DB, logs, uploads |
 | `~/.roost/assets/` | `/srv/assets` | Fonts (not in repo — user-provided) |
-| `~/.config/gh/` | `/root/.config/gh` | GitHub CLI auth tokens |
 
 ### Ports (inside container / on Mac Mini LAN)
 
@@ -410,7 +407,6 @@ Runtime data lives outside the repo in `~/.roost/`:
 | Can't reach `https://ai.home` | Check Pi-hole DNS record. Verify `caddy-proxy` is running: `docker ps`. Try Mac Mini's LAN IP directly. |
 | Browser shows cert warning | Run `mkcert -install` on the client, or import the mkcert root CA on iOS. |
 | Terminal loads but no input | Ensure ttyd is running with `--writable` (it is by default in Dockerfile). |
-| `gh copilot` not found in terminal | Run `gh extension install github/gh-copilot` inside the container. |
 | First Docker build is slow | Normal — downloads ~200 MB of packages. Watch with `docker compose logs -f ttyd`. |
 | Phone keyboard covers terminal | Open as a PWA ("Add to Home Screen"). The shortcut bar handles Esc/Tab/Ctrl without the native keyboard. |
 | History tab empty | Start a project — session logging begins when a tmux session spawns. Check `~/.roost/logs/` for log files. |

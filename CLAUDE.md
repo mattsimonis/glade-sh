@@ -112,6 +112,7 @@ Two Docker services defined in `docker-compose.yml`:
 | API framework | Python stdlib `BaseHTTPRequestHandler` | Zero dependencies, runs on any Python |
 | CSS approach | Inline styles, no framework | Catppuccin Mocha palette applied directly |
 | Auth | Tailscale (network-level) | No passwords, no tokens, no sessions |
+| Package installs | `config/packages.sh` build-time hook | Image ships lean; user adds what they need |
 | Reverse proxy | Caddy (standalone container) | Shared with other `*.home` services |
 | Font | Berkeley Mono Nerd Font | Licensed, beautiful, Nerd glyph support |
 
@@ -139,14 +140,16 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 |---|---|---|
 | `web/index.html` | ~4900 | Single-file PWA: CSS, HTML, JavaScript inline |
 | `api/api.py` | ~920 | REST API: projects, snippets, logs, uploads |
-| `entrypoint.sh` | 21 | Container startup: dirs, gh auth check, start API |
-| `Dockerfile` | 63 | Image: Debian, ttyd, gh CLI, Oh My Zsh |
-| `docker-compose.yml` | 70 | Two services: ttyd + web |
-| `Makefile` | 67 | Daily commands: up, down, restart, build, logs |
+| `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
+| `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
+| `docker-compose.yml` | ~65 | Two services: ttyd + web |
+| `Makefile` | ~57 | Daily commands: up, down, restart, build, logs |
 | `install.sh` | 292 | Host-side installer (creates dirs, init DB, shell integration) |
 | `db/schema.sql` | 64 | SQLite schema: projects, snippets, settings |
 | `config/zshrc` | — | Shell config baked into image |
 | `config/tmux.conf` | — | Tmux config (Catppuccin Mocha status bar) |
+| `config/packages.sh` | — | Build-time hook: user-defined package installs (empty by default) |
+| `config/packages.sh.example` | — | Recipe examples: gh CLI, Node.js, pip, Rust, apt |
 | `services/Caddyfile` | 61 | Caddy-proxy config for ai.home + casper.local |
 | `services/web.Caddyfile` | 42 | Inner Caddy config for roost-web container |
 

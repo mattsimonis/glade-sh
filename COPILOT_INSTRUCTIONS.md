@@ -15,18 +15,20 @@ Previously called "Copilot Sync" — now generalized. The repo directory is stil
 ## Codebase Map
 
 ```
-web/index.html          ← All UI: CSS + HTML + JS inline, no build step
-api/api.py              ← REST API: projects, snippets, logs, uploads, settings
-entrypoint.sh           ← Container boot: mkdir, gh auth check, start API
-Dockerfile              ← Debian bookworm-slim + ttyd + gh CLI + zsh
-docker-compose.yml      ← Two services: roost-ttyd + roost-web
-Makefile                ← Daily ops: up, down, restart, build, logs, shell
-services/Caddyfile      ← caddy-proxy config (ai.home + casper.local routes)
-services/web.Caddyfile  ← Inner Caddy for roost-web (file server + API proxy)
-config/zshrc            ← Shell config baked into Docker image
-config/tmux.conf        ← Tmux config (Catppuccin Mocha status bar)
-db/schema.sql           ← SQLite schema (projects, snippets, settings)
-install.sh              ← Host-side installer (optional, for non-Docker use)
+web/index.html              ← All UI: CSS + HTML + JS inline, no build step
+api/api.py                  ← REST API: projects, snippets, logs, uploads, settings
+entrypoint.sh               ← Container boot: mkdir, start API
+Dockerfile                  ← Debian bookworm-slim + ttyd + zsh + packages.sh hook
+docker-compose.yml          ← Two services: roost-ttyd + roost-web
+Makefile                    ← Daily ops: up, down, restart, build, logs, shell
+services/Caddyfile          ← caddy-proxy config (ai.home + casper.local routes)
+services/web.Caddyfile      ← Inner Caddy for roost-web (file server + API proxy)
+config/zshrc                ← Shell config baked into Docker image
+config/tmux.conf            ← Tmux config (Catppuccin Mocha status bar)
+config/packages.sh          ← Build-time hook for user packages (empty by default)
+config/packages.sh.example  ← Recipe examples: gh CLI, Node.js, pip, Rust, apt
+db/schema.sql               ← SQLite schema (projects, snippets, settings)
+install.sh                  ← Host-side installer (optional, for non-Docker use)
 ```
 
 ### Runtime data (not in repo, lives at `~/.roost/` on host)

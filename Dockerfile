@@ -21,20 +21,6 @@ RUN DPKG_ARCH=$(dpkg --print-architecture) && \
         -O /usr/local/bin/ttyd && \
     chmod +x /usr/local/bin/ttyd
 
-# ── gh CLI ────────────────────────────────────────────────────────────────────
-RUN ARCH=$(dpkg --print-architecture) && \
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-        | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null && \
-    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-        > /etc/apt/sources.list.d/github-cli.list && \
-    apt-get update -qq && \
-    apt-get install -y --no-install-recommends gh && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# ── gh extensions (optional — pre-install copilot if auth is available) ────────
-RUN gh extension install github/gh-copilot 2>/dev/null || true
-
 # ── Shell setup (zsh + Oh My Zsh + Spaceship) ─────────────────────────────────
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
     git clone --depth=1 https://github.com/spaceship-prompt/spaceship-prompt.git \
@@ -49,6 +35,10 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 COPY config/zshrc /root/.zshrc
 COPY config/bashrc /root/.bashrc
 COPY config/tmux.conf /root/.tmux.conf
+
+# ── User packages (edit config/packages.sh to add your own) ──────────────────
+COPY config/packages.sh /tmp/packages.sh
+RUN chmod +x /tmp/packages.sh && /tmp/packages.sh && rm /tmp/packages.sh
 
 COPY api/api.py /app/api.py
 COPY entrypoint.sh /entrypoint.sh

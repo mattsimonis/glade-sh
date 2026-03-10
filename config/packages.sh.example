@@ -1,0 +1,32 @@
+#!/bin/bash
+# ── Roost — custom packages (example recipes) ───────────────────────────────
+# Copy this to config/packages.sh and uncomment what you need.
+# Runs at Docker build time as root.  Rebuild after editing: make build
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── GitHub CLI + Copilot extension ───────────────────────────────────────────
+# ARCH=$(dpkg --print-architecture)
+# curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+#     | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
+# echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+#     > /etc/apt/sources.list.d/github-cli.list
+# apt-get update -qq && apt-get install -y --no-install-recommends gh
+# apt-get clean && rm -rf /var/lib/apt/lists/*
+# gh extension install github/gh-copilot 2>/dev/null || true
+
+# ── Node.js (via NodeSource) ─────────────────────────────────────────────────
+# curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+# apt-get install -y --no-install-recommends nodejs
+# apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ── Python pip packages ──────────────────────────────────────────────────────
+# apt-get update -qq && apt-get install -y --no-install-recommends python3-pip
+# pip3 install --break-system-packages httpie rich
+
+# ── Rust ─────────────────────────────────────────────────────────────────────
+# curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+# ── Extra apt packages ───────────────────────────────────────────────────────
+# apt-get update -qq && apt-get install -y --no-install-recommends \
+#     htop neovim ripgrep fd-find
+# apt-get clean && rm -rf /var/lib/apt/lists/*

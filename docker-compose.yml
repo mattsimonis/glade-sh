@@ -32,8 +32,6 @@ services:
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
       - ${ROOST_DIR:-~/.roost}:/root/.roost
-      - ~/.config/gh:/root/.config/gh
-      - copilot_bin:/root/.local/share/gh
       - ${DEV_DIR:-~/Dev}:/mnt/dev
       - ./api/api.py:/app/api.py   # mount live — API changes only need `make restart`
     environment:
@@ -64,6 +62,3 @@ services:
 networks:
   shared_web:
     external: true
-
-volumes:
-  copilot_bin:

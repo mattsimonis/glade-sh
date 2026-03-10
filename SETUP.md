@@ -5,7 +5,6 @@
 - Mac Mini is on and connected to your network
 - You have admin access to the Mac Mini (SSH or local keyboard)
 - Docker Desktop installed
-- A GitHub account *(optional, for `gh copilot` inside the terminal)*
 
 ---
 
@@ -41,17 +40,7 @@ You should see all your devices listed. Note the Mac Mini's Tailscale hostname (
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Core tools
-brew install gh sqlite3 git
-
-# GitHub CLI auth
-gh auth login
-# Follow the prompts — choose GitHub.com, HTTPS, browser login
-
-# Copilot extension
-gh extension install github/gh-copilot
-
-# Verify
-gh copilot suggest "list files in current directory"
+brew install sqlite3 git docker
 ```
 
 ---
@@ -137,7 +126,7 @@ If `mkcert` isn't installed: `brew install mkcert && mkcert -install`
 
 ---
 
-## Step 8: Start Services
+## Step 7: Start Services
 
 **Docker (the only option — Caddy is handled by your standalone `caddy-proxy`):**
 
@@ -175,7 +164,7 @@ Point your standalone Caddy at `localhost:7681` and `localhost:7682` instead of 
 
 ---
 
-## Step 7: Verify from the Mac Mini Itself
+## Step 8: Verify from the Mac Mini Itself
 
 ```bash
 # Open a browser on the Mac Mini and go to https://ai.home
@@ -189,17 +178,17 @@ curl -s http://localhost:7683/api/health | python3 -m json.tool
 
 ---
 
-## Step 8: Connect from Your Laptop
+## Step 9: Connect from Your Laptop
 
 1. Make sure you're on the same network (or Tailscale is connected)
 2. Open a browser
 3. Go to: `https://ai.home`
 4. You should see the terminal UI with Catppuccin Mocha theme
-5. Type `gh copilot suggest "something"` — it runs on the Mac Mini
+5. Create a project and run a command — it executes on the Mac Mini
 
 ---
 
-## Step 9: Connect from Your Phone
+## Step 10: Connect from Your Phone
 
 1. Make sure you're on the same network (or Tailscale is connected)
 2. Open Safari (iOS) or Chrome (Android)
@@ -212,7 +201,7 @@ curl -s http://localhost:7683/api/health | python3 -m json.tool
 
 ---
 
-## Step 10: Make It Survive Reboots
+## Step 11: Make It Survive Reboots
 
 **If using Docker:**
 The `docker-compose.yml` already has `restart: unless-stopped`, so Docker handles this as long as Docker Desktop is set to start at login (Docker Desktop → Settings → General → "Start Docker Desktop when you sign in"). `caddy-proxy` handles itself the same way.
@@ -254,7 +243,6 @@ launchctl load ~/Library/LaunchAgents/com.roost.ttyd.plist
 | Can't reach `https://ai.home` | Verify Pi-hole DNS record. Check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
-| `gh copilot` not found in terminal | Run `gh extension install github/gh-copilot` inside the container/terminal |
 | Docker first build is slow | Normal — building the image. Watch with `docker compose logs -f ttyd` |
 | Phone keyboard covers terminal | The toolbar should push the terminal up. If not, try "Add to Home Screen" for full-screen mode |
 | History not logging | Session logs are recorded via tmux pipe-pane. Check `ls ~/.roost/logs/` for files. Create a project and run a command to start recording. |
