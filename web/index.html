@@ -145,7 +145,6 @@
         @media (pointer: coarse) {
             #shell-add-btn { width: 40px; height: 28px; font-size: 19px; }
         }
-        .shell-tab.closing { background: #f38ba8 !important; color: #1e1e2e !important; transition: background 150ms; }
 
         /* ── Project grid overlay ─────────────────────────────── */
         #project-grid-overlay {
@@ -816,6 +815,22 @@
         .snippet-ctx button:active { background:#45475a; }
         .snippet-ctx button.danger { color:#f38ba8; }
         .snippet-ctx-backdrop { position:fixed; inset:0; z-index:249; }
+
+        .shell-tab-ctx {
+            position:fixed; z-index:250; background:#313244;
+            border:1px solid #45475a; border-radius:10px;
+            padding:4px 0; min-width:140px;
+            box-shadow:0 8px 24px rgba(0,0,0,0.5);
+            animation:ctxIn 120ms ease-out;
+        }
+        .shell-tab-ctx button {
+            display:block; width:100%; padding:10px 16px; background:none; border:none;
+            text-align:left; font-size:13px; font-family:var(--font-mono);
+            color:#cdd6f4; cursor:pointer; -webkit-tap-highlight-color:transparent;
+        }
+        .shell-tab-ctx button:active { background:#45475a; }
+        .shell-tab-ctx button.danger { color:#f38ba8; }
+        .shell-tab-ctx-backdrop { position:fixed; inset:0; z-index:249; }
 
         /* ── Desktop ──────────────────────────────────────────── */
         @media (min-width: 768px) {
@@ -3076,10 +3091,11 @@
                 }, { passive: true });
                 tile.addEventListener('touchmove', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
                 tile.addEventListener('touchend', function(e) {
+                    e.preventDefault(); // suppress synthetic click that follows touchend
                     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
                     if (longPressed) { longPressed = false; return; }
                     sendSnippetCommand(snip);
-                });
+                }, { passive: false });
                 // Desktop: click to run, right-click for context menu
                 tile.addEventListener('click', function(e) {
                     if (longPressed) return;
@@ -3384,6 +3400,36 @@
             renderShellTabs(shells);
         }
 
+        function closeShellCtx() {
+            document.querySelectorAll('.shell-tab-ctx,.shell-tab-ctx-backdrop').forEach(function(el) { el.remove(); });
+        }
+
+        function showShellCtx(idx, x, y) {
+            closeShellCtx();
+            const backdrop = document.createElement('div');
+            backdrop.className = 'shell-tab-ctx-backdrop';
+            const menu = document.createElement('div');
+            menu.className = 'shell-tab-ctx';
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'danger';
+            closeBtn.textContent = 'Close Tab';
+            function doCloseTab(e) {
+                if (e) { e.preventDefault(); e.stopPropagation(); }
+                closeShellCtx();
+                closeShell(idx);
+            }
+            closeBtn.addEventListener('click', doCloseTab);
+            closeBtn.addEventListener('touchend', doCloseTab, { passive: false });
+            menu.appendChild(closeBtn);
+            document.body.appendChild(backdrop);
+            document.body.appendChild(menu);
+            const mw = 140, mh = 52;
+            menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
+            menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
+            backdrop.addEventListener('click', closeShellCtx);
+            backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeShellCtx(); }, { passive: false });
+        }
+
         function renderShellTabs(shells) {
             const bar = document.getElementById('shell-tabs-bar');
             if (!bar) return;
@@ -3404,15 +3450,21 @@
                     cls.addEventListener('click', doClose);
                     cls.addEventListener('touchend', doClose, { passive: false });
                     btn.appendChild(cls);
-                    // Long-press to close on touch devices (× is hidden on mobile)
+                    // Desktop right-click → context menu
+                    btn.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        showShellCtx(sh.index, e.clientX, e.clientY);
+                    });
+                    // Touch long-press → context menu (× is hidden on mobile)
                     let lpTimer = null;
-                    btn.addEventListener('touchstart', function() {
+                    btn.addEventListener('touchstart', function(e) {
                         longPressed = false;
+                        const t = e.touches[0];
                         lpTimer = setTimeout(function() {
                             lpTimer = null;
                             longPressed = true;
-                            btn.classList.add('closing');
-                            setTimeout(function() { closeShell(sh.index); }, 200);
+                            haptic(20);
+                            showShellCtx(sh.index, t.clientX, t.clientY - 60);
                         }, 500);
                     }, { passive: true });
                     btn.addEventListener('touchend', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
@@ -4238,7 +4290,11 @@
                 if (findTerminal() || attempts > 40) {
                     clearInterval(termPollTimer);
                     reconnectInProgress = false;
-                    if (xtermTextarea) setConnectionState('connected');
+                    // Brief settle delay — tmux repaints the full buffer to the new ttyd client,
+                    // and zsh may redraw the prompt on resize, leaving a stray '>' visible.
+                    // Holding the overlay an extra 400ms lets the terminal finish repainting.
+                    if (xtermTextarea) setTimeout(function() { setConnectionState('connected'); }, 400);
+                    else setConnectionState('connected');
                 }
                 attempts++;
             }, 500);
