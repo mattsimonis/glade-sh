@@ -79,19 +79,20 @@ roost/
 │   └── fonts/              # Place BerkeleyMonoNerdFont-Regular.{woff2,ttf} here
 ├── bin/
 │   ├── copilot-wrap        # Shell function: intercepts gh copilot, logs to SQLite
-│   └── copilot-history     # CLI tool: search/browse interaction history
+│   └── copilot-history     # CLI tool: search/browse interaction history (legacy)
 ├── config/
 │   ├── zshrc               # Zsh config baked into container image
 │   ├── bashrc              # Bash config baked into container image
 │   └── tmux.conf           # Tmux status bar (Catppuccin Mocha, minimal)
 ├── db/
-│   └── schema.sql          # SQLite schema (sessions, interactions, snippets, FTS5)
+│   └── schema.sql          # SQLite schema (snippets, settings, projects)
 ├── docs/
 │   └── working-from-anywhere.md  # How to SSH into a laptop from the terminal
 ├── lib/
 │   └── logger.sh           # Bash logging library (init DB, record interactions)
-├── logs/
-│   └── raw/                # Raw `script` captures of gh copilot sessions
+├── logs/                   # Session logs (auto-recorded via tmux pipe-pane)
+│   ├── _main/              # Main shell logs
+│   └── {project-slug}/     # Per-project logs
 ├── services/
 │   ├── Caddyfile           # ai.home block for the standalone caddy-proxy
 │   └── web.Caddyfile       # Caddy config for the roost-web container
@@ -232,20 +233,20 @@ Saved commands in the Snippets tab — tap to inject into the terminal.
 
 ---
 
-## `copilot-history` CLI
+## Session Logs
 
-Available inside the container and on the Mac Mini after `install.sh`:
+Every terminal session is recorded automatically via tmux `pipe-pane`. Logs are stored as flat files in `~/.roost/logs/{project-slug}/`.
 
-```bash
-copilot-history                      # Last 20 interactions
-copilot-history list [N]             # Last N interactions
-copilot-history search <query>       # Full-text search (prompts + responses)
-copilot-history show <id>            # Full detail of one interaction
-copilot-history today                # Today's interactions
-copilot-history device [name]        # Filter by device (no name = list all)
-copilot-history stats                # Counts by subcommand, device, day
-copilot-history export [--json]      # Export all (TSV or JSON)
-```
+Browse and search session logs from the **History** tab in the UI. Tap a session card to open the log viewer with client-side search. Active sessions show a live-updating tail.
+
+### Log API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/logs` | List all log files (newest first, grouped by project) |
+| `GET` | `/api/logs/:project/:file` | Raw log content (`?tail=N` for last N lines) |
+| `GET` | `/api/logs/current/:project` | Tail active session (last 200 lines) |
+| `GET` | `/api/logs/search?q=term` | Search across all logs (grep, ANSI-stripped excerpts) |
 
 ---
 
@@ -313,21 +314,50 @@ The Python API runs on port **7683** inside the container. All responses are JSO
 |--------|------|-------------|
 | `GET` | `/api/export` | Export all interactions as JSON |
 
+### Session Logs
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/logs` | List all log files (newest first) |
+| `GET` | `/api/logs/:project/:file` | Raw log content (`?tail=N` for last N lines) |
+| `GET` | `/api/logs/current/:project` | Tail active session (last 200 lines) |
+| `GET` | `/api/logs/search?q=term` | Search across all logs |
+
 ---
 
 ## Database Schema
 
 SQLite at `~/.roost/db/history.db`. Schema lives in `db/schema.sql`.
 
-**`sessions`** — one row per `gh copilot` shell session  
-**`interactions`** — one row per `gh copilot` call (prompt, response, cwd, device, duration_ms, exit_code)  
-**`interactions_fts`** — FTS5 virtual table over prompt + response (kept in sync via triggers)  
+**`projects`** — name, directory, color, sort order, last active timestamp  
 **`snippets`** — saved commands  
 **`settings`** — key/value store for keyboard layout and UI preferences  
+
+Session logs are stored as flat files in `~/.roost/logs/`, not in the database.  
 
 ---
 
 ## Development
+
+The repo lives on your server (the machine running Docker). All services mount files directly from the repo via bind mounts — `web/` into the web container, `api/api.py` into the ttyd container. This means a `git pull` on the server is the deploy step for most changes.
+
+### Updating and deploying
+
+Edit files on any machine, commit, and push. Then on the server:
+
+```bash
+cd /path/to/roost          # wherever you cloned the repo
+git pull
+```
+
+That's it for web and API changes — the containers read directly from the repo. For changes that touch the Docker image itself, rebuild after pulling:
+
+| What changed | Deploy command |
+|---|---|
+| `web/index.html`, icons, manifest | `git pull` — refresh browser |
+| `api/api.py` | `git pull && make restart` |
+| `Dockerfile`, `entrypoint.sh`, `config/` | `git pull && make build` |
+| `docker-compose.yml` | `git pull && make down && make up` |
 
 ### Common commands (via `make`)
 
@@ -342,25 +372,21 @@ make auth        # run gh auth login inside the container
 make ps          # show container status
 ```
 
-### Web UI changes — instant, no deploy step
+### What's mounted where
 
-`web/` is mounted directly from the repo into the web container. Edit `web/index.html`, save, refresh the browser. Done.
+| Repo path | Container path | Service | Hot-reload? |
+|---|---|---|---|
+| `./web/` | `/srv/web` | roost-web | Yes — refresh browser |
+| `./api/api.py` | `/app/api.py` | roost-ttyd | `make restart` |
+| `./services/web.Caddyfile` | `/etc/caddy/Caddyfile` | roost-web | `make restart` |
 
-### API changes — restart only, no rebuild
+Runtime data lives outside the repo in `~/.roost/`:
 
-`api/api.py` is mounted as a volume. Edit it, then:
-
-```bash
-make restart
-```
-
-### Dockerfile / config changes — rebuild required
-
-If you change `Dockerfile`, `entrypoint.sh`, or anything in `config/`:
-
-```bash
-make build
-```
+| Host path | Container path | Purpose |
+|---|---|---|
+| `~/.roost/` | `/root/.roost` | SQLite DB, logs, uploads |
+| `~/.roost/assets/` | `/srv/assets` | Fonts (not in repo — user-provided) |
+| `~/.config/gh/` | `/root/.config/gh` | GitHub CLI auth tokens |
 
 ### Ports (inside container / on Mac Mini LAN)
 
@@ -383,7 +409,7 @@ make build
 | `gh copilot` not found in terminal | Run `gh extension install github/gh-copilot` inside the container. |
 | First Docker build is slow | Normal — downloads ~200 MB of packages. Watch with `docker compose logs -f ttyd`. |
 | Phone keyboard covers terminal | Open as a PWA ("Add to Home Screen"). The shortcut bar handles Esc/Tab/Ctrl without the native keyboard. |
-| History not logging | Inside the terminal: `source /root/.roost/bin/copilot-wrap`, then try `gh copilot suggest "test"`, then `copilot-history`. |
+| History tab empty | Start a project — session logging begins when a tmux session spawns. Check `~/.roost/logs/` for log files. |
 | "Press ↵ to Reconnect" stuck | Tap it — it should reconnect. If it doesn't, quit and reopen the PWA. The overlay auto-dismisses once the WebSocket is established. |
 | Container keeps restarting | Check `docker compose logs ttyd` for startup errors, usually a missing volume or DB permission issue. |
 

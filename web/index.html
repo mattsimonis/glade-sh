@@ -456,14 +456,43 @@
             display:flex; align-items:center; justify-content:center; gap:6px;
         }
 
-        /* ── History ──────────────────────────────────────────── */
-        #pv-history { align-items:stretch; justify-content:flex-start; gap:0; padding:0; }
+        /* ── History / Session Log ────────────────────────────── */
+        #pv-history { align-items:stretch; justify-content:flex-start; gap:0; padding:0; position:relative; }
+        #history-list-view, #history-log-view { width:100%; height:100%; display:flex; flex-direction:column; }
+        #history-log-view { display:none; }
         .history-empty-icon  { color:#313244; }
         .history-empty-title { font-size:13px; color:#a6adc8; }
         .history-empty-sub   { font-size:11px; color:#6c7086; text-align:center; line-height:1.6; }
+        #history-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:20px; flex:1; }
 
-        /* ── Sessions ─────────────────────────────────────────── */
-        #sessions-section { flex-shrink:0; }
+        .log-header {
+            display:flex; align-items:center; gap:8px;
+            padding:6px 10px; flex-shrink:0; border-bottom:1px solid #313244;
+        }
+        .log-back-btn {
+            background:none; border:none; color:#89b4fa; font-family:var(--font-mono);
+            font-size:12px; cursor:pointer; padding:2px 6px; border-radius:4px;
+            -webkit-tap-highlight-color:transparent;
+        }
+        .log-back-btn:active { background:#313244; }
+        .log-header-title { font-size:12px; font-weight:600; color:#cdd6f4; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .log-live-dot { width:6px; height:6px; border-radius:50%; background:#a6e3a1; animation:pulse-dot 2s ease-in-out infinite; flex-shrink:0; }
+        @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        #log-search {
+            width:100%; padding:5px 8px; background:#313244; border:1px solid #45475a;
+            border-radius:6px; color:#cdd6f4; font-family:var(--font-mono); font-size:11px;
+            outline:none; margin:6px 10px; box-sizing:border-box;
+            width:calc(100% - 20px);
+        }
+        #log-search:focus { border-color:#89b4fa; }
+        #log-search::placeholder { color:#585b70; }
+        #log-content {
+            flex:1; overflow-y:auto; padding:6px 10px; font-size:11px; line-height:1.5;
+            color:#a6adc8; white-space:pre-wrap; word-break:break-all;
+        }
+
+        /* ── Session cards (reused for log list) ─────────────── */
+        #sessions-section { flex:1; display:flex; flex-direction:column; min-height:0; }
         .section-header {
             display:flex; align-items:center; justify-content:space-between;
             padding:8px 12px 4px; flex-shrink:0;
@@ -475,17 +504,18 @@
             cursor:pointer; -webkit-tap-highlight-color:transparent;
         }
         .section-header-btn:active { background:#45475a; }
-        #sessions-list { overflow-y:auto; padding:0 8px 6px; }
+        #sessions-list { overflow-y:auto; padding:0 8px 6px; flex:1; min-height:0; }
         .session-card {
             padding:9px 10px; background:#1e1e2e; border-radius:8px; margin-bottom:6px;
             border:1px solid #313244; cursor:pointer; -webkit-tap-highlight-color:transparent;
         }
         .session-card:active { background:#313244; }
         .session-title { font-size:12px; font-weight:600; color:#cdd6f4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .session-meta  { display:flex; gap:8px; margin-top:3px; }
+        .session-meta  { display:flex; gap:8px; margin-top:3px; align-items:center; }
         .session-cwd   { font-size:10px; color:#6c7086; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
         .session-time  { font-size:10px; color:#585b70; flex-shrink:0; }
-        #history-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:20px; flex:1; }
+        .session-size  { font-size:10px; color:#585b70; flex-shrink:0; }
+        .session-active-dot { width:5px; height:5px; border-radius:50%; background:#a6e3a1; flex-shrink:0; }
 
         /* ── Presets (Copilot panel) ──────────────────────────── */
         #pv-copilot { padding:8px; }
@@ -1055,19 +1085,29 @@
             </div>
 
             <div id="pv-history" class="panel-view">
-                <div id="sessions-section">
-                    <div class="section-header">
-                        <span>Sessions</span>
-                        <button class="section-header-btn" id="btn-new-session">New</button>
+                <div id="history-list-view">
+                    <div id="sessions-section">
+                        <div class="section-header">
+                            <span>Session Logs</span>
+                        </div>
+                        <div id="sessions-list"></div>
                     </div>
-                    <div id="sessions-list"></div>
+                    <div id="history-empty-state">
+                        <div class="history-empty-icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                        </div>
+                        <div class="history-empty-title">No session logs yet</div>
+                        <div class="history-empty-sub">Terminal output is recorded<br>automatically for each session</div>
+                    </div>
                 </div>
-                <div id="history-empty-state">
-                    <div class="history-empty-icon">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                <div id="history-log-view">
+                    <div class="log-header">
+                        <button class="log-back-btn" id="log-back-btn">&#8592; Back</button>
+                        <span class="log-header-title" id="log-header-title"></span>
+                        <span id="log-live-indicator"></span>
                     </div>
-                    <div class="history-empty-title">No history yet</div>
-                    <div class="history-empty-sub">Logged copilot interactions<br>will appear here</div>
+                    <input type="text" id="log-search" placeholder="Search in log…" autocomplete="off" autocorrect="off" spellcheck="false">
+                    <div id="log-content"></div>
                 </div>
             </div>
 
@@ -2052,7 +2092,7 @@
             });
             updateNavIndicator(!skipAnim);
             if (name === 'snippets') renderSnippets();
-            if (name === 'history')  renderSessions();
+            if (name === 'history')  renderHistory();
         }
         function navPanelAction(name) {
             if (keyboardState !== 'custom') {
@@ -2063,7 +2103,7 @@
                 });
                 updateNavIndicator(false);
                 if (name === 'snippets') renderSnippets();
-                if (name === 'history')  renderSessions();
+                if (name === 'history')  renderHistory();
             } else {
                 switchPanel(name);
             }
@@ -3183,7 +3223,7 @@
             closePresetEditor(); renderPresets();
         });
 
-        // ── Sessions rendering ──────────────────────────────────────────────────
+        // ── Session log rendering ───────────────────────────────────────────────
         function relativeTime(iso) {
             if (!iso) return '';
             try {
@@ -3196,42 +3236,105 @@
                 return Math.floor(hrs / 24) + 'd ago';
             } catch (e) { return ''; }
         }
-        function shortCwd(cwd) {
-            if (!cwd) return '';
-            return cwd.replace(/^\/root\//, '~/').replace(/^\/home\/[^/]+\//, '~/');
+        function formatBytes(b) {
+            if (b < 1024) return b + ' B';
+            if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+            return (b / 1048576).toFixed(1) + ' MB';
         }
-        async function renderSessions() {
-            const list = document.getElementById('sessions-list');
+        function stripAnsi(str) {
+            return str.replace(/\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[()][0-9A-B]/g, '');
+        }
+
+        var _logTailTimer = null;
+
+        async function renderHistory() {
+            var listView = document.getElementById('history-list-view');
+            var logView = document.getElementById('history-log-view');
+            var list = document.getElementById('sessions-list');
+            var emptyState = document.getElementById('history-empty-state');
             if (!list) return;
-            list.innerHTML = '<div style="padding:8px 10px;font-size:11px;color:#585b70;">Loading&#8230;</div>';
-            let sessions = [];
-            try { const r = await fetch('/api/sessions'); if (r.ok) sessions = await r.json(); } catch (e) {}
+            if (_logTailTimer) { clearInterval(_logTailTimer); _logTailTimer = null; }
+            listView.style.display = 'flex';
+            logView.style.display = 'none';
+            list.innerHTML = '<div style="padding:8px 10px;font-size:11px;color:#585b70;">Loading\u2026</div>';
+            emptyState.style.display = 'none';
+            var logs = [];
+            try { var r = await fetch('/api/logs'); if (r.ok) logs = await r.json(); } catch (e) {}
             list.innerHTML = '';
-            if (!sessions.length) {
-                const empty = document.createElement('div');
-                empty.style.cssText = 'padding:8px 10px;font-size:11px;color:#585b70;';
-                empty.textContent = 'No sessions yet';
-                list.appendChild(empty); return;
+            if (!logs.length) {
+                emptyState.style.display = 'flex';
+                return;
             }
-            sessions.forEach(function (s) {
-                const card = document.createElement('div');
+            emptyState.style.display = 'none';
+            logs.forEach(function (log) {
+                var card = document.createElement('div');
                 card.className = 'session-card';
+                var activeDot = log.active ? '<span class="session-active-dot"></span>' : '';
                 card.innerHTML =
-                    '<div class="session-title">' + escapeHtml(s.title || 'Untitled session') + '</div>' +
+                    '<div class="session-title">' + escapeHtml(log.display_name) + '</div>' +
                     '<div class="session-meta">' +
-                        '<span class="session-cwd">'  + escapeHtml(shortCwd(s.cwd)) + '</span>' +
-                        '<span class="session-time">' + escapeHtml(relativeTime(s.started_at)) + '</span>' +
+                        activeDot +
+                        '<span class="session-cwd">' + escapeHtml(log.file) + '</span>' +
+                        '<span class="session-size">' + formatBytes(log.size) + '</span>' +
+                        '<span class="session-time">' + escapeHtml(relativeTime(log.mtime)) + '</span>' +
                     '</div>';
                 card.addEventListener('click', function () {
-                    sendString('gh copilot --resume ' + s.session_id + '\r');
+                    openLogViewer(log.project, log.file, log.display_name, log.active);
                 });
                 list.appendChild(card);
             });
         }
 
-        // ── New session button ───────────────────────────────────────────────────
-        document.getElementById('btn-new-session').addEventListener('click', function () {
-            sendString('gh copilot\r');
+        async function openLogViewer(project, file, displayName, isActive) {
+            var listView = document.getElementById('history-list-view');
+            var logView = document.getElementById('history-log-view');
+            var title = document.getElementById('log-header-title');
+            var liveInd = document.getElementById('log-live-indicator');
+            var content = document.getElementById('log-content');
+            var searchInput = document.getElementById('log-search');
+            if (_logTailTimer) { clearInterval(_logTailTimer); _logTailTimer = null; }
+            listView.style.display = 'none';
+            logView.style.display = 'flex';
+            title.textContent = displayName;
+            liveInd.innerHTML = isActive ? '<span class="log-live-dot"></span>' : '';
+            content.textContent = 'Loading\u2026';
+            searchInput.value = '';
+            var rawText = '';
+            try {
+                var r = await fetch('/api/logs/' + encodeURIComponent(project) + '/' + encodeURIComponent(file));
+                if (r.ok) rawText = await r.text();
+            } catch (e) {}
+            var stripped = stripAnsi(rawText);
+            content.textContent = stripped || '(empty)';
+            content.scrollTop = content.scrollHeight;
+
+            searchInput.oninput = function () {
+                var q = searchInput.value.trim().toLowerCase();
+                if (!q) { content.textContent = stripped; content.scrollTop = content.scrollHeight; return; }
+                var lines = stripped.split('\n');
+                var matched = lines.filter(function (l) { return l.toLowerCase().indexOf(q) !== -1; });
+                content.textContent = matched.length ? matched.join('\n') : '(no matches)';
+            };
+
+            if (isActive) {
+                _logTailTimer = setInterval(async function () {
+                    try {
+                        var r2 = await fetch('/api/logs/current/' + encodeURIComponent(project));
+                        if (r2.ok) {
+                            var tail = await r2.text();
+                            var s2 = stripAnsi(tail);
+                            var wasAtBottom = content.scrollHeight - content.scrollTop - content.clientHeight < 40;
+                            content.textContent = s2 || '(empty)';
+                            if (wasAtBottom) content.scrollTop = content.scrollHeight;
+                        }
+                    } catch (e) {}
+                }, 3000);
+            }
+        }
+
+        document.getElementById('log-back-btn').addEventListener('click', function () {
+            if (_logTailTimer) { clearInterval(_logTailTimer); _logTailTimer = null; }
+            renderHistory();
         });
 
         // ════════════════════════════════════════════════════════════════════════

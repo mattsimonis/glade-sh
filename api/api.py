@@ -28,12 +28,17 @@ Routes:
   GET    /api/uploads                   list recent uploads (last 10)
   GET    /api/uploads/:filename         serve uploaded file
   GET    /api/export                    export interactions as JSON
+  GET    /api/logs                      list all session log files
+  GET    /api/logs/search?q=            search across all logs (grep)
+  GET    /api/logs/current/:slug        tail active session log (last 200 lines)
+  GET    /api/logs/:project/:file       raw log file content (?tail=N optional)
 """
 
 import base64
 import json
 import mimetypes
 import os
+import re
 import signal
 import sqlite3
 import subprocess
@@ -47,6 +52,7 @@ from socketserver import ThreadingTCPServer
 DB_PATH      = os.environ.get("DB_PATH", "/root/.roost/db/history.db")
 PORT         = int(os.environ.get("PORT", "7683"))
 UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.roost/uploads")
+LOGS_DIR     = os.environ.get("LOGS_DIR", "/root/.roost/logs")
 
 PORT_POOL = list(range(7690, 7700))
 
@@ -118,6 +124,18 @@ def ensure_tables():
 
 # ---- tmux helpers -----------------------------------------------------------
 
+_ANSI_RE = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[()][0-9A-B]')
+
+def strip_ansi(text):
+    return _ANSI_RE.sub('', text)
+
+
+def slugify(name):
+    s = name.lower().strip()
+    s = re.sub(r'[^a-z0-9]+', '-', s)
+    return s.strip('-') or 'unnamed'
+
+
 def session_name(project_id):
     return "proj-" + project_id[:8]
 
@@ -127,7 +145,19 @@ def tmux_session_exists(sname):
     return r.returncode == 0
 
 
-def create_tmux_session(sname, directory):
+def start_pipe_pane(sname, log_slug):
+    log_dir = os.path.join(LOGS_DIR, log_slug)
+    os.makedirs(log_dir, exist_ok=True)
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_path = os.path.join(log_dir, ts + ".log")
+    subprocess.run(
+        ["tmux", "pipe-pane", "-o", "-t", sname, f"cat >> {log_path}"],
+        capture_output=True
+    )
+    return log_path
+
+
+def create_tmux_session(sname, directory, log_slug="_main"):
     if tmux_session_exists(sname):
         return
     subprocess.run(["tmux", "new-session", "-d", "-s", sname, "-c", directory],
@@ -139,6 +169,7 @@ def create_tmux_session(sname, directory):
                     "if", "-F", "#{scroll_position}",
                     "send-keys -X scroll-down", "send-keys -X cancel"],
                    capture_output=True)
+    start_pipe_pane(sname, log_slug)
 
 
 def list_shells_tmux(sname):
@@ -191,7 +222,7 @@ def get_free_port():
     return None
 
 
-def ensure_project_running(project_id, directory):
+def ensure_project_running(project_id, directory, project_name=""):
     with _lock:
         info = _ttyd_procs.get(project_id)
         if info and info["process"].poll() is None:
@@ -202,7 +233,8 @@ def ensure_project_running(project_id, directory):
         if port is None:
             return None
         sname = session_name(project_id)
-        create_tmux_session(sname, directory)
+        log_slug = slugify(project_name) if project_name else project_id[:8]
+        create_tmux_session(sname, directory, log_slug=log_slug)
         proc = subprocess.Popen([
             "ttyd", "-p", str(port), "--writable", "--max-clients", "5",
             "-t", "theme=" + TTYD_THEME,
@@ -285,6 +317,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._serve_upload(p[2])
         if p == ["api", "export"]:
             return self._export_interactions()
+        if p == ["api", "logs"]:
+            return self._list_logs()
+        if p == ["api", "logs", "search"]:
+            return self._search_logs()
+        if len(p) == 4 and p[:2] == ["api", "logs"] and p[2] == "current":
+            return self._tail_current_log(p[3])
+        if len(p) == 4 and p[:2] == ["api", "logs"]:
+            return self._get_log_file(p[2], p[3])
         self.send_json(404, {"error": "not found"})
 
     def do_POST(self):
@@ -414,15 +454,16 @@ class Handler(BaseHTTPRequestHandler):
     def _start_project(self, pid):
         conn = open_db()
         try:
-            row = conn.execute("SELECT directory FROM projects WHERE id=?", (pid,)).fetchone()
+            row = conn.execute("SELECT name, directory FROM projects WHERE id=?", (pid,)).fetchone()
             if not row:
                 return self.send_json(404, {"error": "not found"})
             directory = row["directory"]
+            project_name = row["name"]
             conn.execute("UPDATE projects SET last_active=CURRENT_TIMESTAMP WHERE id=?", (pid,))
             conn.commit()
         finally:
             conn.close()
-        port = ensure_project_running(pid, directory)
+        port = ensure_project_running(pid, directory, project_name=project_name)
         if port is None:
             return self.send_json(503, {"error": "no ports available"})
         sname = session_name(pid)
@@ -630,7 +671,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(data, indent=2).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Disposition", "attachment; filename=copilot-history.json")
+        self.send_header("Content-Disposition", "attachment; filename=roost-history.json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -690,6 +731,163 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             conn.close()
         self.send_json(200, {"ok": True})
+
+    # -- session logs --
+
+    def _active_tmux_sessions(self):
+        r = subprocess.run(["tmux", "list-sessions", "-F", "#{session_name}"],
+                           capture_output=True, text=True)
+        return set(r.stdout.strip().splitlines()) if r.returncode == 0 else set()
+
+    def _project_slug_map(self):
+        conn = open_db()
+        try:
+            rows = conn.execute("SELECT id, name FROM projects").fetchall()
+        finally:
+            conn.close()
+        return {slugify(r["name"]): r["name"] for r in rows}
+
+    def _list_logs(self):
+        if not os.path.isdir(LOGS_DIR):
+            return self.send_json(200, [])
+        active_sessions = self._active_tmux_sessions()
+        slug_names = self._project_slug_map()
+        # Build slug→active by checking which projects have a running tmux session
+        conn = open_db()
+        try:
+            rows = conn.execute("SELECT id, name FROM projects").fetchall()
+        finally:
+            conn.close()
+        active_slugs = set()
+        for row in rows:
+            sname = session_name(row["id"])
+            if sname in active_sessions:
+                active_slugs.add(slugify(row["name"]))
+        results = []
+        for slug in sorted(os.listdir(LOGS_DIR)):
+            slug_dir = os.path.join(LOGS_DIR, slug)
+            if not os.path.isdir(slug_dir):
+                continue
+            display_name = slug_names.get(slug, "Main Shell" if slug == "_main" else slug)
+            log_files = sorted([f for f in os.listdir(slug_dir) if f.endswith(".log")])
+            is_slug_active = slug in active_slugs
+            for fname in reversed(log_files):
+                fpath = os.path.join(slug_dir, fname)
+                try:
+                    st = os.stat(fpath)
+                except OSError:
+                    continue
+                results.append({
+                    "project": slug,
+                    "display_name": display_name,
+                    "file": fname,
+                    "size": st.st_size,
+                    "mtime": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc)
+                            .strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "active": is_slug_active and fname == log_files[-1],
+                })
+        results.sort(key=lambda x: x["mtime"], reverse=True)
+        self.send_json(200, results)
+
+    def _get_log_file(self, project, filename):
+        if ".." in project or ".." in filename:
+            return self.send_json(400, {"error": "invalid path"})
+        fpath = os.path.join(LOGS_DIR, project, filename)
+        if not os.path.isfile(fpath):
+            return self.send_json(404, {"error": "not found"})
+        qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+        tail = 0
+        for part in qs.split("&"):
+            if part.startswith("tail="):
+                try:
+                    tail = int(part.split("=", 1)[1])
+                except ValueError:
+                    pass
+        try:
+            with open(fpath, "r", errors="replace") as f:
+                content = f.read()
+            if tail > 0:
+                lines = content.splitlines()
+                content = "\n".join(lines[-tail:])
+        except OSError:
+            return self.send_json(500, {"error": "read error"})
+        body = content.encode("utf-8", errors="replace")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _tail_current_log(self, project):
+        if ".." in project:
+            return self.send_json(400, {"error": "invalid path"})
+        slug_dir = os.path.join(LOGS_DIR, project)
+        if not os.path.isdir(slug_dir):
+            return self.send_json(404, {"error": "no logs for project"})
+        logs = sorted([f for f in os.listdir(slug_dir) if f.endswith(".log")])
+        if not logs:
+            return self.send_json(404, {"error": "no log files"})
+        latest = os.path.join(slug_dir, logs[-1])
+        try:
+            with open(latest, "r", errors="replace") as f:
+                lines = f.readlines()
+            content = "".join(lines[-200:])
+        except OSError:
+            return self.send_json(500, {"error": "read error"})
+        body = content.encode("utf-8", errors="replace")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _search_logs(self):
+        qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+        query = ""
+        for part in qs.split("&"):
+            if part.startswith("q="):
+                from urllib.parse import unquote
+                query = unquote(part.split("=", 1)[1])
+        if not query or not os.path.isdir(LOGS_DIR):
+            return self.send_json(200, [])
+        try:
+            r = subprocess.run(
+                ["grep", "-ril", "--include=*.log", query, LOGS_DIR],
+                capture_output=True, text=True, timeout=10
+            )
+        except subprocess.TimeoutExpired:
+            return self.send_json(200, [])
+        results = []
+        slug_names = self._project_slug_map()
+        for fpath in r.stdout.strip().splitlines()[:20]:
+            if not fpath:
+                continue
+            rel = os.path.relpath(fpath, LOGS_DIR)
+            parts = rel.split(os.sep, 1)
+            if len(parts) != 2:
+                continue
+            slug, fname = parts
+            display_name = slug_names.get(slug, "Main Shell" if slug == "_main" else slug)
+            matches = []
+            try:
+                with open(fpath, "r", errors="replace") as f:
+                    for i, line in enumerate(f, 1):
+                        if query.lower() in line.lower():
+                            matches.append({
+                                "line": i,
+                                "text": strip_ansi(line.rstrip())[:200]
+                            })
+                            if len(matches) >= 5:
+                                break
+            except OSError:
+                continue
+            results.append({
+                "project": slug,
+                "display_name": display_name,
+                "file": fname,
+                "matches": matches,
+            })
+        self.send_json(200, results)
 
 
 if __name__ == "__main__":

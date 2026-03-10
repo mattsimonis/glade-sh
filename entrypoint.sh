@@ -6,7 +6,7 @@
 export DB_PATH="${ROOST_DIR}/db/history.db"
 export PORT=7683
 
-mkdir -p "${ROOST_DIR}/db"
+mkdir -p "${ROOST_DIR}/db" "${ROOST_DIR}/logs/_main"
 
 # Warn clearly if gh CLI is not authenticated — the terminal will still work
 # but `gh copilot` commands will fail until auth is complete.
