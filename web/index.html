@@ -3676,7 +3676,7 @@
             const pfEl   = document.getElementById('path-footer');
             const proj   = projects.find(function(p) { return p.id === pid; });
             if (pfText) pfText.textContent = (proj && proj.directory) ? proj.directory : '';
-            repositionPathFooter();
+            repositionShortcutBar();
             // Start project & get port
             try {
                 const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
