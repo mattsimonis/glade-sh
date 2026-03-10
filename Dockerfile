@@ -32,7 +32,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# ── gh copilot extension ──────────────────────────────────────────────────────
+# ── gh extensions (optional — pre-install copilot if auth is available) ────────
 RUN gh extension install github/gh-copilot 2>/dev/null || true
 
 # ── Shell setup (zsh + Oh My Zsh + Spaceship) ─────────────────────────────────

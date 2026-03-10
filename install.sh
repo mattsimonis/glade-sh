@@ -183,24 +183,12 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7: Check for gh copilot extension (optional)
-# ─────────────────────────────────────────────────────────────────────────────
-if command -v gh &>/dev/null; then
-    if gh extension list 2>/dev/null | grep -q "gh-copilot"; then
-        success "gh copilot extension is installed."
-    else
-        info "gh copilot extension not found (optional)."
-        info "  Install with: gh extension install github/gh-copilot"
-    fi
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Step 8: sqlite3 availability (already checked above, just confirm)
+# Step 7: sqlite3 availability (already checked above, just confirm)
 # ─────────────────────────────────────────────────────────────────────────────
 success "sqlite3 is available: $(sqlite3 --version | head -1)"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 9: Shell integration (.zshrc / .bashrc)
+# Step 8: Shell integration (.zshrc / .bashrc)
 # ─────────────────────────────────────────────────────────────────────────────
 PATH_LINE="export PATH=\"\$HOME/.roost/bin:\$PATH\""
 SOURCE_LINE="[[ -f \"\$HOME/.roost/bin/roost-wrap\" ]] && source \"\$HOME/.roost/bin/roost-wrap\""
