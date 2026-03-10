@@ -3235,7 +3235,13 @@
             modal.appendChild(actionsEl);
             document.body.appendChild(backdrop);
             document.body.appendChild(modal);
-            setTimeout(function() { backdrop.addEventListener('click', closeConfirm); }, 300);
+            // Block all interaction until the touch that opened the modal is fully cleared.
+            // iOS can retarget touch/click events onto new elements that appear mid-touch.
+            modal.style.pointerEvents = 'none';
+            setTimeout(function() {
+                modal.style.pointerEvents = '';
+                backdrop.addEventListener('click', closeConfirm);
+            }, 350);
         }
 
         function closeLogCtx() { closeConfirm(); }
