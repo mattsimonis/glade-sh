@@ -4,7 +4,8 @@
 # Intended to be invoked by cron on the host machine every 2 minutes.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "$0")/.." && pwd)"
+# ROOST_REPO can be set in the launchd plist when the script runs from outside the repo
+REPO="${ROOST_REPO:-$(cd "$(dirname "$0")/.." && pwd)}"
 LOG_TAG="roost-sync"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
