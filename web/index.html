@@ -986,16 +986,26 @@
            Only height animates (42px → 76px). No width animation. */
         /* ── Dynamic island glow — mobile only, tied to connection state ── */
         #di-glow {
-            position:fixed; top:-15px; left:50%; transform:translateX(-50%);
-            width:180px; height:60px; border-radius:50%;
-            filter:blur(24px); opacity:0; pointer-events:none; z-index:9998;
-            transition:opacity 350ms ease; display:none;
+            position:fixed; top:11px; left:50%; transform:translateX(-50%);
+            width:min(132px,calc(100vw - 32px)); height:42px;
+            background:#000; border:2px solid transparent; border-radius:21px;
+            pointer-events:none; z-index:9997;
+            opacity:0; transition:opacity 300ms ease; display:none;
         }
         @media (max-width:767px) { #di-glow { display:block; } }
-        #di-glow.glow-connected    { background:rgba(166,227,161,0.9); }
-        #di-glow.glow-reconnecting { background:rgba(250,179,135,0.9); }
-        #di-glow.glow-disconnected { background:rgba(243,139,168,0.9); }
-        #di-glow.glow-active       { opacity:1; }
+        #di-glow::after {
+            --_full: conic-gradient(red 0 0);
+            content:''; position:absolute; inset:-2px;
+            border:2px solid transparent; border-radius:inherit;
+            mask: var(--_full) no-clip subtract, var(--_full) padding-box;
+            pointer-events:none; opacity:0; transition:opacity 300ms ease;
+            filter:blur(7px);
+        }
+        #di-glow.glow-connected::after    { background: conic-gradient(from var(--toast-angle), #94e2d5, #a6e3a1, #d4f0d2, #a6e3a1, #94e2d5, #76c7b8) border-box; }
+        #di-glow.glow-reconnecting::after { background: conic-gradient(from var(--toast-angle), #f9e2af, #fab387, #f5c2e7, #fab387, #f9e2af, #e0a060) border-box; }
+        #di-glow.glow-disconnected::after { background: conic-gradient(from var(--toast-angle), #f38ba8, #fab387, #f5c2e7, #fab387, #f38ba8, #e07090) border-box; }
+        #di-glow.glow-active { opacity:1; }
+        #di-glow.glow-active::after { opacity:1; animation: toast-spin 3s linear infinite; }
 
         @property --toast-angle {
             syntax: '<angle>';
