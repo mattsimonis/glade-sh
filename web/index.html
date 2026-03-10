@@ -977,6 +977,7 @@
         .dbg-btn.mauve  { background:rgba(203,166,247,0.12); color:#cba6f7; border:1px solid rgba(203,166,247,0.25); }
         .dbg-btn.peach  { background:rgba(250,179,135,0.12); color:#fab387; border:1px solid rgba(250,179,135,0.25); }
         #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:#a6adc8; background:#11111b; border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
+        #dbg-conn-live { display:flex; align-items:center; gap:7px; padding:4px 0 12px; font-family:var(--font-mono); font-size:13px; font-weight:600; color:#cdd6f4; }
 
         /* ── Toast — rotating conic border glow ──────────────── */
         /* Technique from Ana Tudor: two pseudo-elements share a rotating
@@ -1521,6 +1522,10 @@
 
             <div class="dbg-section">
                 <div class="dbg-section-label">Connection State</div>
+                <div id="dbg-conn-live">
+                    <span class="status-dot" id="dbg-conn-dot"></span>
+                    <span id="dbg-conn-text">—</span>
+                </div>
                 <div class="dbg-row">
                     <button class="dbg-btn green"  id="dbg-conn-connected">Connected</button>
                     <button class="dbg-btn peach"  id="dbg-conn-reconnecting">Reconnecting</button>
@@ -4548,8 +4553,17 @@
             }
             statusIndicator.classList.remove('fade-out');
             clearTimeout(statusFadeTimer);
-            if (state === 'connected')
-                statusFadeTimer = setTimeout(function () { statusIndicator.classList.add('fade-out'); }, 4000);
+            if (state === 'connected') {
+                // Don't fade the indicator while the debug panel is open
+                var dbgPanelOpen = document.getElementById('debug-panel').classList.contains('open');
+                if (!dbgPanelOpen)
+                    statusFadeTimer = setTimeout(function () { statusIndicator.classList.add('fade-out'); }, 4000);
+            }
+            // Keep debug panel live status in sync
+            var dbgDot  = document.getElementById('dbg-conn-dot');
+            var dbgText = document.getElementById('dbg-conn-text');
+            if (dbgDot)  { dbgDot.className = 'status-dot ' + state; }
+            if (dbgText) { dbgText.textContent = labels[state] || state; }
         }
         let consecutiveFailures = 0;
         let reconnectInProgress = false;
