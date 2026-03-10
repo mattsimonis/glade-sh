@@ -3440,40 +3440,31 @@
                 const lbl = document.createElement('span');
                 lbl.textContent = sh.name || ('shell ' + (sh.index + 1));
                 btn.appendChild(lbl);
-                let longPressed = false;
                 if (shells.length > 1) {
+                    // Desktop: × button for quick close, right-click for context menu
                     const cls = document.createElement('span');
                     cls.className = 'shell-close';
                     cls.textContent = '×';
                     cls.setAttribute('aria-label', 'Close shell');
                     function doClose(e) { e.preventDefault(); e.stopPropagation(); closeShell(sh.index); }
                     cls.addEventListener('click', doClose);
-                    cls.addEventListener('touchend', doClose, { passive: false });
                     btn.appendChild(cls);
-                    // Desktop right-click → context menu
                     btn.addEventListener('contextmenu', function(e) {
                         e.preventDefault();
                         showShellCtx(sh.index, e.clientX, e.clientY);
                     });
-                    // Touch long-press → context menu (× is hidden on mobile)
-                    let lpTimer = null;
-                    btn.addEventListener('touchstart', function(e) {
-                        longPressed = false;
-                        const t = e.touches[0];
-                        lpTimer = setTimeout(function() {
-                            lpTimer = null;
-                            longPressed = true;
-                            haptic(20);
-                            showShellCtx(sh.index, t.clientX, t.clientY - 60);
-                        }, 500);
-                    }, { passive: true });
-                    btn.addEventListener('touchend', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
-                    btn.addEventListener('touchmove', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
                 }
                 function doSwitch(e) {
                     if (e) { e.preventDefault(); e.stopPropagation(); }
-                    if (longPressed) { longPressed = false; return; }
-                    switchShell(sh.index);
+                    if (btn.classList.contains('active') && shells.length > 1) {
+                        // Tap the active tab again → show close menu
+                        const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                        const y = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+                        haptic(8);
+                        showShellCtx(sh.index, x, y);
+                    } else {
+                        switchShell(sh.index);
+                    }
                 }
                 btn.addEventListener('click', doSwitch);
                 btn.addEventListener('touchend', doSwitch, { passive: false });
