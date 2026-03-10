@@ -816,6 +816,22 @@
         .snippet-ctx button.danger { color:#f38ba8; }
         .snippet-ctx-backdrop { position:fixed; inset:0; z-index:249; }
 
+        .log-ctx {
+            position:fixed; z-index:250; background:#313244;
+            border:1px solid #45475a; border-radius:10px;
+            padding:4px 0; min-width:140px;
+            box-shadow:0 8px 24px rgba(0,0,0,0.5);
+            animation:ctxIn 120ms ease-out;
+        }
+        .log-ctx button {
+            display:block; width:100%; padding:10px 16px; background:none; border:none;
+            text-align:left; font-size:13px; font-family:var(--font-mono);
+            color:#cdd6f4; cursor:pointer; -webkit-tap-highlight-color:transparent;
+        }
+        .log-ctx button:active { background:#45475a; }
+        .log-ctx button.danger { color:#f38ba8; }
+        .log-ctx-backdrop { position:fixed; inset:0; z-index:249; }
+
         .shell-tab-ctx {
             position:fixed; z-index:250; background:#313244;
             border:1px solid #45475a; border-radius:10px;
@@ -3211,6 +3227,37 @@
 
         var _logTailTimer = null;
 
+        function closeLogCtx() {
+            document.querySelectorAll('.log-ctx,.log-ctx-backdrop').forEach(function(el) { el.remove(); });
+        }
+
+        function showLogCtx(log, x, y) {
+            closeLogCtx();
+            var backdrop = document.createElement('div');
+            backdrop.className = 'log-ctx-backdrop';
+            var menu = document.createElement('div');
+            menu.className = 'log-ctx';
+            var delBtn = document.createElement('button');
+            delBtn.className = 'danger';
+            delBtn.textContent = log.active ? 'Delete (active)' : 'Delete';
+            async function doDelete(e) {
+                if (e) { e.preventDefault(); e.stopPropagation(); }
+                closeLogCtx();
+                await fetch('/api/logs/' + encodeURIComponent(log.project) + '/' + encodeURIComponent(log.file), { method: 'DELETE' });
+                renderHistory();
+            }
+            delBtn.addEventListener('click', doDelete);
+            delBtn.addEventListener('touchend', doDelete, { passive: false });
+            menu.appendChild(delBtn);
+            document.body.appendChild(backdrop);
+            document.body.appendChild(menu);
+            var mw = 160, mh = 52;
+            menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
+            menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
+            backdrop.addEventListener('click', closeLogCtx);
+            backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeLogCtx(); }, { passive: false });
+        }
+
         async function renderHistory() {
             var listView = document.getElementById('history-list-view');
             var logView = document.getElementById('history-log-view');
@@ -3242,8 +3289,31 @@
                         '<span class="session-size">' + formatBytes(log.size) + '</span>' +
                         '<span class="session-time">' + escapeHtml(relativeTime(log.mtime)) + '</span>' +
                     '</div>';
-                card.addEventListener('click', function () {
+                // Long-press (touch) or right-click (desktop) → delete menu
+                var lpTimer = null, longPressed = false;
+                card.addEventListener('touchstart', function(e) {
+                    longPressed = false;
+                    var t = e.touches[0];
+                    lpTimer = setTimeout(function() {
+                        lpTimer = null; longPressed = true;
+                        haptic(20);
+                        showLogCtx(log, t.clientX, t.clientY);
+                    }, 500);
+                }, { passive: true });
+                card.addEventListener('touchmove', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
+                card.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+                    if (longPressed) { longPressed = false; return; }
                     openLogViewer(log.project, log.file, log.display_name, log.active);
+                }, { passive: false });
+                card.addEventListener('click', function() {
+                    if (longPressed) return;
+                    openLogViewer(log.project, log.file, log.display_name, log.active);
+                });
+                card.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    showLogCtx(log, e.clientX, e.clientY);
                 });
                 list.appendChild(card);
             });

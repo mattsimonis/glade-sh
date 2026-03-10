@@ -368,6 +368,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._kill_shell(p[2], p[4])
         if len(p) == 3 and p[:2] == ["api", "snippets"]:
             return self._delete_snippet(p[2])
+        if len(p) == 4 and p[:2] == ["api", "logs"]:
+            return self._delete_log_file(p[2], p[3])
         self.send_json(404, {"error": "not found"})
 
     # -- projects --
@@ -890,8 +892,17 @@ class Handler(BaseHTTPRequestHandler):
             })
         self.send_json(200, results)
 
-
-if __name__ == "__main__":
+    def _delete_log_file(self, project, filename):
+        if ".." in project or ".." in filename:
+            return self.send_json(400, {"error": "invalid path"})
+        fpath = os.path.join(LOGS_DIR, project, filename)
+        if not os.path.isfile(fpath):
+            return self.send_json(404, {"error": "not found"})
+        try:
+            os.remove(fpath)
+        except OSError as e:
+            return self.send_json(500, {"error": str(e)})
+        self.send_json(200, {"ok": True})
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     ensure_tables()
     # Kill any ttyd processes left over from a prior crash that still hold our ports.
