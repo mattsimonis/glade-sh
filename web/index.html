@@ -439,22 +439,18 @@
             outline:none; box-sizing:border-box; -webkit-appearance:none;
         }
         #snippets-search:focus { border-color:#89b4fa; }
-        #snippets-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 8px; }
+        #snippets-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 6px; display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content:start; }
         #snippets-list::-webkit-scrollbar { display:none; }
-        .snippet-item {
-            display:flex; align-items:center; gap:6px; padding:6px 0;
-            border-bottom:1px solid #313244; cursor:pointer; -webkit-tap-highlight-color:transparent;
+        .snippet-tile {
+            background:#313244; border-radius:8px; padding:8px 10px; cursor:pointer;
+            -webkit-tap-highlight-color:transparent; overflow:hidden;
+            transition:background 80ms, transform 80ms;
+            display:flex; flex-direction:column; gap:2px;
         }
-        .snippet-item:last-child { border-bottom:none; }
-        .snippet-info { flex:1; min-width:0; }
+        .snippet-tile:active { background:#45475a; transform:scale(0.97); }
+        .snippet-tile.lp-active { background:#f38ba8; }
         .snippet-name { font-size:12px; font-weight:600; color:#cdd6f4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .snippet-cmd  { font-size:10px; color:#6c7086; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
-        .snippet-edit-btn {
-            flex-shrink:0; width:28px; height:28px; background:#313244; border:none; border-radius:6px;
-            color:#6c7086; display:flex; align-items:center; justify-content:center;
-            cursor:pointer; -webkit-tap-highlight-color:transparent;
-        }
-        .snippet-edit-btn:active { background:#45475a; color:#a6adc8; }
+        .snippet-cmd  { font-size:10px; color:#6c7086; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         #snippets-add-row { padding:4px 8px 6px; flex-shrink:0; border-top:1px solid #313244; }
         #snippets-add-btn {
             width:100%; padding:7px; background:rgba(166,227,161,0.05);
@@ -803,34 +799,23 @@
             text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;
         }
 
-        /* ── Swipe-to-reveal snippets ────────────────────────────────── */
-        .snippet-wrap {
-            position:relative; overflow:hidden;
-            border-bottom:1px solid #313244;
+        /* ── Snippet context menu (long-press) ─────────────────── */
+        .snippet-ctx {
+            position:fixed; z-index:250; background:#313244;
+            border:1px solid #45475a; border-radius:10px;
+            padding:4px 0; min-width:140px;
+            box-shadow:0 8px 24px rgba(0,0,0,0.5);
+            animation:ctxIn 120ms ease-out;
         }
-        .snippet-wrap:last-child { border-bottom:none; }
-        .snippet-wrap .snippet-item {
-            border-bottom:none !important;
-            transform:translateX(0);
-            transition:transform 200ms cubic-bezier(0.25,0.46,0.45,0.94);
-            will-change:transform;
-            position:relative; background:#181825; z-index:1;
+        @keyframes ctxIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+        .snippet-ctx button {
+            display:block; width:100%; padding:10px 16px; background:none; border:none;
+            text-align:left; font-size:13px; font-family:var(--font-mono);
+            color:#cdd6f4; cursor:pointer; -webkit-tap-highlight-color:transparent;
         }
-        .snippet-reveal {
-            position:absolute; right:0; top:0; bottom:0;
-            display:flex; align-items:stretch; z-index:0;
-            pointer-events:none; opacity:0;
-            transition:opacity 150ms;
-        }
-        .snippet-wrap.revealed .snippet-reveal { pointer-events:auto; opacity:1; }
-        .snippet-action-btn {
-            display:flex; align-items:center; justify-content:center;
-            padding:0 18px; border:none; cursor:pointer;
-            font-size:12px; font-weight:600; font-family:var(--font-mono);
-            min-width:72px; -webkit-tap-highlight-color:transparent;
-        }
-        .snippet-action-btn.edit   { background:#cba6f7; color:#1e1e2e; }
-        .snippet-action-btn.delete { background:#f38ba8; color:#1e1e2e; }
+        .snippet-ctx button:active { background:#45475a; }
+        .snippet-ctx button.danger { color:#f38ba8; }
+        .snippet-ctx-backdrop { position:fixed; inset:0; z-index:249; }
 
         /* ── Desktop ──────────────────────────────────────────── */
         @media (min-width: 768px) {
@@ -3033,125 +3018,80 @@
             list.innerHTML = '';
             if (filtered.length === 0) {
                 const empty = document.createElement('div');
-                empty.style.cssText = 'padding:24px;text-align:center;color:#6c7086;font-size:13px;';
+                empty.style.cssText = 'padding:24px;text-align:center;color:#6c7086;font-size:13px;grid-column:1/-1;';
                 empty.textContent = q ? 'No snippets match' : 'No snippets yet. Add one below.';
                 list.appendChild(empty); return;
             }
 
-            let currentlyRevealedWrap = null;
-
-            function closeReveal(wrap, animated) {
-                if (!wrap) return;
-                const item = wrap.querySelector('.snippet-item');
-                if (animated) item.style.transition = 'transform 200ms cubic-bezier(0.25,0.46,0.45,0.94)';
-                item.style.transform = 'translateX(0)';
-                wrap.classList.remove('revealed');
-                if (currentlyRevealedWrap === wrap) currentlyRevealedWrap = null;
-            }
-
-            filtered.forEach(function(snip) {
-                const wrap = document.createElement('div');
-                wrap.className = 'snippet-wrap';
-
-                const reveal = document.createElement('div');
-                reveal.className = 'snippet-reveal';
+            function showSnippetCtx(snip, x, y) {
+                closeSnippetCtx();
+                const backdrop = document.createElement('div');
+                backdrop.className = 'snippet-ctx-backdrop';
+                const menu = document.createElement('div');
+                menu.className = 'snippet-ctx';
                 const editBtn = document.createElement('button');
-                editBtn.className = 'snippet-action-btn edit'; editBtn.textContent = 'Edit';
-                const delBtn  = document.createElement('button');
-                delBtn.className = 'snippet-action-btn delete'; delBtn.textContent = 'Delete';
-                reveal.appendChild(editBtn); reveal.appendChild(delBtn);
-
-                const item = document.createElement('div');
-                item.className = 'snippet-item';
-                item.innerHTML =
-                    '<div class="snippet-info">'+
-                        '<div class="snippet-name">'+escapeHtml(snip.name)+'</div>'+
-                        '<div class="snippet-cmd">'+escapeHtml(snip.command)+'</div>'+
-                    '</div>';
-
-                wrap.appendChild(reveal); wrap.appendChild(item);
-
-                let swipeStartX = 0, swipeStartY = 0, swipeDx = 0;
-                let swipeActive = false, swipeDecided = false, swipeIsHoriz = false;
-                const REVEAL_WIDTH = 144;
-
-                item.addEventListener('touchstart', function(e) {
-                    if (e.touches.length !== 1) return;
-                    swipeStartX = e.touches[0].clientX;
-                    swipeStartY = e.touches[0].clientY;
-                    swipeDx = 0; swipeActive = true; swipeDecided = false; swipeIsHoriz = false;
-                    item.style.transition = 'none';
-                }, { passive: true });
-
-                item.addEventListener('touchmove', function(e) {
-                    if (!swipeActive || e.touches.length !== 1) return;
-                    const dx = e.touches[0].clientX - swipeStartX;
-                    const dy = e.touches[0].clientY - swipeStartY;
-                    if (!swipeDecided && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
-                        swipeDecided = true;
-                        swipeIsHoriz = Math.abs(dx) > Math.abs(dy);
-                        if (swipeIsHoriz && currentlyRevealedWrap && currentlyRevealedWrap !== wrap) {
-                            closeReveal(currentlyRevealedWrap, true);
-                        }
-                    }
-                    if (!swipeIsHoriz) return;
-                    e.preventDefault();
-                    const current = wrap.classList.contains('revealed') ? -REVEAL_WIDTH : 0;
-                    let newX = current + dx;
-                    if (newX > 0) newX = newX * 0.15;
-                    if (newX < -REVEAL_WIDTH) newX = -REVEAL_WIDTH + (newX + REVEAL_WIDTH) * 0.2;
-                    swipeDx = dx;
-                    item.style.transform = 'translateX(' + newX + 'px)';
-                }, { passive: false });
-
-                item.addEventListener('touchend', function(e) {
-                    if (!swipeActive) return; swipeActive = false;
-                    if (!swipeIsHoriz) {
-                        if (Math.abs(swipeDx) < 5) {
-                            if (currentlyRevealedWrap) { closeReveal(currentlyRevealedWrap, true); return; }
-                            sendSnippetCommand(snip);
-                            item.style.background = 'rgba(137,180,250,0.12)';
-                            setTimeout(function(){ item.style.background = ''; }, 180);
-                        }
-                        return;
-                    }
-                    item.style.transition = 'transform 200ms cubic-bezier(0.25,0.46,0.45,0.94)';
-                    const current = wrap.classList.contains('revealed') ? -REVEAL_WIDTH : 0;
-                    const finalX  = current + swipeDx;
-                    const SNAP_THRESHOLD = REVEAL_WIDTH * 0.35;
-                    if (finalX < -SNAP_THRESHOLD) {
-                        item.style.transform = 'translateX(' + (-REVEAL_WIDTH) + 'px)';
-                        wrap.classList.add('revealed');
-                        currentlyRevealedWrap = wrap;
-                    } else {
-                        item.style.transform = 'translateX(0)';
-                        wrap.classList.remove('revealed');
-                        if (currentlyRevealedWrap === wrap) currentlyRevealedWrap = null;
-                    }
-                }, { passive: true });
-
-                editBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    closeReveal(wrap, true);
-                    openSnippetEditor(snip.id);
-                });
-                delBtn.addEventListener('click', async function(e) {
-                    e.stopPropagation();
-                    item.style.transition = 'transform 150ms ease, opacity 150ms ease';
-                    item.style.transform = 'translateX(-110%)';
-                    item.style.opacity = '0';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', function() { closeSnippetCtx(); openSnippetEditor(snip.id); });
+                const delBtn = document.createElement('button');
+                delBtn.className = 'danger';
+                delBtn.textContent = 'Delete';
+                delBtn.addEventListener('click', async function() {
+                    closeSnippetCtx();
                     await deleteSnippet(snip.id);
                     snippets = await fetchSnippetsFromServer();
                     renderSnippets();
                 });
+                menu.appendChild(editBtn);
+                menu.appendChild(delBtn);
+                document.body.appendChild(backdrop);
+                document.body.appendChild(menu);
+                // Position: keep on screen
+                const mw = 160, mh = 90;
+                menu.style.left = Math.min(x, window.innerWidth - mw) + 'px';
+                menu.style.top = Math.min(y, window.innerHeight - mh) + 'px';
+                backdrop.addEventListener('click', closeSnippetCtx);
+                backdrop.addEventListener('touchend', closeSnippetCtx);
+            }
+            function closeSnippetCtx() {
+                document.querySelectorAll('.snippet-ctx,.snippet-ctx-backdrop').forEach(function(el) { el.remove(); });
+                document.querySelectorAll('.snippet-tile.lp-active').forEach(function(el) { el.classList.remove('lp-active'); });
+            }
 
-                list.appendChild(wrap);
+            filtered.forEach(function(snip) {
+                const tile = document.createElement('div');
+                tile.className = 'snippet-tile';
+                tile.innerHTML =
+                    '<div class="snippet-name">' + escapeHtml(snip.name) + '</div>' +
+                    '<div class="snippet-cmd">' + escapeHtml(snip.command) + '</div>';
+
+                let lpTimer = null, longPressed = false;
+                tile.addEventListener('touchstart', function(e) {
+                    longPressed = false;
+                    const t = e.touches[0];
+                    lpTimer = setTimeout(function() {
+                        lpTimer = null; longPressed = true;
+                        tile.classList.add('lp-active');
+                        showSnippetCtx(snip, t.clientX, t.clientY);
+                    }, 450);
+                }, { passive: true });
+                tile.addEventListener('touchmove', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
+                tile.addEventListener('touchend', function(e) {
+                    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+                    if (longPressed) { longPressed = false; return; }
+                    sendSnippetCommand(snip);
+                });
+                // Desktop: click to run, right-click for context menu
+                tile.addEventListener('click', function(e) {
+                    if (longPressed) return;
+                    sendSnippetCommand(snip);
+                });
+                tile.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    showSnippetCtx(snip, e.clientX, e.clientY);
+                });
+
+                list.appendChild(tile);
             });
-
-            document.addEventListener('touchstart', function closeOnOutside(e) {
-                if (!currentlyRevealedWrap) return;
-                if (!list.contains(e.target)) { closeReveal(currentlyRevealedWrap, true); }
-            }, { passive: true });
         }
 
         // ── Presets rendering ───────────────────────────────────────────────────
