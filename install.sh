@@ -35,8 +35,7 @@ ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
 WARNINGS=()
 INSTALLED=()
 
-printf "
-${BOLD}Roost Installer${RESET}\n"${RESET}\n"
+printf "\n${BOLD}Roost Installer${RESET}\n"
 printf "%-20s %s\n" "Source:" "$SCRIPT_DIR"
 printf "%-20s %s\n" "Target:" "$ROOST_DIR"
 printf "\n"
