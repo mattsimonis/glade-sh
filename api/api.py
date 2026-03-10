@@ -41,7 +41,6 @@ import json
 import mimetypes
 import os
 import re
-import shlex
 import signal
 import sqlite3
 import subprocess
@@ -177,12 +176,6 @@ def create_tmux_session(sname, directory, log_slug="_main"):
                     "if", "-F", "#{scroll_position}",
                     "send-keys -X scroll-down", "send-keys -X cancel"],
                    capture_output=True)
-    # Explicit cd so the user sees an error if the path doesn't exist in the container
-    # (tmux -c silently falls back to $HOME when the directory is missing)
-    subprocess.run(
-        ["tmux", "send-keys", "-t", sname, "cd " + shlex.quote(directory), "Enter"],
-        capture_output=True
-    )
     start_pipe_pane(sname, log_slug)
 
 
@@ -207,8 +200,7 @@ def new_shell_tmux(sname, directory):
         capture_output=True, text=True
     )
     s = r.stdout.strip()
-    idx = int(s) if s.isdigit() else None
-    return idx
+    return int(s) if s.isdigit() else None
 
 
 def select_shell_tmux(sname, index):
@@ -508,10 +500,9 @@ class Handler(BaseHTTPRequestHandler):
         with _lock:
             info = _ttyd_procs.get(pid)
             running = bool(info and info["process"].poll() is None)
-        sname = session_name(pid)
-        if not running and not tmux_session_exists(sname):
+        if not running:
             return self.send_json(200, [])
-        self.send_json(200, list_shells_tmux(sname))
+        self.send_json(200, list_shells_tmux(session_name(pid)))
 
     def _new_shell(self, pid):
         conn = open_db()
