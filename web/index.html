@@ -260,11 +260,33 @@
         #status-indicator {
             position:absolute; top:calc(env(safe-area-inset-top) + 5px); right:8px; z-index:30; display:flex; align-items:center; gap:6px;
             padding:4px 10px; background:rgba(24,24,37,0.8); backdrop-filter:blur(8px);
-            -webkit-backdrop-filter:blur(8px); border-radius:9999px; border:1px solid rgba(88,91,112,0.3);
+            -webkit-backdrop-filter:blur(8px); border-radius:9999px; border:2px solid transparent;
             font-size:11px; font-family:var(--font-mono); color:#a6adc8;
             transition:opacity 300ms ease; pointer-events:none;
         }
         #status-indicator.fade-out { opacity:0; }
+        /* ── Status indicator spinning glow (mirrors toast technique) ─ */
+        @property --si-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+        @keyframes si-spin { to { --si-angle: 1turn; } }
+        #status-indicator.connected    { --si-a:#a6e3a1; --si-b:#94e2d5; --si-c:#d4f0d2; }
+        #status-indicator.reconnecting { --si-a:#fab387; --si-b:#f9e2af; --si-c:#fab387; }
+        #status-indicator.disconnected { --si-a:#f38ba8; --si-b:#fab387; --si-c:#f5c2e7; }
+        #status-indicator::before, #status-indicator::after {
+            --_m: conic-gradient(red 0 0);
+            content:''; position:absolute; inset:-2px; border-radius:inherit;
+            background: conic-gradient(from var(--si-angle), var(--si-a), var(--si-b), var(--si-c), var(--si-b), var(--si-a)) border-box;
+            mask: var(--_m) no-clip subtract, var(--_m) padding-box;
+            pointer-events:none; opacity:0; transition:opacity 400ms ease;
+        }
+        #status-indicator::after { filter:blur(8px); }
+        #status-indicator:not(.fade-out)::before,
+        #status-indicator:not(.fade-out)::after {
+            opacity:1; animation:si-spin 3s linear infinite;
+        }
 
         /* ── Gesture + trackpad ───────────────────────────────── */
         #gesture-overlay { position:absolute; inset:0; z-index:20; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
@@ -4540,6 +4562,8 @@
             if (state === connectionState) return;
             connectionState = state;
             statusDot.className = 'status-dot ' + state;
+            statusIndicator.classList.remove('connected', 'reconnecting', 'disconnected');
+            statusIndicator.classList.add(state);
             const labels = { connected: 'Connected', reconnecting: 'Reconnecting...', disconnected: 'Disconnected' };
             statusText.textContent = labels[state] || state;
             if (state === 'reconnecting' || state === 'disconnected') {
