@@ -258,7 +258,7 @@
         .status-dot.reconnecting { background:#fab387; animation:pulse-dot 1.5s ease-in-out infinite; }
         .status-dot.disconnected { background:#f38ba8; }
         #status-indicator {
-            position:absolute; top:calc(env(safe-area-inset-top) + 8px); right:8px; z-index:30; display:flex; align-items:center; gap:6px;
+            position:absolute; top:calc(env(safe-area-inset-top) + 5px); right:8px; z-index:30; display:flex; align-items:center; gap:6px;
             padding:4px 10px; background:rgba(24,24,37,0.8); backdrop-filter:blur(8px);
             -webkit-backdrop-filter:blur(8px); border-radius:9999px; border:1px solid rgba(88,91,112,0.3);
             font-size:11px; font-family:var(--font-mono); color:#a6adc8;
@@ -864,7 +864,7 @@
         @media (min-width: 768px) {
             #panel, #bottom-nav, #shortcut-bar { display:none; }
             /* Center vertically within the 38px project-tabs-bar; clear the settings gear */
-            #status-indicator { top:9px; right:52px; }
+            #status-indicator { top:5px; right:52px; }
             /* Make room for settings gear at the right of the project-tabs-bar */
             #project-tabs-bar { padding-right:44px; }
             /* Settings gear — sits in the project-tabs-bar row, right side */
