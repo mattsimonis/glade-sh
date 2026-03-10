@@ -207,7 +207,13 @@ def new_shell_tmux(sname, directory):
         capture_output=True, text=True
     )
     s = r.stdout.strip()
-    return int(s) if s.isdigit() else None
+    idx = int(s) if s.isdigit() else None
+    if idx is not None:
+        subprocess.run(
+            ["tmux", "send-keys", "-t", f"{sname}:{idx}", "cd " + shlex.quote(directory), "Enter"],
+            capture_output=True
+        )
+    return idx
 
 
 def select_shell_tmux(sname, index):
