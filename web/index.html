@@ -2374,7 +2374,7 @@
             const pfText = document.getElementById('path-footer-text');
             if (!pfEl) return;
             const hasContent = pfText && pfText.textContent.trim().length > 0;
-            if (!hasContent) {
+            if (!hasContent && !currentProjectId) {
                 pfEl.classList.remove('pf-visible');
                 pfEl.style.bottom = '-50px';
                 return;
@@ -3670,10 +3670,11 @@
             // Reset OSC 7 wire so new iframe's WebSocket gets wired on load
             window._osc7Wired = false;
             _osc7WiredSocket = null;
-            // Clear stale path footer from previous project
+            // Clear stale path footer; pre-fill with stored directory so it's visible immediately
             const pfText = document.getElementById('path-footer-text');
-            if (pfText) pfText.textContent = '';
-            const pfEl = document.getElementById('path-footer');
+            const pfEl   = document.getElementById('path-footer');
+            const proj   = projects.find(function(p) { return p.id === pid; });
+            if (pfText) pfText.textContent = (proj && proj.directory) ? proj.directory : '';
             if (pfEl) pfEl.classList.remove('pf-visible');
             repositionShortcutBar();
             // Start project & get port
@@ -3761,16 +3762,25 @@
             bar.appendChild(addBtn);
         }
 
-        function switchShell(idx) {
+        async function switchShell(idx) {
             if (!currentProjectId) return;
-            apiJson('/api/projects/' + currentProjectId + '/shells/' + idx + '/select', { method: 'PUT' })
-                .catch(function(e) { console.warn('switchShell failed', e); });
-            // Optimistic active update
+            // Optimistic tab highlight first so the UI feels instant
             const bar = document.getElementById('shell-tabs-bar');
-            if (!bar) return;
-            bar.querySelectorAll('.shell-tab').forEach(function(t, i) {
-                t.classList.toggle('active', i === idx);
-            });
+            if (bar) {
+                bar.querySelectorAll('.shell-tab').forEach(function(t, i) {
+                    t.classList.toggle('active', i === idx);
+                });
+            }
+            try {
+                await apiJson('/api/projects/' + currentProjectId + '/shells/' + idx + '/select', { method: 'PUT' });
+                // ttyd doesn't redraw automatically on an external tmux window switch —
+                // reload the iframe so the WebSocket reconnects and shows the new window.
+                if (iframe && iframe.src && iframe.src !== 'about:blank') {
+                    const url = iframe.src;
+                    iframe.src = 'about:blank';
+                    requestAnimationFrame(function() { iframe.src = url; });
+                }
+            } catch(e) { console.warn('switchShell failed', e); }
         }
 
         async function addShell() {
@@ -5259,7 +5269,7 @@
                     '<span class="update-icon">' + (isImage ? '🔧' : '↑') + '</span>' +
                     '<span class="update-msg' + (isImage ? ' image' : '') + '">' +
                         (isImage
-                            ? '<strong>Image update available</strong> — run <code>make build</code> on the host'
+                            ? '<strong>Image update available</strong> — use Settings → Rebuild Container'
                             : '<strong>Update available</strong> — tap to restart and apply') +
                     '</span>' +
                     (isImage ? '' : '<button id="update-restart-btn">Restart</button>') +
@@ -5274,6 +5284,19 @@
                         restartBtn.textContent = 'Restarting…';
                         restartBtn.disabled = true;
                         fetch('/api/restart', { method: 'POST' }).catch(function(){});
+                        // Poll until the API comes back, then dismiss and reconnect
+                        var attempts = 0;
+                        var poll = setInterval(function() {
+                            attempts++;
+                            if (attempts > 30) { clearInterval(poll); restartBtn.textContent = 'Timed out'; return; }
+                            fetch('/api/health').then(function(r) { return r.json(); }).then(function() {
+                                clearInterval(poll);
+                                banner.remove();
+                                _updateBannerShown = false;
+                                reconnectInProgress = false;
+                                forceReconnect();
+                            }).catch(function() { /* still restarting */ });
+                        }, 1500);
                     });
                 }
             }).catch(function(){});

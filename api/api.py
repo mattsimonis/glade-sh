@@ -41,6 +41,7 @@ import json
 import mimetypes
 import os
 import re
+import shlex
 import signal
 import sqlite3
 import subprocess
@@ -176,6 +177,12 @@ def create_tmux_session(sname, directory, log_slug="_main"):
                     "if", "-F", "#{scroll_position}",
                     "send-keys -X scroll-down", "send-keys -X cancel"],
                    capture_output=True)
+    # Explicit cd so the user sees an error if the path doesn't exist in the container
+    # (tmux -c silently falls back to $HOME when the directory is missing)
+    subprocess.run(
+        ["tmux", "send-keys", "-t", sname, "cd " + shlex.quote(directory), "Enter"],
+        capture_output=True
+    )
     start_pipe_pane(sname, log_slug)
 
 
