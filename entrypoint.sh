@@ -9,6 +9,7 @@ APP_DIR="/app/roost"
 UPDATE_PENDING_FILE="/tmp/roost-update-pending"
 IMAGE_UPDATE_FILE="/tmp/roost-image-update-pending"
 POLL_INTERVAL=120
+export GIT_TERMINAL_PROMPT=0
 
 export DB_PATH="${ROOST_DIR}/db/history.db"
 export PORT=7683
@@ -24,7 +25,8 @@ elif git -C "$APP_DIR" rev-parse HEAD >/dev/null 2>&1; then
     log "git pull failed — continuing with existing code"
 else
     log "Cloning $ROOST_REPO_URL"
-    rm -rf "$APP_DIR"
+    # Can't rm the mountpoint itself — clear its contents instead
+    find "$APP_DIR" -mindepth 1 -depth -delete 2>/dev/null || true
     git clone -q "$ROOST_REPO_URL" "$APP_DIR"
 fi
 
