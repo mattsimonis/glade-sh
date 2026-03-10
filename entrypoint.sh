@@ -18,11 +18,13 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [roost] $*"; }
 mkdir -p "${ROOST_DIR}/db" "${ROOST_DIR}/logs/_main"
 
 # ── Clone or pull app repo ─────────────────────────────────────────────────────
-if [ -d "$APP_DIR/.git" ]; then
-    log "Updating repo"
-    cd "$APP_DIR" && git pull --ff-only -q || log "git pull failed — continuing with existing code"
+if git -C "$APP_DIR" pull --ff-only -q 2>/dev/null; then
+    log "Repo updated"
+elif git -C "$APP_DIR" rev-parse HEAD >/dev/null 2>&1; then
+    log "git pull failed — continuing with existing code"
 else
     log "Cloning $ROOST_REPO_URL"
+    rm -rf "$APP_DIR"
     git clone -q "$ROOST_REPO_URL" "$APP_DIR"
 fi
 
