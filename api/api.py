@@ -124,7 +124,7 @@ def ensure_tables():
 
 # ---- tmux helpers -----------------------------------------------------------
 
-_ANSI_RE = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[()][0-9A-B]')
+_ANSI_RE = re.compile(r'\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-B]|\x1b[>=]|[\x00-\x08\x0e-\x1f]')
 
 def strip_ansi(text):
     return _ANSI_RE.sub('', text)
@@ -242,6 +242,7 @@ def ensure_project_running(project_id, directory, project_name=""):
             "-t", "fontFamily=Berkeley Mono Nerd Font,JetBrains Mono,Fira Code,monospace",
             "-t", "cursorStyle=block",
             "-t", "cursorBlink=true",
+            "-t", "scrollback=0",
             "tmux", "attach-session", "-t", sname,
         ])
         _ttyd_procs[project_id] = {"process": proc, "port": port}

@@ -130,14 +130,22 @@
         }
         .shell-tab:hover .shell-close, .shell-tab.active .shell-close { opacity: 0.7; }
         .shell-close:active { opacity: 1; background: #45475a; }
+        /* On touch devices: hide tiny ×, long-press closes instead */
+        @media (pointer: coarse) {
+            .shell-close { display: none; }
+        }
         #shell-add-btn {
-            flex-shrink: 0; width: 26px; height: 24px;
+            flex-shrink: 0; width: 36px; height: 26px;
             display: flex; align-items: center; justify-content: center;
             background: transparent; border: none; border-radius: 6px;
             color: #45475a; font-size: 17px; line-height: 1; cursor: pointer;
             -webkit-tap-highlight-color: transparent;
         }
         #shell-add-btn:active { background: #313244; color: #cdd6f4; }
+        @media (pointer: coarse) {
+            #shell-add-btn { width: 40px; height: 28px; font-size: 19px; }
+        }
+        .shell-tab.closing { background: #f38ba8 !important; color: #1e1e2e !important; transition: background 150ms; }
 
         /* ── Project grid overlay ─────────────────────────────── */
         #project-grid-overlay {
@@ -423,33 +431,33 @@
         #panel.edit-mode .kb-add-btn { display:flex !important; }
 
         /* ── Snippets ─────────────────────────────────────────── */
-        #snippets-search-row { padding:8px 8px 4px; flex-shrink:0; }
+        #snippets-search-row { padding:6px 8px 3px; flex-shrink:0; }
         #snippets-search {
-            width:100%; padding:8px 12px; background:#313244;
-            border:1px solid #45475a; border-radius:8px;
-            color:#cdd6f4; font-family:var(--font-mono); font-size:13px;
+            width:100%; padding:6px 10px; background:#313244;
+            border:1px solid #45475a; border-radius:6px;
+            color:#cdd6f4; font-family:var(--font-mono); font-size:12px;
             outline:none; box-sizing:border-box; -webkit-appearance:none;
         }
         #snippets-search:focus { border-color:#89b4fa; }
         #snippets-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 8px; }
         #snippets-list::-webkit-scrollbar { display:none; }
         .snippet-item {
-            display:flex; align-items:center; gap:8px; padding:10px 0;
+            display:flex; align-items:center; gap:6px; padding:6px 0;
             border-bottom:1px solid #313244; cursor:pointer; -webkit-tap-highlight-color:transparent;
         }
         .snippet-item:last-child { border-bottom:none; }
         .snippet-info { flex:1; min-width:0; }
-        .snippet-name { font-size:13px; font-weight:600; color:#cdd6f4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .snippet-cmd  { font-size:11px; color:#6c7086; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+        .snippet-name { font-size:12px; font-weight:600; color:#cdd6f4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .snippet-cmd  { font-size:10px; color:#6c7086; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
         .snippet-edit-btn {
-            flex-shrink:0; width:32px; height:32px; background:#313244; border:none; border-radius:6px;
+            flex-shrink:0; width:28px; height:28px; background:#313244; border:none; border-radius:6px;
             color:#6c7086; display:flex; align-items:center; justify-content:center;
             cursor:pointer; -webkit-tap-highlight-color:transparent;
         }
         .snippet-edit-btn:active { background:#45475a; color:#a6adc8; }
-        #snippets-add-row { padding:6px 8px 8px; flex-shrink:0; border-top:1px solid #313244; }
+        #snippets-add-row { padding:4px 8px 6px; flex-shrink:0; border-top:1px solid #313244; }
         #snippets-add-btn {
-            width:100%; padding:9px; background:rgba(166,227,161,0.05);
+            width:100%; padding:7px; background:rgba(166,227,161,0.05);
             border:1.5px dashed rgba(166,227,161,0.3); border-radius:8px;
             color:#a6e3a1; font-family:var(--font-mono); font-size:13px;
             cursor:pointer; -webkit-tap-highlight-color:transparent;
@@ -3242,7 +3250,7 @@
             return (b / 1048576).toFixed(1) + ' MB';
         }
         function stripAnsi(str) {
-            return str.replace(/\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[()][0-9A-B]/g, '');
+            return str.replace(/\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-B]|\x1b[>=]|[\x00-\x08\x0e-\x1f]/g, '');
         }
 
         var _logTailTimer = null;
@@ -3446,6 +3454,7 @@
                 const lbl = document.createElement('span');
                 lbl.textContent = sh.name || ('shell ' + (sh.index + 1));
                 btn.appendChild(lbl);
+                let longPressed = false;
                 if (shells.length > 1) {
                     const cls = document.createElement('span');
                     cls.className = 'shell-close';
@@ -3455,8 +3464,25 @@
                     cls.addEventListener('click', doClose);
                     cls.addEventListener('touchend', doClose, { passive: false });
                     btn.appendChild(cls);
+                    // Long-press to close on touch devices (× is hidden on mobile)
+                    let lpTimer = null;
+                    btn.addEventListener('touchstart', function() {
+                        longPressed = false;
+                        lpTimer = setTimeout(function() {
+                            lpTimer = null;
+                            longPressed = true;
+                            btn.classList.add('closing');
+                            setTimeout(function() { closeShell(sh.index); }, 200);
+                        }, 500);
+                    }, { passive: true });
+                    btn.addEventListener('touchend', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
+                    btn.addEventListener('touchmove', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
                 }
-                function doSwitch(e) { if (e) { e.preventDefault(); e.stopPropagation(); } switchShell(sh.index); }
+                function doSwitch(e) {
+                    if (e) { e.preventDefault(); e.stopPropagation(); }
+                    if (longPressed) { longPressed = false; return; }
+                    switchShell(sh.index);
+                }
                 btn.addEventListener('click', doSwitch);
                 btn.addEventListener('touchend', doSwitch, { passive: false });
                 bar.appendChild(btn);
@@ -3702,6 +3728,14 @@
                     // On desktop: leave it enabled — xterm.js handles keyboard natively.
                     if (xtermTextarea && !isPointerDevice) {
                         xtermTextarea.disabled = true;
+                    }
+                    // Hide xterm.js scrollbar — tmux handles scrolling.
+                    // Reclaims ~14px for an extra terminal column on narrow screens.
+                    if (xtermTextarea && !iframeDoc.getElementById('roost-xterm-fix')) {
+                        const s = iframeDoc.createElement('style');
+                        s.id = 'roost-xterm-fix';
+                        s.textContent = '.xterm-viewport{scrollbar-width:none!important;overflow-y:hidden!important}.xterm-viewport::-webkit-scrollbar{display:none!important}';
+                        iframeDoc.head.appendChild(s);
                     }
                 }
                 if (!terminalInstance) {
