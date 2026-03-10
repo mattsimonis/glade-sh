@@ -31,5 +31,5 @@ Initial public release.
 - **SQLite storage** — projects, snippets, settings, keyboard layouts in `~/.roost/db/history.db`
 - **Docker Compose stack** — two services: `roost-ttyd` (app) and `roost-web` (Caddy file server)
 - **Makefile** — `make setup`, `up`, `down`, `restart`, `build`, `logs`, `shell`, `ps`
-- **Tailscale support** — remote access over mesh VPN; works on same `ai.home` URL from anywhere
+- **Tailscale support** — remote access over mesh VPN; works on same `roost.local` URL from anywhere
 - **mkcert TLS** — local HTTPS via standalone `caddy-proxy`; mkcert CA for trusted certs on all devices

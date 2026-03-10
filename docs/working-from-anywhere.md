@@ -109,7 +109,7 @@ git pull
 # On laptop, run this — it watches for file changes and rsyncs to Mac Mini
 fswatch -r ~/Dev/my-project | xargs -I{} rsync -avz \
   --exclude 'node_modules' --exclude '.git' \
-  ~/Dev/my-project/ casper:~/projects/my-project/
+  ~/Dev/my-project/ your-mac:~/projects/my-project/
 ```
 
 Requires `fswatch`: `brew install fswatch`.
@@ -120,7 +120,7 @@ brew install mutagen-io/mutagen/mutagen
 mutagen sync create \
   --name=my-project \
   ~/Dev/my-project \
-  matt@casper:~/projects/my-project
+  matt@your-mac:~/projects/my-project
 ```
 
 Mutagen syncs in real-time, both directions. Edit on laptop, run on Mac Mini, changes appear everywhere. Requires files `node_modules` to be excluded via a mutagen config.
@@ -165,7 +165,7 @@ Tonight's scenario: you're working on your laptop, you want to dim it and contin
 
 ### On your phone
 
-1. Open Safari → `http://casper` (or whatever your Tailscale hostname is)
+1. Open Safari → `http://your-mac.local` (or your Tailscale hostname)
 2. Tap the project you were working on
 3. If your session was in a Mac Mini terminal: it's exactly where you left it (tmux)
 4. If you were SSH'd into your laptop: re-connect: `ssh matt@matts-macbook && cd ~/Dev/my-project`
@@ -242,4 +242,4 @@ That's it. Laptop stays on the desk. You pick up your phone and keep working.
 
 **Tailscale not connecting devices**
 - Open Tailscale app, sign in, ensure both devices show in the admin console
-- MagicDNS must be enabled for hostname resolution (`casper` instead of IP)
+- MagicDNS must be enabled for hostname resolution (hostname instead of IP)

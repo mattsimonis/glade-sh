@@ -8,8 +8,8 @@ reverse_proxy yoto-home:3000
 tls /etc/caddy/certs/yoto.home.pem /etc/caddy/certs/yoto.home-key.pem
 }
 
-# Roost — plain HTTP via mDNS (casper.local on port 80, no cert needed)
-http://casper.local {
+# Roost — plain HTTP via mDNS (roost.local on port 80, no cert needed)
+http://roost.local {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
 uri strip_prefix /ttyd/{http.regexp.tport.1}
@@ -33,8 +33,8 @@ Referrer-Policy strict-origin-when-cross-origin
 }
 }
 
-# Roost — HTTPS via Pi-hole DNS (ai.home)
-ai.home {
+# Roost — HTTPS via Pi-hole DNS (roost.local)
+roost.local {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
 uri strip_prefix /ttyd/{http.regexp.tport.1}
@@ -51,7 +51,7 @@ write_timeout 0
 handle {
 reverse_proxy roost-web:7682
 }
-tls /etc/caddy/certs/ai.home.pem /etc/caddy/certs/ai.home-key.pem
+tls /etc/caddy/certs/roost.local.pem /etc/caddy/certs/roost.local-key.pem
 header {
 -X-Frame-Options
 X-Content-Type-Options nosniff

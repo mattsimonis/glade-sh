@@ -55,7 +55,7 @@ It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywher
        │           Mac Mini (Docker)          │
        │                                      │
        │  caddy-proxy (standalone container)  │
-       │    https://ai.home → :7682 (web UI)  │
+       │    https://roost.local → :7682 (web UI)  │
        │    /ttyd/* → :7681 + :7690–7699      │
        │                                      │
        │  roost-web  (:7682)           │
@@ -69,7 +69,7 @@ It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywher
        └──────────────────────────────────────┘
 ```
 
-**DNS:** Pi-hole maps `ai.home` → Mac Mini LAN IP  
+**DNS:** Pi-hole maps `roost.local` → Mac Mini LAN IP  
 **TLS:** mkcert cert managed by the standalone `caddy-proxy`  
 **Remote access:** Tailscale connects devices outside the home network  
 
@@ -113,7 +113,7 @@ Most mobile terminal apps either cost money, lock you to one platform, or drop y
 
 **Always-on AI assistant.** Mount your dev directory into the container. Keep a session with your AI tools running. Pick it back up from any device.
 
-**Remote access from anywhere.** Tailscale connects your devices over a mesh VPN. Roost is accessible on the same `ai.home` URL whether you're home or not.
+**Remote access from anywhere.** Tailscale connects your devices over a mesh VPN. Roost is accessible on the same `roost.local` URL whether you're home or not.
 
 **One keyboard layout for every device.** Configure your key toolbar once. It syncs across devices via the API — your Esc, Tab, and arrow keys are always where you put them.
 
@@ -126,7 +126,7 @@ Most mobile terminal apps either cost money, lock you to one platform, or drop y
 | Mac Mini (or always-on Linux host) | The execution hub; everything runs here |
 | Docker Desktop | For the container stack |
 | Standalone `caddy-proxy` container | Pre-existing; handles TLS for all `*.home` domains |
-| Pi-hole | Provides `ai.home` DNS record |
+| Pi-hole | Provides `roost.local` DNS record |
 | Tailscale | For remote access outside the home network |
 | Berkeley Mono Nerd Font `.woff2` or `.ttf` *(optional)* | Licensed; must be supplied by you |
 
@@ -158,7 +158,7 @@ roost/
 │   ├── _main/              # Main shell logs
 │   └── {project-slug}/     # Per-project logs
 ├── services/
-│   ├── Caddyfile           # ai.home block for the standalone caddy-proxy
+│   ├── Caddyfile           # roost.local block for the standalone caddy-proxy
 │   └── web.Caddyfile       # Caddy config for the roost-web container
 ├── web/
 │   ├── index.html          # Single-file PWA (~4900 lines, all CSS + JS inline)
@@ -191,14 +191,14 @@ Edit `.env`:
 
 ```bash
 HOST=mac-mini      # hostname of the machine running Docker
-DOMAIN=ai.home     # domain you'll use to access the UI
+DOMAIN=roost.local     # domain you'll use to access the UI
 DEV_DIR=~/Dev      # local directory to mount as /mnt/dev inside the container
 ```
 
 ### 2. DNS — Pi-hole
 
 Add a local DNS record in Pi-hole admin → **Local DNS → DNS Records**:
-- Domain: `ai.home` (or whatever you set `DOMAIN` to)
+- Domain: `roost.local` (or whatever you set `DOMAIN` to)
 - IP: the machine's LAN IP (`ipconfig getifaddr en0` on macOS)
 
 ### 3. TLS — mkcert cert
@@ -206,12 +206,12 @@ Add a local DNS record in Pi-hole admin → **Local DNS → DNS Records**:
 On the machine where `caddy-proxy` is managed:
 
 ```bash
-mkcert ai.home
-mv ai.home.pem       /path/to/caddy/certs/ai.home.pem
-mv ai.home-key.pem   /path/to/caddy/certs/ai.home-key.pem
+mkcert roost.local
+mv roost.local.pem       /path/to/caddy/certs/roost.local.pem
+mv roost.local-key.pem   /path/to/caddy/certs/roost.local-key.pem
 ```
 
-Add the `ai.home` block from `services/Caddyfile` into your `caddy-proxy` Caddyfile, then restart it.
+Add the `roost.local` block from `services/Caddyfile` into your `caddy-proxy` Caddyfile, then restart it.
 
 ### 4. Font — Berkeley Mono Nerd Font (optional)
 
@@ -253,10 +253,10 @@ make build
 
 | Device | URL | Notes |
 |---|---|---|
-| Laptop / desktop | `https://ai.home` | LAN or Tailscale |
-| Phone (iOS) | `https://ai.home` → Share → Add to Home Screen | Full-screen PWA |
-| Phone (Android) | `https://ai.home` → Install app | Full-screen PWA |
-| Remote (Tailscale) | `https://ai.home` via Tailscale | Works anywhere |
+| Laptop / desktop | `https://roost.local` | LAN or Tailscale |
+| Phone (iOS) | `https://roost.local` → Share → Add to Home Screen | Full-screen PWA |
+| Phone (Android) | `https://roost.local` → Install app | Full-screen PWA |
+| Remote (Tailscale) | `https://roost.local` via Tailscale | Works anywhere |
 
 ### First visit — trust the mkcert CA
 
@@ -468,7 +468,7 @@ Runtime data lives outside the repo in `~/.roost/`:
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://ai.home` | Check Pi-hole DNS record. Verify `caddy-proxy` is running: `docker ps`. Try Mac Mini's LAN IP directly. |
+| Can't reach `https://roost.local` | Check Pi-hole DNS record. Verify `caddy-proxy` is running: `docker ps`. Try Mac Mini's LAN IP directly. |
 | Browser shows cert warning | Run `mkcert -install` on the client, or import the mkcert root CA on iOS. |
 | Terminal loads but no input | Ensure ttyd is running with `--writable` (it is by default in Dockerfile). |
 | First Docker build is slow | Normal — downloads ~200 MB of packages. Watch with `docker compose logs -f ttyd`. |
@@ -493,7 +493,7 @@ Runtime data lives outside the repo in `~/.roost/`:
 | Font | Berkeley Mono Nerd Font | Licensed; Nerd-patched for terminal glyphs |
 | Reverse proxy | [Caddy](https://caddyserver.com/) | Auto TLS, simple config, shared with other home services |
 | Remote access | [Tailscale](https://tailscale.com/) | Zero-config mesh VPN, iOS/Android apps |
-| DNS | Pi-hole | Local `ai.home` record; already running |
+| DNS | Pi-hole | Local `roost.local` record; already running |
 | Containerisation | Docker Compose | Two services; `restart: unless-stopped` |
 
 ---

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Polls origin/main and auto-deploys changes to the local repo.
 # Runs the right make target based on what changed.
-# Intended to be invoked by cron every 2 minutes on casper.
+# Intended to be invoked by cron on the host machine every 2 minutes.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"

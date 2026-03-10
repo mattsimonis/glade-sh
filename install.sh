@@ -265,7 +265,7 @@ cat <<EOF
        cd $SCRIPT_DIR && make up
 
   4. From another device on your network, visit:
-       https://ai.home   (if Pi-hole DNS is configured)
+       https://roost.local   (if Pi-hole DNS is configured)
        or the Mac Mini's LAN IP
 
   5. (Optional) Authenticate gh CLI inside the container:

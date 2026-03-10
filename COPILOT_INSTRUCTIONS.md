@@ -6,7 +6,7 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Roost** is a self-hosted browser terminal. One Mac Mini runs Docker; any device connects via `https://ai.home`. The frontend is a single-file PWA (`web/index.html`, ~4900 lines). The backend is a stdlib Python API (`api/api.py`, ~920 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Roost** is a self-hosted browser terminal. One Mac Mini runs Docker; any device connects via `https://roost.local`. The frontend is a single-file PWA (`web/index.html`, ~4900 lines). The backend is a stdlib Python API (`api/api.py`, ~920 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
 Previously called "Copilot Sync" — now generalized. The repo directory is still `copilot-sync` but the project name is **Roost**.
 
@@ -21,7 +21,7 @@ entrypoint.sh               ← Container boot: mkdir, start API
 Dockerfile                  ← Debian bookworm-slim + ttyd + zsh + packages.sh hook
 docker-compose.yml          ← Two services: roost-ttyd + roost-web
 Makefile                    ← Daily ops: up, down, restart, build, logs, shell
-services/Caddyfile          ← caddy-proxy config (ai.home + casper.local routes)
+services/Caddyfile          ← caddy-proxy config (roost.local routes)
 services/web.Caddyfile      ← Inner Caddy for roost-web (file server + API proxy)
 config/zshrc                ← Shell config baked into Docker image
 config/tmux.conf            ← Tmux config (Catppuccin Mocha status bar)
@@ -210,4 +210,4 @@ make shell
 
 9. **iOS viewport math** — The PWA panel height is `31vh`, tuned for iOS Safari's viewport with keyboard open. Changing this requires testing on an actual iPhone.
 
-10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes ai.home traffic). `services/web.Caddyfile` is for the roost-web container (serves files, proxies API).
+10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes roost.local traffic). `services/web.Caddyfile` is for the roost-web container (serves files, proxies API).

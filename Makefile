@@ -7,7 +7,7 @@ ifneq (,$(wildcard .env))
 endif
 
 HOST    ?= mac-mini
-DOMAIN  ?= ai.home
+DOMAIN  ?= roost.local
 
 # ── First-time setup ──────────────────────────────────────────────────────────
 

@@ -92,32 +92,32 @@ If you skip this, the UI falls back to JetBrains Mono / Fira Code / system monos
 
 ---
 
-## Step 6: Set Up Pi-hole DNS for ai.home
+## Step 6: Set Up Pi-hole DNS for roost.local
 
 On the machine running Pi-hole, add a local DNS record:
 
 1. Open Pi-hole admin → **Local DNS** → **DNS Records**
 2. Add:
-   - **Domain:** `ai.home`
+   - **Domain:** `roost.local`
    - **IP Address:** Mac Mini's LAN IP (find it with `ipconfig getifaddr en0`)
 3. Click **Add**
 
 Verify from any device on the network:
 ```bash
-ping ai.home
+ping roost.local
 ```
 
 ---
 
-## Step 7: Add ai.home to Your Standalone Caddy
+## Step 7: Add roost.local to Your Standalone Caddy
 
-Copy the contents of `services/Caddyfile` (the `ai.home` block) into your Caddy project's `Caddyfile`, then generate a TLS cert with `mkcert` using the same CA already installed for `fizzy.home` and `yoto.home`:
+Copy the contents of `services/Caddyfile` (the `roost.local` block) into your Caddy project's `Caddyfile`, then generate a TLS cert with `mkcert` using the same CA already installed for `fizzy.home` and `yoto.home`:
 
 ```bash
 cd /Volumes/Photos/Dev/caddy
-mkcert ai.home
-mv ai.home.pem certs/ai.home.pem
-mv ai.home-key.pem certs/ai.home-key.pem
+mkcert roost.local
+mv roost.local.pem certs/roost.local.pem
+mv roost.local-key.pem certs/roost.local-key.pem
 
 docker restart caddy-proxy
 ```
@@ -167,7 +167,7 @@ Point your standalone Caddy at `localhost:7681` and `localhost:7682` instead of 
 ## Step 8: Verify from the Mac Mini Itself
 
 ```bash
-# Open a browser on the Mac Mini and go to https://ai.home
+# Open a browser on the Mac Mini and go to https://roost.local
 # You should see the Roost web UI with project cards and a terminal
 ```
 
@@ -182,7 +182,7 @@ curl -s http://localhost:7683/api/health | python3 -m json.tool
 
 1. Make sure you're on the same network (or Tailscale is connected)
 2. Open a browser
-3. Go to: `https://ai.home`
+3. Go to: `https://roost.local`
 4. You should see the terminal UI with Catppuccin Mocha theme
 5. Create a project and run a command — it executes on the Mac Mini
 
@@ -192,7 +192,7 @@ curl -s http://localhost:7683/api/health | python3 -m json.tool
 
 1. Make sure you're on the same network (or Tailscale is connected)
 2. Open Safari (iOS) or Chrome (Android)
-3. Go to: `https://ai.home`
+3. Go to: `https://roost.local`
 4. The terminal loads with the mobile keyboard toolbar at the bottom
 5. Use the extra keys (Esc, Tab, Ctrl, arrows) to navigate interactive menus
 6. Copy/Paste buttons are in the toolbar
@@ -240,7 +240,7 @@ launchctl load ~/Library/LaunchAgents/com.roost.ttyd.plist
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://ai.home` | Verify Pi-hole DNS record. Check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
+| Can't reach `https://roost.local` | Verify Pi-hole DNS record. Check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
 | Docker first build is slow | Normal — building the image. Watch with `docker compose logs -f ttyd` |

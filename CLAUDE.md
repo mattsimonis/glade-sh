@@ -22,7 +22,7 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        │         Mac Mini (Docker)            │
        │                                      │
        │  caddy-proxy (standalone container)  │
-       │    ai.home + casper.local → :7682    │
+       │    roost.local → :7682                   │
        │    /ttyd/{port} → :769x              │
        │                                      │
        │  roost-web (:7682, Caddy)            │
@@ -39,8 +39,8 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        └──────────────────────────────────────┘
 ```
 
-**DNS:** Pi-hole maps `ai.home` → Mac Mini LAN IP. `casper.local` works via mDNS.
-**TLS:** mkcert cert for `ai.home`, managed by standalone `caddy-proxy`.
+**DNS:** `roost.local` resolves via mDNS on the local network (no Pi-hole needed).
+**TLS:** mkcert cert for `roost.local`, managed by standalone `caddy-proxy`.
 **Remote:** Tailscale mesh VPN for access outside the home network.
 
 ---
@@ -64,7 +64,7 @@ Two Docker services defined in `docker-compose.yml`:
 
 **caddy-proxy** — standalone (not in this compose file):
 - Pre-existing container shared with other `*.home` services
-- Routes `ai.home` and `casper.local` to `roost-web:7682`
+- Routes `roost.local` to `roost-web:7682`
 - Routes `/ttyd/{port}` to `roost-ttyd:{port}` for WebSocket proxying
 - Manages TLS certs
 
@@ -80,7 +80,7 @@ Two Docker services defined in `docker-compose.yml`:
 4. API starts `tmux pipe-pane` to record output to `~/.roost/logs/{slug}/{timestamp}.log`
 5. API spawns ttyd on a free port (7690–7699) attached to the tmux session
 6. API returns `{port}` to PWA
-7. PWA loads `https://ai.home/ttyd/{port}/` in an iframe
+7. PWA loads `https://roost.local/ttyd/{port}/` in an iframe
 8. User types; input flows through iframe → WebSocket → ttyd → tmux → zsh
 
 ### Session Recording
@@ -150,7 +150,7 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 | `config/tmux.conf` | — | Tmux config (Catppuccin Mocha status bar) |
 | `config/packages.sh` | — | Build-time hook: user-defined package installs (empty by default) |
 | `config/packages.sh.example` | — | Recipe examples: gh CLI, Node.js, pip, Rust, apt |
-| `services/Caddyfile` | 61 | Caddy-proxy config for ai.home + casper.local |
+| `services/Caddyfile` | 61 | Caddy-proxy config for roost.local |
 | `services/web.Caddyfile` | 42 | Inner Caddy config for roost-web container |
 
 ### Runtime (outside repo, on host at `~/.roost/`)

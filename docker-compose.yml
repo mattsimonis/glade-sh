@@ -6,14 +6,14 @@
 #
 # The api service has been merged into the ttyd container.
 # Caddy reverse proxy is a separate standalone container (caddy-proxy on shared_web).
-# Add the ai.home block from services/Caddyfile to your standalone Caddy's Caddyfile.
+# Add the roost.local block from services/Caddyfile to your standalone Caddy's Caddyfile.
 #
 # Prerequisites:
 #   - ~/.config/gh/ must contain valid gh CLI auth tokens (run `gh auth login` first)
 #   - ~/.roost/ must exist with web/, assets/, db/ populated (run install.sh first)
 #   - Docker network 'shared_web' must exist: docker network create shared_web
-#   - ai.home DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
-#   - TLS cert for ai.home in your Caddy certs directory (see services/Caddyfile)
+#   - roost.local DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
+#   - TLS cert for roost.local in your Caddy certs directory (see services/Caddyfile)
 #
 # Usage:
 #   make up        # start all services
