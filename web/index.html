@@ -5260,7 +5260,7 @@
                     '<span class="update-icon">' + (isImage ? '🔧' : '↑') + '</span>' +
                     '<span class="update-msg' + (isImage ? ' image' : '') + '">' +
                         (isImage
-                            ? '<strong>Image update available</strong> — run <code>make build</code> on the host'
+                            ? '<strong>Image update available</strong> — use Settings → Rebuild Container'
                             : '<strong>Update available</strong> — tap to restart and apply') +
                     '</span>' +
                     (isImage ? '' : '<button id="update-restart-btn">Restart</button>') +
@@ -5275,6 +5275,18 @@
                         restartBtn.textContent = 'Restarting…';
                         restartBtn.disabled = true;
                         fetch('/api/restart', { method: 'POST' }).catch(function(){});
+                        // Poll until the API comes back, then dismiss and reconnect
+                        var attempts = 0;
+                        var poll = setInterval(function() {
+                            attempts++;
+                            if (attempts > 30) { clearInterval(poll); restartBtn.textContent = 'Timed out'; return; }
+                            fetch('/api/health').then(function(r) { return r.json(); }).then(function() {
+                                clearInterval(poll);
+                                banner.remove();
+                                _updateBannerShown = false;
+                                forceReconnect();
+                            }).catch(function() { /* still restarting */ });
+                        }, 1500);
                     });
                 }
             }).catch(function(){});
