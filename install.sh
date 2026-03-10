@@ -227,6 +227,82 @@ add_shell_integration "$HOME/.zshrc"  ".zshrc"
 add_shell_integration "$HOME/.bashrc" ".bashrc"
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Step 9: Rebuild watcher (macOS only — launchd WatchPaths agent)
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    SCRIPTS_DIR="$ROOST_DIR/scripts"
+    WATCHER_SCRIPT="$SCRIPTS_DIR/rebuild-watcher.sh"
+    PLIST_PATH="$HOME/Library/LaunchAgents/com.roost.rebuild-watcher.plist"
+    TRIGGER_FILE="$ROOST_DIR/.rebuild-requested"
+    LOCK_FILE="$ROOST_DIR/.rebuild-running"
+    REBUILD_LOG="$ROOST_DIR/rebuild.log"
+
+    mkdir -p "$SCRIPTS_DIR"
+
+    # Write the watcher script (repo path baked in at install time)
+    cat > "$WATCHER_SCRIPT" << WATCHER_EOF
+#!/bin/bash
+TRIGGER="$TRIGGER_FILE"
+LOCK="$LOCK_FILE"
+LOG="$REBUILD_LOG"
+REPO_DIR="$SCRIPT_DIR"
+
+if [[ -f "\$TRIGGER" ]]; then
+    rm -f "\$TRIGGER"
+    touch "\$LOCK"
+    echo "=== Rebuild started \$(date) ===" >> "\$LOG"
+    cd "\$REPO_DIR" && git pull 2>&1 | tee -a "\$LOG" && make build 2>&1 | tee -a "\$LOG"
+    echo "=== Rebuild finished \$(date) ===" >> "\$LOG"
+    rm -f "\$LOCK"
+fi
+WATCHER_EOF
+    chmod +x "$WATCHER_SCRIPT"
+
+    # Write launchd plist with WatchPaths so it fires when the trigger file appears
+    mkdir -p "$HOME/Library/LaunchAgents"
+    cat > "$PLIST_PATH" << PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.roost.rebuild-watcher</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>$WATCHER_SCRIPT</string>
+    </array>
+    <key>WatchPaths</key>
+    <array>
+        <string>$TRIGGER_FILE</string>
+    </array>
+    <key>StandardOutPath</key>
+    <string>$SCRIPTS_DIR/watcher.log</string>
+    <key>StandardErrorPath</key>
+    <string>$SCRIPTS_DIR/watcher.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
+PLIST_EOF
+
+    # Load (or reload) the agent
+    LAUNCH_CTL_UID=$(id -u)
+    launchctl bootout "gui/$LAUNCH_CTL_UID" "$PLIST_PATH" 2>/dev/null || true
+    if launchctl bootstrap "gui/$LAUNCH_CTL_UID" "$PLIST_PATH" 2>/dev/null; then
+        success "Rebuild watcher registered (com.roost.rebuild-watcher)"
+        INSTALLED+=("Rebuild watcher LaunchAgent")
+    else
+        # Fallback: legacy load
+        launchctl load -w "$PLIST_PATH" 2>/dev/null || true
+        success "Rebuild watcher registered (legacy load)"
+        INSTALLED+=("Rebuild watcher LaunchAgent")
+    fi
+else
+    info "Skipping rebuild watcher (macOS only)."
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
 printf "\n${BOLD}━━━ Installation Summary ━━━${RESET}\n\n"

@@ -29,7 +29,8 @@ Routes:
   GET    /api/uploads                   list recent uploads (last 10)
   GET    /api/uploads/:filename         serve uploaded file
   GET    /api/export                    export interactions as JSON
-  GET    /api/logs                      list all session log files
+  GET    /api/rebuild/log               {log, running} — rebuild output log + running state
+  POST   /api/rebuild                   write trigger file for host watcher → {ok}
   GET    /api/logs/search?q=            search across all logs (grep)
   GET    /api/logs/current/:slug        tail active session log (last 200 lines)
   GET    /api/logs/:project/:file       raw log file content (?tail=N optional)
@@ -52,8 +53,13 @@ from socketserver import ThreadingTCPServer
 
 DB_PATH      = os.environ.get("DB_PATH", "/root/.roost/db/history.db")
 PORT         = int(os.environ.get("PORT", "7683"))
+ROOST_DIR    = os.environ.get("ROOST_DIR", "/root/.roost")
 UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.roost/uploads")
 LOGS_DIR     = os.environ.get("LOGS_DIR", "/root/.roost/logs")
+
+REBUILD_TRIGGER = os.path.join(ROOST_DIR, ".rebuild-requested")
+REBUILD_LOCK    = os.path.join(ROOST_DIR, ".rebuild-running")
+REBUILD_LOG     = os.path.join(ROOST_DIR, "rebuild.log")
 
 PORT_POOL = list(range(7690, 7700))
 
@@ -323,6 +329,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._serve_upload(p[2])
         if p == ["api", "export"]:
             return self._export_interactions()
+        if p == ["api", "rebuild", "log"]:
+            return self._get_rebuild_log()
         if p == ["api", "logs"]:
             return self._list_logs()
         if p == ["api", "logs", "search"]:
@@ -335,6 +343,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         p = self.parts()
+        if p == ["api", "rebuild"]:
+            return self._trigger_rebuild()
         if p == ["api", "restart"]:
             return self._restart_api()
         if p == ["api", "projects"]:
@@ -910,6 +920,26 @@ class Handler(BaseHTTPRequestHandler):
         except OSError as e:
             return self.send_json(500, {"error": str(e)})
         self.send_json(200, {"ok": True})
+
+    def _trigger_rebuild(self):
+        try:
+            # Clear previous log so the UI starts fresh
+            open(REBUILD_LOG, "w").close()
+            # Write trigger file — the host launchd watcher picks this up
+            open(REBUILD_TRIGGER, "w").close()
+        except OSError as e:
+            return self.send_json(500, {"error": str(e)})
+        self.send_json(200, {"ok": True})
+
+    def _get_rebuild_log(self):
+        running = os.path.exists(REBUILD_TRIGGER) or os.path.exists(REBUILD_LOCK)
+        try:
+            with open(REBUILD_LOG) as f:
+                lines = f.readlines()
+            log = "".join(lines[-200:])
+        except FileNotFoundError:
+            log = ""
+        self.send_json(200, {"log": log, "running": running})
 
     def _restart_api(self):
         # Respond before exiting so the client gets a clean 200.

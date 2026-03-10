@@ -1476,6 +1476,17 @@
             </div>
         </div>
 
+        <!-- Container section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Container</div>
+            <div class="settings-row">
+                <span class="settings-label">Rebuild</span>
+                <span class="settings-value" id="rebuild-status-val" style="color:#6c7086">Idle</span>
+            </div>
+            <pre id="rebuild-log-pre" style="display:none;margin:8px 0 0;padding:8px;background:#11111b;border-radius:6px;font-size:10px;line-height:1.5;color:#a6adc8;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;border:1px solid #313244"></pre>
+            <button class="settings-btn-full settings-btn-primary" id="rebuild-btn" style="margin-top:8px">Rebuild Container</button>
+        </div>
+
         <!-- History section -->
         <div class="settings-section">
             <div class="settings-section-title">History</div>
@@ -2854,6 +2865,55 @@
             document.getElementById('settings-export-btn').addEventListener('click', function () {
                 window.open('/api/export', '_blank');
             });
+
+            // ── Rebuild ─────────────────────────────────────────────────────────
+            (function () {
+                var rebuildBtn   = document.getElementById('rebuild-btn');
+                var rebuildPre   = document.getElementById('rebuild-log-pre');
+                var rebuildVal   = document.getElementById('rebuild-status-val');
+                var rebuildPoll  = null;
+
+                function pollRebuildLog() {
+                    fetch('/api/rebuild/log').then(function (r) { return r.json(); }).then(function (d) {
+                        if (d.log) {
+                            rebuildPre.style.display = 'block';
+                            rebuildPre.textContent = d.log;
+                            rebuildPre.scrollTop = rebuildPre.scrollHeight;
+                        }
+                        if (d.running) {
+                            rebuildVal.textContent = 'Building…';
+                            rebuildVal.style.color = '#fab387';
+                            rebuildBtn.disabled = true;
+                            rebuildBtn.textContent = 'Building…';
+                        } else {
+                            rebuildVal.style.color = d.log ? '#a6e3a1' : '#6c7086';
+                            rebuildVal.textContent = d.log ? 'Done' : 'Idle';
+                            rebuildBtn.disabled = false;
+                            rebuildBtn.textContent = 'Rebuild Container';
+                            clearInterval(rebuildPoll);
+                            rebuildPoll = null;
+                        }
+                    }).catch(function () {
+                        clearInterval(rebuildPoll);
+                        rebuildPoll = null;
+                    });
+                }
+
+                rebuildBtn.addEventListener('click', function () {
+                    rebuildPre.style.display = 'none';
+                    rebuildPre.textContent = '';
+                    rebuildVal.textContent = 'Triggered…';
+                    rebuildVal.style.color = '#fab387';
+                    rebuildBtn.disabled = true;
+                    fetch('/api/rebuild', { method: 'POST' }).then(function () {
+                        if (!rebuildPoll) rebuildPoll = setInterval(pollRebuildLog, 2000);
+                    }).catch(function () {
+                        rebuildVal.textContent = 'Error';
+                        rebuildVal.style.color = '#f38ba8';
+                        rebuildBtn.disabled = false;
+                    });
+                });
+            })();
         })();
 
         // Cancel edit mode when tapping outside the panel
