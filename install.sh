@@ -241,6 +241,9 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     # Write the watcher script (repo path baked in at install time)
     cat > "$WATCHER_SCRIPT" << WATCHER_EOF
 #!/bin/bash
+# LaunchAgents run with a minimal PATH — add common locations for Docker/Homebrew
+export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
+
 TRIGGER="$TRIGGER_FILE"
 LOCK="$LOCK_FILE"
 LOG="$REBUILD_LOG"
@@ -251,7 +254,8 @@ if [[ -f "\$TRIGGER" ]]; then
     touch "\$LOCK"
     echo "=== Rebuild started \$(date) ===" >> "\$LOG"
     cd "\$REPO_DIR" && git pull 2>&1 | tee -a "\$LOG" && make build 2>&1 | tee -a "\$LOG"
-    echo "=== Rebuild finished \$(date) ===" >> "\$LOG"
+    STATUS=\$?
+    echo "=== Rebuild finished \$(date) exit=\$STATUS ===" >> "\$LOG"
     rm -f "\$LOCK"
 fi
 WATCHER_EOF
