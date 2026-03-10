@@ -1530,6 +1530,13 @@
         let focusModeActive = false;
         let lastTapTime = 0;
 
+        // Track active touch count so showConfirm knows whether a touch is still
+        // held (long-press path) vs. already lifted (tap path).
+        let activeTouchCount = 0;
+        document.addEventListener('touchstart',  function() { activeTouchCount++; }, { passive: true });
+        document.addEventListener('touchend',    function() { activeTouchCount = Math.max(0, activeTouchCount - 1); }, { passive: true });
+        document.addEventListener('touchcancel', function() { activeTouchCount = 0; }, { passive: true });
+
         // ── Project state ────────────────────────────────────────────────────
         let projects = [];
         let currentProjectId = null;
@@ -3235,13 +3242,28 @@
             modal.appendChild(actionsEl);
             document.body.appendChild(backdrop);
             document.body.appendChild(modal);
-            // Block all interaction until the touch that opened the modal is fully cleared.
-            // iOS can retarget touch/click events onto new elements that appear mid-touch.
-            modal.style.pointerEvents = 'none';
-            setTimeout(function() {
-                modal.style.pointerEvents = '';
+            // iOS can retarget touch events onto elements that appear mid-touch.
+            // Block all modal interaction until the triggering touch is fully cleared.
+            modal.style.pointerEvents    = 'none';
+            backdrop.style.pointerEvents = 'none';
+            function armModal() {
+                modal.style.pointerEvents    = '';
+                backdrop.style.pointerEvents = '';
                 backdrop.addEventListener('click', closeConfirm);
-            }, 350);
+            }
+            if (activeTouchCount > 0) {
+                // Touch is still held (long-press path) — wait for finger to lift,
+                // then add a small settle buffer before enabling interaction.
+                var maxTimer = setTimeout(armModal, 800);
+                document.addEventListener('touchend', function() {
+                    clearTimeout(maxTimer);
+                    setTimeout(armModal, 80);
+                }, { once: true, passive: true });
+            } else {
+                // Called from touchend handler or mouse click — iOS may still fire
+                // a synthetic click (~300ms). Block for long enough to absorb it.
+                setTimeout(armModal, 350);
+            }
         }
 
         function closeLogCtx() { closeConfirm(); }
