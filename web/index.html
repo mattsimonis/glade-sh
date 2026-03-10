@@ -863,7 +863,8 @@
         /* ── Desktop ──────────────────────────────────────────── */
         @media (min-width: 768px) {
             #panel, #bottom-nav, #shortcut-bar { display:none; }
-            #status-indicator { top:12px; right:12px; }
+            /* Center vertically within the 38px project-tabs-bar; clear the settings gear */
+            #status-indicator { top:9px; right:52px; }
             /* Make room for settings gear at the right of the project-tabs-bar */
             #project-tabs-bar { padding-right:44px; }
             /* Settings gear — sits in the project-tabs-bar row, right side */
@@ -871,7 +872,7 @@
                 display:flex; align-items:center; justify-content:center;
                 position:absolute; top:0; right:0; z-index:22;
                 width:40px; height:38px;
-                background:#181825; border:none; border-left:1px solid #313244;
+                background:#181825; border:none; border-left:1px solid #313244; border-bottom:1px solid #313244;
                 color:#6c7086; cursor:pointer;
                 -webkit-tap-highlight-color:transparent;
                 transition:color 120ms;
