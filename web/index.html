@@ -4956,11 +4956,12 @@
                 if (desktopPanelBtn) desktopPanelBtn.classList.toggle('active', open);
                 if (open) {
                     // Clear inline styles left by mobile panel animations — they beat CSS rules
-                    panel.style.height = '';
-                    panel.style.opacity = '';
-                    panel.style.transform = '';
-                    panel.style.transition = '';
-                    panel.style.pointerEvents = '';
+                    var mainPanel = document.getElementById('panel');
+                    mainPanel.style.height = '';
+                    mainPanel.style.opacity = '';
+                    mainPanel.style.transform = '';
+                    mainPanel.style.transition = '';
+                    mainPanel.style.pointerEvents = '';
                 }
             }
             if (desktopPanelBtn) {
