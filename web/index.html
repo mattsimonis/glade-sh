@@ -864,7 +864,20 @@
         @media (min-width: 768px) {
             #panel, #bottom-nav, #shortcut-bar { display:none; }
             #status-indicator { top:12px; right:12px; }
-            /* Panel toggle button — visible only on desktop */
+            /* Make room for settings gear at the right of the project-tabs-bar */
+            #project-tabs-bar { padding-right:44px; }
+            /* Settings gear — sits in the project-tabs-bar row, right side */
+            #desktop-settings-btn {
+                display:flex; align-items:center; justify-content:center;
+                position:absolute; top:0; right:0; z-index:22;
+                width:40px; height:38px;
+                background:#181825; border:none; border-left:1px solid #313244;
+                color:#6c7086; cursor:pointer;
+                -webkit-tap-highlight-color:transparent;
+                transition:color 120ms;
+            }
+            #desktop-settings-btn:hover { color:#cdd6f4; }
+            /* Panel toggle button — bottom-right corner */
             #desktop-panel-btn {
                 display:flex; align-items:center; justify-content:center;
                 position:fixed; bottom:16px; right:16px; z-index:90;
@@ -876,12 +889,22 @@
             }
             #desktop-panel-btn:hover { background:#45475a; color:#cdd6f4; }
             #desktop-panel-btn.active { background:#89b4fa22; border-color:#89b4fa55; color:#89b4fa; }
-            /* When panel is open on desktop, show the elements */
-            body.desktop-panel-open #panel { display:block; }
-            body.desktop-panel-open #bottom-nav { display:flex; }
+            /* When panel is open: snippets | history side by side, no carousel */
+            body.desktop-panel-open #panel {
+                display:flex; flex-direction:row; height:260px;
+            }
+            body.desktop-panel-open #panel-slider {
+                display:flex; flex:1; width:100%;
+                transform:none !important; transition:none;
+            }
+            body.desktop-panel-open #pv-keyboard,
+            body.desktop-panel-open #pv-copilot { display:none !important; }
+            body.desktop-panel-open #pv-snippets,
+            body.desktop-panel-open #pv-history { flex:1; width:auto; }
+            body.desktop-panel-open #pv-snippets { border-right:1px solid #313244; }
         }
         @media (max-width: 767px) {
-            #desktop-panel-btn { display:none; }
+            #desktop-panel-btn, #desktop-settings-btn { display:none; }
         }
 
         /* ── Image paste overlay ──────────────────────────────── */
@@ -1085,6 +1108,10 @@
                 <div id="project-tabs-bar"></div>
                 <!-- Shell tabs -->
                 <div id="shell-tabs-bar"></div>
+                <!-- Desktop-only settings gear: sits at the right of the project-tabs-bar row -->
+                <button id="desktop-settings-btn" title="Settings" aria-label="Settings">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
             </div>
             <iframe id="terminal-iframe" src="about:blank" title="Terminal"></iframe>
             <div id="status-indicator">
@@ -2755,6 +2782,8 @@
             document.getElementById('nav-settings-btn').addEventListener('touchend', function (e) {
                 e.preventDefault(); e.stopPropagation(); openSettings();
             }, { passive: false });
+            var deskSettingsBtn = document.getElementById('desktop-settings-btn');
+            if (deskSettingsBtn) deskSettingsBtn.addEventListener('click', openSettings);
             document.getElementById('settings-close-btn').addEventListener('click', closeSettings);
 
             document.getElementById('settings-edit-full').addEventListener('click', function () {
@@ -4924,9 +4953,6 @@
             function toggleDesktopPanel() {
                 var open = document.body.classList.toggle('desktop-panel-open');
                 if (desktopPanelBtn) desktopPanelBtn.classList.toggle('active', open);
-                if (open) {
-                    requestAnimationFrame(function() { switchPanel(currentPanel, true); });
-                }
             }
             if (desktopPanelBtn) {
                 desktopPanelBtn.addEventListener('click', toggleDesktopPanel);
