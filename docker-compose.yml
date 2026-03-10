@@ -1,4 +1,5 @@
 # Roost — Docker Compose
+name: roost
 #
 # Services:
 #   ttyd — terminal server + API (project lifecycle, snippets, layout)
