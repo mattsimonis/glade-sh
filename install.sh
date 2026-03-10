@@ -253,7 +253,10 @@ if [[ -f "\$TRIGGER" ]]; then
     rm -f "\$TRIGGER"
     touch "\$LOCK"
     echo "=== Rebuild started \$(date) ===" >> "\$LOG"
-    cd "\$REPO_DIR" && git pull 2>&1 | tee -a "\$LOG" && make build 2>&1 | tee -a "\$LOG"
+    # Use git -C and docker compose -f to avoid cd + make (LaunchAgent can't getcwd on /Volumes)
+    git -C "\$REPO_DIR" pull 2>&1 | tee -a "\$LOG" && \
+        docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" build ttyd 2>&1 | tee -a "\$LOG" && \
+        docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" up -d 2>&1 | tee -a "\$LOG"
     STATUS=\$?
     echo "=== Rebuild finished \$(date) exit=\$STATUS ===" >> "\$LOG"
     rm -f "\$LOCK"
