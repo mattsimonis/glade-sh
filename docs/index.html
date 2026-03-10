@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roost — Self-hosted terminal for every device</title>
+  <meta name="description" content="A self-hosted terminal that lives on your server and runs on any device. Browser PWA, tmux sessions, mobile keyboard, session logging. Free and open source.">
+  <meta property="og:title" content="Roost">
+  <meta property="og:description" content="A self-hosted terminal that lives on your server and runs on any device.">
+  <meta property="og:image" content="roost_logo.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="roost_logo.png">
+  <style>
+    :root {
+      --crust:    #11111b;
+      --mantle:   #181825;
+      --base:     #1e1e2e;
+      --surface0: #313244;
+      --surface1: #45475a;
+      --surface2: #585b70;
+      --overlay0: #6c7086;
+      --subtext0: #a6adc8;
+      --text:     #cdd6f4;
+      --blue:     #89b4fa;
+      --green:    #a6e3a1;
+      --red:      #f38ba8;
+      --mauve:    #cba6f7;
+      --peach:    #fab387;
+      --sky:      #89dceb;
+      --teal:     #94e2d5;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Berkeley Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, 'Cascadia Code', monospace;
+      background: var(--base);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { color: var(--sky); }
+
+    code {
+      font-family: inherit;
+      background: var(--crust);
+      border: 1px solid var(--surface0);
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+      font-size: 0.9em;
+      color: var(--peach);
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      background: rgba(24, 24, 37, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--surface0);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      z-index: 100;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .nav-brand img { width: 28px; height: 28px; border-radius: 7px; }
+    .nav-links { display: flex; gap: 1.75rem; font-size: 0.83rem; }
+    .nav-links a { color: var(--subtext0); transition: color 0.15s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--blue);
+      color: var(--crust) !important;
+      font-weight: 600;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      transition: opacity 0.15s;
+    }
+    .nav-cta:hover { opacity: 0.85; color: var(--crust) !important; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 6rem 1.5rem 5rem;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .hero-logo {
+      width: 112px;
+      height: 112px;
+      border-radius: 26px;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 0 60px rgba(137, 180, 250, 0.18);
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 3.5rem);
+      font-weight: 700;
+      letter-spacing: -0.035em;
+      color: var(--text);
+      margin-bottom: 1rem;
+      line-height: 1.1;
+    }
+    .hero-tagline {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--subtext0);
+      margin-bottom: 0.6rem;
+      line-height: 1.5;
+    }
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+      margin-top: 1rem;
+    }
+    .pill {
+      background: var(--surface0);
+      border: 1px solid var(--surface1);
+      border-radius: 999px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.75rem;
+      color: var(--subtext0);
+    }
+    .hero-actions {
+      display: flex;
+      gap: 0.875rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--blue);
+      color: var(--crust);
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-primary:hover { opacity: 0.85; color: var(--crust); }
+    .btn-secondary {
+      background: var(--surface0);
+      color: var(--text);
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      border: 1px solid var(--surface1);
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-secondary:hover { background: var(--surface1); color: var(--text); }
+
+    /* ── Install strip ── */
+    .install-strip {
+      background: var(--mantle);
+      border-top: 1px solid var(--surface0);
+      border-bottom: 1px solid var(--surface0);
+      padding: 1.5rem 1rem;
+      text-align: center;
+    }
+    .install-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--overlay0);
+      margin-bottom: 0.6rem;
+    }
+    .cmd-block {
+      display: inline-flex;
+      align-items: center;
+      gap: 1.25rem;
+      background: var(--crust);
+      border: 1px solid var(--surface0);
+      border-radius: 8px;
+      padding: 0.7rem 1.25rem;
+      font-size: clamp(0.75rem, 2vw, 0.88rem);
+      color: var(--green);
+      max-width: 100%;
+    }
+    .cmd-text { overflow-x: auto; white-space: nowrap; }
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--surface1);
+      color: var(--overlay0);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-family: inherit;
+      padding: 0.25rem 0.6rem;
+      border-radius: 5px;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--surface2); }
+
+    /* ── Sections ── */
+    section { padding: 5.5rem 1.5rem; }
+    .section-inner { max-width: 980px; margin: 0 auto; }
+    .section-eyebrow {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+      margin-bottom: 0.6rem;
+    }
+    h2 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.875rem;
+      letter-spacing: -0.02em;
+    }
+    .section-desc {
+      color: var(--subtext0);
+      font-size: 0.95rem;
+      max-width: 540px;
+      margin-bottom: 3rem;
+      line-height: 1.7;
+    }
+
+    /* ── Features grid ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 1px;
+      background: var(--surface0);
+      border: 1px solid var(--surface0);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .feature-card {
+      background: var(--mantle);
+      padding: 1.75rem 1.875rem;
+      transition: background 0.15s;
+    }
+    .feature-card:hover { background: var(--surface0); }
+    .feature-icon { font-size: 1.4rem; margin-bottom: 0.875rem; }
+    .feature-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .feature-card p {
+      font-size: 0.83rem;
+      color: var(--subtext0);
+      line-height: 1.65;
+    }
+
+    /* ── Comparison ── */
+    #comparison { background: var(--mantle); }
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--surface0); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead tr { background: var(--crust); }
+    tbody tr { border-top: 1px solid var(--surface0); transition: background 0.1s; }
+    tbody tr:hover { background: rgba(137, 180, 250, 0.04); }
+    th {
+      padding: 0.9rem 1.25rem;
+      text-align: left;
+      color: var(--overlay0);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+    }
+    th.roost-h { color: var(--blue); }
+    td {
+      padding: 0.85rem 1.25rem;
+      color: var(--subtext0);
+      vertical-align: middle;
+    }
+    td:first-child { color: var(--text); font-weight: 500; }
+    td.roost-col { background: rgba(137, 180, 250, 0.06); font-weight: 600; color: var(--blue); }
+    .yes  { color: var(--green); }
+    .no   { color: var(--surface2); }
+    .part { color: var(--peach); }
+
+    /* ── Quick start ── */
+    .steps { display: flex; flex-direction: column; gap: 1.75rem; max-width: 640px; }
+    .step { display: flex; gap: 1.5rem; align-items: flex-start; }
+    .step-num {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--surface0); color: var(--blue);
+      font-weight: 700; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 0.15rem;
+      border: 1px solid var(--surface1);
+    }
+    .step-body h3 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
+    .step-body p { font-size: 0.84rem; color: var(--subtext0); line-height: 1.65; }
+    .step-cmd {
+      background: var(--crust);
+      border: 1px solid var(--surface0);
+      border-radius: 7px;
+      padding: 0.65rem 1rem;
+      font-size: 0.84rem;
+      color: var(--green);
+      display: block;
+      margin-top: 0.6rem;
+      white-space: nowrap;
+      overflow-x: auto;
+    }
+
+    /* ── Built with ── */
+    #built-with { background: var(--mantle); }
+    .built-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      margin-top: 0.5rem;
+    }
+    .built-chip {
+      background: var(--surface0);
+      border: 1px solid var(--surface1);
+      border-radius: 999px;
+      padding: 0.45rem 1.1rem;
+      font-size: 0.8rem;
+      color: var(--subtext0);
+    }
+    .built-chip b { color: var(--text); font-weight: 600; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--crust);
+      border-top: 1px solid var(--surface0);
+      padding: 3rem 1.5rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--overlay0);
+    }
+    footer img { width: 40px; height: 40px; border-radius: 10px; margin-bottom: 1rem; opacity: 0.7; }
+    footer a { color: var(--subtext0); }
+    footer a:hover { color: var(--text); }
+    .footer-links { display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      section { padding: 3.5rem 1rem; }
+      .hero { padding: 4rem 1rem 3rem; }
+      .step { flex-direction: column; gap: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <a href="#" class="nav-brand">
+    <img src="roost_logo.png" alt="Roost">
+    Roost
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#comparison">Why Roost?</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="#built-with">Stack</a>
+  </div>
+  <a href="https://github.com/mattsimonis/roost" class="nav-cta">GitHub →</a>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero" style="max-width:100%; padding-left:1.5rem; padding-right:1.5rem;">
+  <div style="max-width:680px; margin:0 auto;">
+    <img src="roost_logo.png" alt="Roost" class="hero-logo">
+    <h1>Your terminal,<br>on every device.</h1>
+    <p class="hero-tagline">Roost runs on your server. Any browser connects to it.<br>Sessions stay alive when you close the tab.</p>
+    <div class="hero-pills">
+      <span class="pill">Self-hosted</span>
+      <span class="pill">Browser PWA</span>
+      <span class="pill">tmux sessions</span>
+      <span class="pill">Mobile keyboard</span>
+      <span class="pill">Session logging</span>
+      <span class="pill">Free &amp; open source</span>
+    </div>
+    <div class="hero-actions">
+      <a href="https://github.com/mattsimonis/roost" class="btn-primary">View on GitHub →</a>
+      <a href="#quickstart" class="btn-secondary">Quick Start</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Install strip ── -->
+<div class="install-strip">
+  <p class="install-label">Get started in one command</p>
+  <div class="cmd-block">
+    <span class="cmd-text">git clone https://github.com/mattsimonis/roost &amp;&amp; cd roost &amp;&amp; make setup</span>
+    <button class="copy-btn" onclick="
+      navigator.clipboard.writeText('git clone https://github.com/mattsimonis/roost && cd roost && make setup');
+      this.textContent = '✓ copied';
+      setTimeout(() => this.textContent = 'copy', 1600);
+    ">copy</button>
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<section id="features">
+  <div class="section-inner">
+    <p class="section-eyebrow">What it does</p>
+    <h2>Every device. One terminal.</h2>
+    <p class="section-desc">Roost runs centrally on your machine. Sessions are alive whether you're at your desk, on the couch, or away from home.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Mobile PWA</h3>
+        <p>Install via "Add to Home Screen" on iOS or Android. Full-screen, no browser chrome. Works over Tailscale from anywhere.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⌨️</div>
+        <h3>Custom mobile keyboard</h3>
+        <p>Key toolbar with Esc, Tab, Ctrl, Alt, arrows, and combos. Long-press to repeat. Fully configurable — drag keys to reorder.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🪟</div>
+        <h3>Project isolation</h3>
+        <p>Each project gets its own tmux session and ttyd instance. Sessions survive browser closes, network drops, and reboots.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📜</div>
+        <h3>Session logging</h3>
+        <p>Every session recorded automatically via <code>tmux pipe-pane</code>. Browse and full-text search logs from the History tab.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Command snippets</h3>
+        <p>Save commands and fire them into the terminal with one tap. Synced across all devices via the API.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Private by default</h3>
+        <p>Everything runs on your hardware. Remote access via Tailscale mesh VPN. No cloud. No accounts. Nothing leaves your machine.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔁</div>
+        <h3>Auto-reconnect</h3>
+        <p>Reconnects automatically on network drop or app background. Force-reconnects after &gt;5s backgrounded.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>Catppuccin Mocha</h3>
+        <p>Consistent theme across terminal, UI chrome, toolbar, and this site. Berkeley Mono Nerd Font optional.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Comparison ── -->
+<section id="comparison">
+  <div class="section-inner">
+    <p class="section-eyebrow">Comparison</p>
+    <h2>Why Roost?</h2>
+    <p class="section-desc">Mobile terminal apps drop your session, cost money, or lock you to one platform. Roost runs on your server — the session lives there, and any browser is just a window into it.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="roost-h">Roost</th>
+            <th>Termius</th>
+            <th>Blink Shell</th>
+            <th>JuiceSSH</th>
+            <th>Raw SSH</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Self-hosted</td>
+            <td class="roost-col yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Free</td>
+            <td class="roost-col yes">✓ MIT</td>
+            <td class="part">Freemium</td>
+            <td class="no">$20</td>
+            <td class="part">Freemium</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Works on any device</td>
+            <td class="roost-col yes">✓ browser</td>
+            <td class="yes">✓</td>
+            <td class="no">iOS only</td>
+            <td class="no">Android only</td>
+            <td class="part">With client</td>
+          </tr>
+          <tr>
+            <td>Persistent sessions</td>
+            <td class="roost-col yes">✓ tmux</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="part">With tmux</td>
+          </tr>
+          <tr>
+            <td>Custom mobile keyboard</td>
+            <td class="roost-col yes">✓</td>
+            <td class="no">✗</td>
+            <td class="part">Limited</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+          <tr>
+            <td>Session recording</td>
+            <td class="roost-col yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+          <tr>
+            <td>Multi-project isolation</td>
+            <td class="roost-col yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+          <tr>
+            <td>No cloud dependency</td>
+            <td class="roost-col yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── Quick start ── -->
+<section id="quickstart">
+  <div class="section-inner">
+    <p class="section-eyebrow">Get started</p>
+    <h2>Up in minutes.</h2>
+    <p class="section-desc">You need Docker and an always-on host. Everything else is handled by the Makefile.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Clone and configure</h3>
+          <p>Copy the environment template. Set your hostname, domain, and dev directory.</p>
+          <code class="step-cmd">git clone https://github.com/mattsimonis/roost &amp;&amp; cp .env.example .env</code>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>DNS and TLS</h3>
+          <p>Add a local DNS record in Pi-hole for <code>ai.home</code>. Generate a cert with mkcert and add the Caddyfile block to your reverse proxy. Full steps in <a href="https://github.com/mattsimonis/roost/blob/main/SETUP.md">SETUP.md</a>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Start</h3>
+          <p>One command builds and starts both containers.</p>
+          <code class="step-cmd">make setup</code>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Open and install the PWA</h3>
+          <p>Navigate to <code>https://ai.home</code> on any device. On iOS, tap Share → Add to Home Screen. Create your first project and the terminal opens.</p>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:2.5rem; font-size:0.84rem; color:var(--subtext0)">
+      Full walkthrough → <a href="https://github.com/mattsimonis/roost/blob/main/SETUP.md">SETUP.md</a>
+    </p>
+  </div>
+</section>
+
+<!-- ── Built with ── -->
+<section id="built-with">
+  <div class="section-inner">
+    <p class="section-eyebrow">Stack</p>
+    <h2>Solid foundations.</h2>
+    <p class="section-desc">No novel dependencies. Every component is a proven, widely-used open source project.</p>
+    <div class="built-grid">
+      <span class="built-chip"><b>ttyd</b> — terminal over WebSocket</span>
+      <span class="built-chip"><b>tmux</b> — session multiplexer</span>
+      <span class="built-chip"><b>Caddy</b> — reverse proxy + TLS</span>
+      <span class="built-chip"><b>Tailscale</b> — mesh VPN</span>
+      <span class="built-chip"><b>Docker Compose</b> — container runtime</span>
+      <span class="built-chip"><b>Python stdlib</b> — REST API, zero deps</span>
+      <span class="built-chip"><b>SQLite + FTS5</b> — embedded database</span>
+      <span class="built-chip"><b>xterm.js</b> — terminal renderer</span>
+      <span class="built-chip"><b>Catppuccin Mocha</b> — theme</span>
+      <span class="built-chip"><b>Oh My Zsh + Spaceship</b> — shell</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <img src="roost_logo.png" alt="Roost">
+  <p>Roost is <a href="https://github.com/mattsimonis/roost/blob/main/LICENSE">MIT licensed</a>.<br>Built by <a href="https://github.com/mattsimonis">mattsimonis</a>.</p>
+  <div class="footer-links">
+    <a href="https://github.com/mattsimonis/roost">GitHub</a>
+    <a href="https://github.com/mattsimonis/roost/blob/main/README.md">Docs</a>
+    <a href="https://github.com/mattsimonis/roost/blob/main/SETUP.md">Setup</a>
+    <a href="https://github.com/mattsimonis/roost/issues">Issues</a>
+  </div>
+</footer>
+
+<script>
+  // Nav active link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        navLinks.forEach(a => {
+          a.style.color = a.getAttribute('href') === `#${id}` ? 'var(--text)' : '';
+        });
+      }
+    });
+  }, { threshold: 0.45 });
+  sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest something for Roost to do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the use case first — what you're trying to do, not just the feature you want.
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: What's the use case?
+      description: What are you trying to do? What's the context?
+      placeholder: "When I'm away from home and want to check on a running job, I have to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to see?
+      description: Describe the feature or behaviour you're proposing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Any workarounds or other approaches you've tried.
+    validations:
+      required: false

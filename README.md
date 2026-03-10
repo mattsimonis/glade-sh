@@ -1,10 +1,42 @@
-# Roost
+<div align="center">
+  <img src="assets/roost_logo.png" width="140" alt="Roost">
+  <h1>Roost</h1>
+  <p>A self-hosted terminal that lives on your server and runs on every device.</p>
 
-A self-hosted, always-on terminal that's identical on every device — phone, laptop, desktop. Runs centrally on your own machine (Mac Mini, home server, VPS) and is accessible from anywhere via browser. All interactions are logged to SQLite with full-text search.
+  [![License: MIT](https://img.shields.io/badge/License-MIT-cba6f7.svg?style=flat-square&labelColor=313244)](LICENSE)
+  [![Docker](https://img.shields.io/badge/Docker-ready-89b4fa.svg?style=flat-square&labelColor=313244&logo=docker&logoColor=89b4fa)](docker-compose.yml)
+  [![Python](https://img.shields.io/badge/API-Python_stdlib-a6e3a1.svg?style=flat-square&labelColor=313244&logo=python&logoColor=a6e3a1)](api/api.py)
+  [![PWA](https://img.shields.io/badge/PWA-installable-fab387.svg?style=flat-square&labelColor=313244)](web/manifest.json)
+</div>
 
-The UI is a single-file PWA styled in Catppuccin Mocha with a mobile keyboard toolbar, per-project terminal isolation via tmux, command snippets, and connection auto-recovery.
+---
 
-> **Screenshots/GIFs welcome** — if you set this up and want to contribute visuals to the README, open a PR.
+Your terminal is open on your phone. The session is alive on your server. Close the browser — it keeps running. Open it on your laptop — same session, same history, same scrollback. That's Roost.
+
+It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywhere: on LAN through Caddy, remotely through Tailscale. No subscriptions. No cloud. Nothing leaves your machine.
+
+> **Screenshots and GIFs welcome.** If you set this up and want to contribute visuals to the README, open a PR.
+
+---
+
+## Contents
+
+- [Architecture](#architecture)
+- [Features](#features)
+- [Why Roost?](#why-roost)
+- [Use Cases](#use-cases)
+- [Prerequisites](#prerequisites)
+- [Directory Structure](#directory-structure)
+- [Setup](#setup)
+- [Accessing the UI](#accessing-the-ui)
+- [Using the Terminal](#using-the-terminal)
+- [Session Logs](#session-logs)
+- [API Reference](#api-reference)
+- [Database Schema](#database-schema)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [Tech Stack](#tech-stack)
+- [Contributing](#contributing)
 
 ---
 
@@ -52,6 +84,37 @@ The UI is a single-file PWA styled in Catppuccin Mocha with a mobile keyboard to
 - **Connection recovery** — auto-reconnects on network drop or app background; force-reconnects after >5s in background
 - **Catppuccin Mocha** — consistent theme across terminal, UI chrome, and toolbar
 - **Berkeley Mono Nerd Font** — optional; falls back to JetBrains Mono → Fira Code → system monospace
+
+---
+
+## Why Roost?
+
+Most mobile terminal apps either cost money, lock you to one platform, or drop your session when you close the app. Roost runs *on your server* — the session lives there, and any browser is just a window into it.
+
+|  | **Roost** | Termius | Blink Shell | JuiceSSH | Raw SSH |
+|---|---|---|---|---|---|
+| Self-hosted | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Free | ✅ MIT | Freemium | $20 | Freemium | ✅ |
+| Works on any device | ✅ browser | ✅ | iOS only | Android only | With client |
+| Persistent sessions | ✅ tmux | ❌ | ❌ | ❌ | With tmux |
+| Custom mobile keyboard | ✅ | ❌ | Limited | ❌ | ❌ |
+| Session recording | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Multi-project isolation | ✅ | ❌ | ❌ | ❌ | ❌ |
+| No cloud dependency | ✅ | ❌ | ❌ | ❌ | ✅ |
+
+---
+
+## Use Cases
+
+**Homelab from the couch.** Each project gets its own tmux session. Switch between them from your phone without losing context.
+
+**Check on a long build.** Start a job on your server. Close the laptop. Open Roost on your phone an hour later — session still running, logs still scrolling.
+
+**Always-on AI assistant.** Mount your dev directory into the container. Keep a session with your AI tools running. Pick it back up from any device.
+
+**Remote access from anywhere.** Tailscale connects your devices over a mesh VPN. Roost is accessible on the same `ai.home` URL whether you're home or not.
+
+**One keyboard layout for every device.** Configure your key toolbar once. It syncs across devices via the API — your Esc, Tab, and arrow keys are always where you put them.
 
 ---
 
@@ -431,3 +494,11 @@ Runtime data lives outside the repo in `~/.roost/`:
 | Remote access | [Tailscale](https://tailscale.com/) | Zero-config mesh VPN, iOS/Android apps |
 | DNS | Pi-hole | Local `ai.home` record; already running |
 | Containerisation | Docker Compose | Two services; `restart: unless-stopped` |
+
+---
+
+## Contributing
+
+Screenshots, GIFs, and bug reports are the most useful contributions right now. If you run Roost and want to share a screenshot or screen recording, open a PR adding them to `assets/`.
+
+For code contributions, see [CONTRIBUTING.md](CONTRIBUTING.md).

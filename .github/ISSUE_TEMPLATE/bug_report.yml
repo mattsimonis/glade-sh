@@ -1,0 +1,60 @@
+name: Bug report
+description: Something isn't working as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a bug report, check `docker compose logs` for errors and confirm you're on the latest commit.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what did you get instead?
+      placeholder: "I tapped the project card, the terminal loaded, but input doesn't work."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug.
+      placeholder: |
+        1. Create a new project
+        2. Tap the project card
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Host OS
+      placeholder: "macOS 14.x / Ubuntu 22.04 / ..."
+    validations:
+      required: true
+
+  - type: input
+    id: docker
+    attributes:
+      label: Docker version
+      placeholder: "docker compose version"
+    validations:
+      required: true
+
+  - type: input
+    id: client
+    attributes:
+      label: Client device and browser
+      placeholder: "iPhone 15, Safari 17 / macOS, Chrome 122"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Output of `make logs` or `docker compose logs ttyd`, trimmed to the relevant section.
+      render: shell
