@@ -4,13 +4,13 @@
 #   ttyd — terminal server + API (project lifecycle, snippets, layout)
 #   web  — Caddy file-server for the HTML wrapper and assets
 #
-# The api service has been merged into the ttyd container.
-# Caddy reverse proxy is a separate standalone container (caddy-proxy on shared_web).
-# Add the roost.local block from services/Caddyfile to your standalone Caddy's Caddyfile.
+# The ttyd container clones the app repo at startup and polls for updates
+# every 2 minutes. No host repo required for daily operation.
+# Run `make build` only when Dockerfile/entrypoint.sh/config/ changes.
 #
 # Prerequisites:
 #   - ~/.config/gh/ must contain valid gh CLI auth tokens (run `gh auth login` first)
-#   - ~/.roost/ must exist with web/, assets/, db/ populated (run install.sh first)
+#   - ~/.roost/ must exist with assets/, db/ populated (run install.sh first)
 #   - Docker network 'shared_web' must exist: docker network create shared_web
 #   - roost.local DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
 #   - TLS cert for roost.local in your Caddy certs directory (see services/Caddyfile)
@@ -33,10 +33,11 @@ services:
     volumes:
       - ${ROOST_DIR:-~/.roost}:/root/.roost
       - ${DEV_DIR:-~/Dev}:/mnt/dev
-      - ./api/api.py:/app/api.py   # mount live — API changes only need `make restart`
+      - roost-app:/app/roost              # cloned repo lives here
     environment:
       - TERM=xterm-256color
       - ROOST_DIR=/root/.roost
+      - ROOST_REPO_URL=${ROOST_REPO_URL:-https://github.com/mattsimonis/roost.git}
     restart: unless-stopped
     networks:
       - shared_web
@@ -45,7 +46,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 30s
 
   web:
     image: caddy:2-alpine
@@ -53,8 +54,8 @@ services:
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
       - ./services/web.Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./web:/srv/web:ro                  # serve directly from repo — no scp needed
-      - ~/.roost/assets:/srv/assets:ro
+      - roost-app:/srv:ro                 # serves /srv/web/index.html (Caddyfile unchanged)
+      - ${ROOST_DIR:-~/.roost}/assets:/srv/assets:ro
     restart: unless-stopped
     networks:
       - shared_web
@@ -62,3 +63,6 @@ services:
 networks:
   shared_web:
     external: true
+
+volumes:
+  roost-app:                              # shared between ttyd (write) and web (read)

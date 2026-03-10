@@ -6,7 +6,8 @@ Runs inside the ttyd Docker container on port 7683.
 Manages project lifecycle: tmux sessions + ttyd child processes.
 
 Routes:
-  GET    /api/health
+  GET    /api/health                    {ok, update_pending, image_update_pending}
+  POST   /api/restart                   trigger graceful API restart (exit 42 → entrypoint loops)
   GET    /api/projects                  list all projects with running status
   POST   /api/projects                  create {name, directory, color}
   PUT    /api/projects/:id              update project
@@ -297,7 +298,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         p = self.parts()
         if p == ["api", "health"]:
-            return self.send_json(200, {"ok": True})
+            return self.send_json(200, {
+                "ok": True,
+                "update_pending": os.path.exists("/tmp/roost-update-pending"),
+                "image_update_pending": os.path.exists("/tmp/roost-image-update-pending"),
+            })
         if p == ["api", "projects", "activity"]:
             return self._get_activity()
         if p == ["api", "projects"]:
@@ -330,6 +335,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         p = self.parts()
+        if p == ["api", "restart"]:
+            return self._restart_api()
         if p == ["api", "projects"]:
             return self._create_project()
         if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "start":
@@ -903,6 +910,15 @@ class Handler(BaseHTTPRequestHandler):
         except OSError as e:
             return self.send_json(500, {"error": str(e)})
         self.send_json(200, {"ok": True})
+
+    def _restart_api(self):
+        # Respond before exiting so the client gets a clean 200.
+        self.send_json(200, {"ok": True, "message": "Restarting…"})
+        # Exit code 42 signals the entrypoint supervisor loop to restart.
+        threading.Thread(target=lambda: (
+            __import__("time").sleep(0.2),
+            os._exit(42)
+        ), daemon=True).start()
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     ensure_tables()
     # Kill any ttyd processes left over from a prior crash that still hold our ports.

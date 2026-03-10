@@ -40,7 +40,6 @@ COPY config/tmux.conf /root/.tmux.conf
 COPY config/packages.sh /tmp/packages.sh
 RUN chmod +x /tmp/packages.sh && /tmp/packages.sh && rm /tmp/packages.sh
 
-COPY api/api.py /app/api.py
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

@@ -834,6 +834,32 @@
         .confirm-actions .action-neutral { background:#313244; color:#cdd6f4; }
         .confirm-actions .action-cancel { background:none; color:#585b70; font-size:13px; }
 
+        /* ── Update banner ────────────────────────────────────── */
+        #update-banner {
+            position:fixed; top:0; left:0; right:0; z-index:350;
+            background:#313244; border-bottom:1px solid #45475a;
+            padding:10px 16px; padding-top:calc(10px + env(safe-area-inset-top));
+            display:flex; align-items:center; gap:10px;
+            font-size:13px; font-family:var(--font-mono); color:#cdd6f4;
+            animation:slideDown 200ms ease-out;
+            transform:translateY(0);
+        }
+        @keyframes slideDown { from { transform:translateY(-100%); } to { transform:translateY(0); } }
+        #update-banner .update-icon { font-size:16px; flex-shrink:0; }
+        #update-banner .update-msg { flex:1; }
+        #update-banner .update-msg strong { color:#a6e3a1; }
+        #update-banner .update-msg.image strong { color:#fab387; }
+        #update-banner button {
+            background:#89b4fa; color:#1e1e2e; border:none; border-radius:8px;
+            padding:6px 12px; font-size:12px; font-family:var(--font-mono);
+            font-weight:600; cursor:pointer; flex-shrink:0;
+            -webkit-tap-highlight-color:transparent;
+        }
+        #update-banner button:active { opacity:0.75; }
+        #update-banner .update-dismiss {
+            background:none; color:#585b70; padding:6px;
+        }
+
         /* ── Desktop ──────────────────────────────────────────── */
         @media (min-width: 768px) {
             #panel, #bottom-nav, #shortcut-bar { display:none !important; }
@@ -5019,6 +5045,42 @@
                 return;
             }
         }, true); // capture phase — fires before kbRelay's listener
+
+        // ── Update banner ─────────────────────────────────────────────────────────
+        var _updateBannerShown = false;
+        function checkForUpdates() {
+            fetch('/api/health').then(function(r) { return r.json(); }).then(function(data) {
+                if (!data.update_pending && !data.image_update_pending) return;
+                if (_updateBannerShown) return;
+                _updateBannerShown = true;
+                var banner = document.createElement('div');
+                banner.id = 'update-banner';
+                var isImage = data.image_update_pending;
+                banner.innerHTML =
+                    '<span class="update-icon">' + (isImage ? '🔧' : '↑') + '</span>' +
+                    '<span class="update-msg' + (isImage ? ' image' : '') + '">' +
+                        (isImage
+                            ? '<strong>Image update available</strong> — run <code>make build</code> on the host'
+                            : '<strong>Update available</strong> — tap to restart and apply') +
+                    '</span>' +
+                    (isImage ? '' : '<button id="update-restart-btn">Restart</button>') +
+                    '<button class="update-dismiss">✕</button>';
+                document.body.prepend(banner);
+                banner.querySelector('.update-dismiss').addEventListener('click', function() {
+                    banner.remove(); _updateBannerShown = false;
+                });
+                var restartBtn = banner.querySelector('#update-restart-btn');
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', function() {
+                        restartBtn.textContent = 'Restarting…';
+                        restartBtn.disabled = true;
+                        fetch('/api/restart', { method: 'POST' }).catch(function(){});
+                    });
+                }
+            }).catch(function(){});
+        }
+        checkForUpdates();
+        setInterval(checkForUpdates, 30000);
 
         startTerminalPoll();
 

@@ -178,14 +178,14 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 
 ## Deployment Model
 
-The repo is cloned on the Mac Mini. Docker containers mount files directly from it via bind mounts. `git pull` is the deploy step for most changes.
+The container clones the repo from GitHub on first start and polls `origin/main` every 2 minutes. The host only needs `docker-compose.yml` and `.env`.
 
-| What changed | Deploy command |
+| What changed | How it deploys |
 |---|---|
-| `web/index.html` | `git pull` — refresh browser |
-| `api/api.py` | `git pull && make restart` |
-| `Dockerfile`, `entrypoint.sh`, `config/` | `git pull && make build` |
-| `docker-compose.yml` | `git pull && make down && make up` |
+| `web/index.html` / static files | Auto-pulled; browser gets new file on next load |
+| `api/api.py` | Auto-pulled; PWA shows "Update available" banner → user taps Restart |
+| `Dockerfile`, `entrypoint.sh`, `config/` | Auto-pulled but can't apply without rebuild; banner shows "run `make build`" |
+| `docker-compose.yml` | `make down && make up` on the host |
 
 ---
 
