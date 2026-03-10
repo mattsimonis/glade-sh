@@ -36,6 +36,7 @@ It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywher
 - [Development](#development)
 - [Troubleshooting](#troubleshooting)
 - [Tech Stack](#tech-stack)
+- [FAQ](#faq)
 - [Contributing](#contributing)
 
 ---
@@ -494,6 +495,18 @@ Runtime data lives outside the repo in `~/.roost/`:
 | Remote access | [Tailscale](https://tailscale.com/) | Zero-config mesh VPN, iOS/Android apps |
 | DNS | Pi-hole | Local `ai.home` record; already running |
 | Containerisation | Docker Compose | Two services; `restart: unless-stopped` |
+
+---
+
+## FAQ
+
+**Why is `web/index.html` ~5,000 lines?**
+
+It's a deliberate choice. All CSS and JavaScript are inline in a single file — no bundler, no build step, no `node_modules`. Deploying a change is `git pull` on the server and a browser refresh. The container reads the file directly via bind mount. There's no compilation stage that can break.
+
+The tradeoff is that the file is large and not split by concern. The payoff is that the entire frontend is one `cat`, one `scp`, one file to audit. For a self-hosted tool that one person runs and maintains, that's the right call.
+
+If you want to add a feature, you edit one file. That's it.
 
 ---
 
