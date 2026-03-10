@@ -3080,8 +3080,8 @@
                 const mw = 160, mh = 90;
                 menu.style.left = Math.min(x, window.innerWidth - mw) + 'px';
                 menu.style.top = Math.min(y, window.innerHeight - mh) + 'px';
-                backdrop.addEventListener('click', closeSnippetCtx);
                 setTimeout(function() {
+                    backdrop.addEventListener('click', closeSnippetCtx);
                     backdrop.addEventListener('touchend', closeSnippetCtx);
                 }, 100);
             }
@@ -3256,8 +3256,8 @@
             var mw = 160, mh = 52;
             menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
             menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
-            backdrop.addEventListener('click', closeLogCtx);
             setTimeout(function() {
+                backdrop.addEventListener('click', closeLogCtx);
                 backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeLogCtx(); }, { passive: false });
             }, 100);
         }
@@ -3500,8 +3500,8 @@
             const mw = 140, mh = 52;
             menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
             menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
-            backdrop.addEventListener('click', closeShellCtx);
             setTimeout(function() {
+                backdrop.addEventListener('click', closeShellCtx);
                 backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeShellCtx(); }, { passive: false });
             }, 100);
         }
