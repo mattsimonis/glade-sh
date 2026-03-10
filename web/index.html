@@ -260,33 +260,11 @@
         #status-indicator {
             position:absolute; top:calc(env(safe-area-inset-top) + 5px); right:8px; z-index:30; display:flex; align-items:center; gap:6px;
             padding:4px 10px; background:rgba(24,24,37,0.8); backdrop-filter:blur(8px);
-            -webkit-backdrop-filter:blur(8px); border-radius:9999px; border:2px solid transparent;
+            -webkit-backdrop-filter:blur(8px); border-radius:9999px; border:1px solid rgba(166,173,200,0.15);
             font-size:11px; font-family:var(--font-mono); color:#a6adc8;
             transition:opacity 300ms ease; pointer-events:none;
         }
         #status-indicator.fade-out { opacity:0; }
-        /* ── Status indicator spinning glow (mirrors toast technique) ─ */
-        @property --si-angle {
-            syntax: '<angle>';
-            initial-value: 0deg;
-            inherits: false;
-        }
-        @keyframes si-spin { to { --si-angle: 1turn; } }
-        #status-indicator.connected    { --si-a:#a6e3a1; --si-b:#94e2d5; --si-c:#d4f0d2; }
-        #status-indicator.reconnecting { --si-a:#fab387; --si-b:#f9e2af; --si-c:#fab387; }
-        #status-indicator.disconnected { --si-a:#f38ba8; --si-b:#fab387; --si-c:#f5c2e7; }
-        #status-indicator::before, #status-indicator::after {
-            --_m: conic-gradient(red 0 0);
-            content:''; position:absolute; inset:-2px; border-radius:inherit;
-            background: conic-gradient(from var(--si-angle), var(--si-a), var(--si-b), var(--si-c), var(--si-b), var(--si-a)) border-box;
-            mask: var(--_m) no-clip subtract, var(--_m) padding-box;
-            pointer-events:none; opacity:0; transition:opacity 400ms ease;
-        }
-        #status-indicator::after { filter:blur(8px); }
-        #status-indicator:not(.fade-out)::before,
-        #status-indicator:not(.fade-out)::after {
-            opacity:1; animation:si-spin 3s linear infinite;
-        }
 
         /* ── Gesture + trackpad ───────────────────────────────── */
         #gesture-overlay { position:absolute; inset:0; z-index:20; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
@@ -1006,6 +984,19 @@
            conic gradient. ::before = the border strip (masked to border-box
            minus padding-box). ::after = same, blurred = the glow.
            Only height animates (42px → 76px). No width animation. */
+        /* ── Dynamic island glow — mobile only, tied to connection state ── */
+        #di-glow {
+            position:fixed; top:-15px; left:50%; transform:translateX(-50%);
+            width:180px; height:60px; border-radius:50%;
+            filter:blur(24px); opacity:0; pointer-events:none; z-index:9998;
+            transition:opacity 350ms ease; display:none;
+        }
+        @media (max-width:767px) { #di-glow { display:block; } }
+        #di-glow.glow-connected    { background:rgba(166,227,161,0.9); }
+        #di-glow.glow-reconnecting { background:rgba(250,179,135,0.9); }
+        #di-glow.glow-disconnected { background:rgba(243,139,168,0.9); }
+        #di-glow.glow-active       { opacity:1; }
+
         @property --toast-angle {
             syntax: '<angle>';
             initial-value: 0deg;
@@ -1533,6 +1524,7 @@
     </div>
 
     <!-- Toast container -->
+    <div id="di-glow"></div>
     <div id="toast-container"></div>
 
     <!-- Debug panel — open via long-press on status indicator or Ctrl+Shift+D -->
@@ -1629,6 +1621,7 @@
         let selListenerAdded = false;          // xterm selection listener guard
         let connectionState = 'connected';
         let statusFadeTimer = null;
+        let diGlowTimer     = null;
         let xtermTextarea = null, terminalInstance = null;
         let editMode = false, editorTargetRow = null, editorTargetIndex = null;
         let currentPanel = 'keyboard';
@@ -4657,6 +4650,17 @@
             var dbgText = document.getElementById('dbg-conn-text');
             if (dbgDot)  { dbgDot.className = 'status-dot ' + state; }
             if (dbgText) { dbgText.textContent = labels[state] || state; }
+            // Dynamic island glow (mobile only — CSS display:none on desktop)
+            var diGlow = document.getElementById('di-glow');
+            if (diGlow) {
+                clearTimeout(diGlowTimer);
+                diGlow.classList.remove('glow-connected', 'glow-reconnecting', 'glow-disconnected', 'glow-active');
+                void diGlow.offsetWidth; // force reflow so re-adding classes re-triggers transition
+                diGlow.classList.add('glow-' + state, 'glow-active');
+                if (state === 'connected') {
+                    diGlowTimer = setTimeout(function () { diGlow.classList.remove('glow-active'); }, 4000);
+                }
+            }
         }
         let consecutiveFailures = 0;
         let reconnectInProgress = false;
