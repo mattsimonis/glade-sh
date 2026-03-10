@@ -3078,12 +3078,15 @@
                 document.body.appendChild(menu);
                 // Position: keep on screen
                 const mw = 160, mh = 90;
+                const aboveY = y - mh - 16;
                 menu.style.left = Math.min(x, window.innerWidth - mw) + 'px';
-                menu.style.top = Math.min(y, window.innerHeight - mh) + 'px';
+                menu.style.top = (aboveY >= 8 ? aboveY : Math.min(y + 16, window.innerHeight - mh - 8)) + 'px';
+                menu.style.pointerEvents = 'none';
                 setTimeout(function() {
+                    menu.style.pointerEvents = '';
                     backdrop.addEventListener('click', closeSnippetCtx);
                     backdrop.addEventListener('touchend', closeSnippetCtx);
-                }, 100);
+                }, 200);
             }
             function closeSnippetCtx() {
                 document.querySelectorAll('.snippet-ctx,.snippet-ctx-backdrop').forEach(function(el) { el.remove(); });
@@ -3254,12 +3257,15 @@
             document.body.appendChild(backdrop);
             document.body.appendChild(menu);
             var mw = 160, mh = 52;
+            var aboveY = y - mh - 16;
             menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
-            menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
+            menu.style.top = (aboveY >= 8 ? aboveY : Math.min(y + 16, window.innerHeight - mh - 8)) + 'px';
+            menu.style.pointerEvents = 'none';
             setTimeout(function() {
+                menu.style.pointerEvents = '';
                 backdrop.addEventListener('click', closeLogCtx);
                 backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeLogCtx(); }, { passive: false });
-            }, 100);
+            }, 200);
         }
 
         async function renderHistory() {
@@ -3498,12 +3504,15 @@
             document.body.appendChild(backdrop);
             document.body.appendChild(menu);
             const mw = 140, mh = 52;
+            const aboveY = y - mh - 16;
             menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
-            menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
+            menu.style.top = (aboveY >= 8 ? aboveY : Math.min(y + 16, window.innerHeight - mh - 8)) + 'px';
+            menu.style.pointerEvents = 'none';
             setTimeout(function() {
+                menu.style.pointerEvents = '';
                 backdrop.addEventListener('click', closeShellCtx);
                 backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeShellCtx(); }, { passive: false });
-            }, 100);
+            }, 200);
         }
 
         function renderShellTabs(shells) {
