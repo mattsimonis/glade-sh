@@ -3081,7 +3081,9 @@
                 menu.style.left = Math.min(x, window.innerWidth - mw) + 'px';
                 menu.style.top = Math.min(y, window.innerHeight - mh) + 'px';
                 backdrop.addEventListener('click', closeSnippetCtx);
-                backdrop.addEventListener('touchend', closeSnippetCtx);
+                setTimeout(function() {
+                    backdrop.addEventListener('touchend', closeSnippetCtx);
+                }, 100);
             }
             function closeSnippetCtx() {
                 document.querySelectorAll('.snippet-ctx,.snippet-ctx-backdrop').forEach(function(el) { el.remove(); });
@@ -3255,7 +3257,9 @@
             menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
             menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
             backdrop.addEventListener('click', closeLogCtx);
-            backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeLogCtx(); }, { passive: false });
+            setTimeout(function() {
+                backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeLogCtx(); }, { passive: false });
+            }, 100);
         }
 
         async function renderHistory() {
@@ -3497,7 +3501,9 @@
             menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
             menu.style.top = Math.min(y + 8, window.innerHeight - mh - 8) + 'px';
             backdrop.addEventListener('click', closeShellCtx);
-            backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeShellCtx(); }, { passive: false });
+            setTimeout(function() {
+                backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeShellCtx(); }, { passive: false });
+            }, 100);
         }
 
         function renderShellTabs(shells) {
