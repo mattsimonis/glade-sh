@@ -798,55 +798,37 @@
             text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;
         }
 
-        /* ── Snippet context menu (long-press) ─────────────────── */
-        .snippet-ctx {
-            position:fixed; z-index:250; background:#313244;
-            border:1px solid #45475a; border-radius:10px;
-            padding:4px 0; min-width:140px;
-            box-shadow:0 8px 24px rgba(0,0,0,0.5);
-            animation:ctxIn 120ms ease-out;
-        }
+        /* ── Confirm modal ─────────────────────────────────────── */
         @keyframes ctxIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
-        .snippet-ctx button {
-            display:block; width:100%; padding:10px 16px; background:none; border:none;
-            text-align:left; font-size:13px; font-family:var(--font-mono);
-            color:#cdd6f4; cursor:pointer; -webkit-tap-highlight-color:transparent;
+        .confirm-backdrop {
+            position:fixed; inset:0; z-index:299;
+            background:rgba(0,0,0,0.55);
+            backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+            animation:fadeIn 150ms ease-out;
         }
-        .snippet-ctx button:active { background:#45475a; }
-        .snippet-ctx button.danger { color:#f38ba8; }
-        .snippet-ctx-backdrop { position:fixed; inset:0; z-index:249; }
-
-        .log-ctx {
-            position:fixed; z-index:250; background:#313244;
-            border:1px solid #45475a; border-radius:10px;
-            padding:4px 0; min-width:140px;
-            box-shadow:0 8px 24px rgba(0,0,0,0.5);
-            animation:ctxIn 120ms ease-out;
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        .confirm-modal {
+            position:fixed; left:50%; top:50%;
+            transform:translate(-50%,-50%);
+            z-index:300; background:#1e1e2e;
+            border:1px solid #45475a; border-radius:16px;
+            padding:24px 20px 16px;
+            width:min(300px, calc(100vw - 48px));
+            box-shadow:0 24px 64px rgba(0,0,0,0.7);
+            animation:ctxIn 150ms ease-out; text-align:center;
         }
-        .log-ctx button {
-            display:block; width:100%; padding:10px 16px; background:none; border:none;
-            text-align:left; font-size:13px; font-family:var(--font-mono);
-            color:#cdd6f4; cursor:pointer; -webkit-tap-highlight-color:transparent;
+        .confirm-title { font-size:15px; font-weight:600; color:#cdd6f4; margin-bottom:6px; }
+        .confirm-msg { font-size:12px; color:#6c7086; font-family:var(--font-mono); margin-bottom:20px; word-break:break-all; }
+        .confirm-actions { display:flex; flex-direction:column; gap:8px; }
+        .confirm-actions button {
+            width:100%; padding:12px 16px; border:none; border-radius:10px;
+            font-size:14px; font-family:var(--font-mono); cursor:pointer;
+            -webkit-tap-highlight-color:transparent;
         }
-        .log-ctx button:active { background:#45475a; }
-        .log-ctx button.danger { color:#f38ba8; }
-        .log-ctx-backdrop { position:fixed; inset:0; z-index:249; }
-
-        .shell-tab-ctx {
-            position:fixed; z-index:250; background:#313244;
-            border:1px solid #45475a; border-radius:10px;
-            padding:4px 0; min-width:140px;
-            box-shadow:0 8px 24px rgba(0,0,0,0.5);
-            animation:ctxIn 120ms ease-out;
-        }
-        .shell-tab-ctx button {
-            display:block; width:100%; padding:10px 16px; background:none; border:none;
-            text-align:left; font-size:13px; font-family:var(--font-mono);
-            color:#cdd6f4; cursor:pointer; -webkit-tap-highlight-color:transparent;
-        }
-        .shell-tab-ctx button:active { background:#45475a; }
-        .shell-tab-ctx button.danger { color:#f38ba8; }
-        .shell-tab-ctx-backdrop { position:fixed; inset:0; z-index:249; }
+        .confirm-actions button:active { opacity:0.75; }
+        .confirm-actions .action-danger { background:#f38ba8; color:#1e1e2e; font-weight:600; }
+        .confirm-actions .action-neutral { background:#313244; color:#cdd6f4; }
+        .confirm-actions .action-cancel { background:none; color:#585b70; font-size:13px; }
 
         /* ── Desktop ──────────────────────────────────────────── */
         @media (min-width: 768px) {
@@ -3055,42 +3037,17 @@
             }
 
             function showSnippetCtx(snip, x, y) {
-                closeSnippetCtx();
-                const backdrop = document.createElement('div');
-                backdrop.className = 'snippet-ctx-backdrop';
-                const menu = document.createElement('div');
-                menu.className = 'snippet-ctx';
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Edit';
-                editBtn.addEventListener('click', function() { closeSnippetCtx(); openSnippetEditor(snip.id); });
-                const delBtn = document.createElement('button');
-                delBtn.className = 'danger';
-                delBtn.textContent = 'Delete';
-                delBtn.addEventListener('click', async function() {
-                    closeSnippetCtx();
-                    await deleteSnippet(snip.id);
-                    snippets = await fetchSnippetsFromServer();
-                    renderSnippets();
-                });
-                menu.appendChild(editBtn);
-                menu.appendChild(delBtn);
-                document.body.appendChild(backdrop);
-                document.body.appendChild(menu);
-                // Position: keep on screen
-                const mw = 160, mh = 90;
-                const aboveY = y - mh - 16;
-                menu.style.left = Math.min(x, window.innerWidth - mw) + 'px';
-                menu.style.top = (aboveY >= 8 ? aboveY : Math.min(y + 16, window.innerHeight - mh - 8)) + 'px';
-                menu.style.pointerEvents = 'none';
-                setTimeout(function() {
-                    menu.style.pointerEvents = '';
-                    backdrop.addEventListener('click', closeSnippetCtx);
-                    backdrop.addEventListener('touchend', closeSnippetCtx);
-                }, 200);
+                showConfirm(snip.name, null, [
+                    { label: 'Edit', style: 'neutral', onConfirm: function() { openSnippetEditor(snip.id); } },
+                    { label: 'Delete', style: 'danger', onConfirm: async function() {
+                        await deleteSnippet(snip.id);
+                        snippets = await fetchSnippetsFromServer();
+                        renderSnippets();
+                    }}
+                ]);
             }
             function closeSnippetCtx() {
-                document.querySelectorAll('.snippet-ctx,.snippet-ctx-backdrop').forEach(function(el) { el.remove(); });
-                document.querySelectorAll('.snippet-tile.lp-active').forEach(function(el) { el.classList.remove('lp-active'); });
+                closeConfirm();
             }
 
             filtered.forEach(function(snip) {
@@ -3232,40 +3189,62 @@
 
         var _logTailTimer = null;
 
-        function closeLogCtx() {
-            document.querySelectorAll('.log-ctx,.log-ctx-backdrop').forEach(function(el) { el.remove(); });
+        function closeConfirm() {
+            document.querySelectorAll('.confirm-backdrop,.confirm-modal').forEach(function(el) { el.remove(); });
+            document.querySelectorAll('.snippet-tile.lp-active').forEach(function(el) { el.classList.remove('lp-active'); });
         }
 
-        function showLogCtx(log, x, y) {
-            closeLogCtx();
+        function showConfirm(title, message, actions) {
+            closeConfirm();
             var backdrop = document.createElement('div');
-            backdrop.className = 'log-ctx-backdrop';
-            var menu = document.createElement('div');
-            menu.className = 'log-ctx';
-            var delBtn = document.createElement('button');
-            delBtn.className = 'danger';
-            delBtn.textContent = log.active ? 'Delete (active)' : 'Delete';
-            async function doDelete(e) {
-                if (e) { e.preventDefault(); e.stopPropagation(); }
-                closeLogCtx();
-                await fetch('/api/logs/' + encodeURIComponent(log.project) + '/' + encodeURIComponent(log.file), { method: 'DELETE' });
-                renderHistory();
+            backdrop.className = 'confirm-backdrop';
+            var modal = document.createElement('div');
+            modal.className = 'confirm-modal';
+            var titleEl = document.createElement('div');
+            titleEl.className = 'confirm-title';
+            titleEl.textContent = title;
+            modal.appendChild(titleEl);
+            if (message) {
+                var msgEl = document.createElement('div');
+                msgEl.className = 'confirm-msg';
+                msgEl.textContent = message;
+                modal.appendChild(msgEl);
             }
-            delBtn.addEventListener('click', doDelete);
-            delBtn.addEventListener('touchend', doDelete, { passive: false });
-            menu.appendChild(delBtn);
+            var actionsEl = document.createElement('div');
+            actionsEl.className = 'confirm-actions';
+            actions.forEach(function(action) {
+                var btn = document.createElement('button');
+                btn.className = 'action-' + (action.style || 'neutral');
+                btn.textContent = action.label;
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    closeConfirm();
+                    if (action.onConfirm) action.onConfirm();
+                });
+                actionsEl.appendChild(btn);
+            });
+            var cancelBtn = document.createElement('button');
+            cancelBtn.className = 'action-cancel';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.addEventListener('click', closeConfirm);
+            actionsEl.appendChild(cancelBtn);
+            modal.appendChild(actionsEl);
             document.body.appendChild(backdrop);
-            document.body.appendChild(menu);
-            var mw = 160, mh = 52;
-            var aboveY = y - mh - 16;
-            menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
-            menu.style.top = (aboveY >= 8 ? aboveY : Math.min(y + 16, window.innerHeight - mh - 8)) + 'px';
-            menu.style.pointerEvents = 'none';
-            setTimeout(function() {
-                menu.style.pointerEvents = '';
-                backdrop.addEventListener('click', closeLogCtx);
-                backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeLogCtx(); }, { passive: false });
-            }, 200);
+            document.body.appendChild(modal);
+            setTimeout(function() { backdrop.addEventListener('click', closeConfirm); }, 50);
+        }
+
+        function closeLogCtx() { closeConfirm(); }
+
+        function showLogCtx(log, x, y) {
+            showConfirm(
+                'Delete session log?',
+                log.file,
+                [{ label: 'Delete', style: 'danger', onConfirm: async function() {
+                    await fetch('/api/logs/' + encodeURIComponent(log.project) + '/' + encodeURIComponent(log.file), { method: 'DELETE' });
+                    renderHistory();
+                }}]
+            );
         }
 
         async function renderHistory() {
@@ -3480,39 +3459,12 @@
             renderShellTabs(shells);
         }
 
-        function closeShellCtx() {
-            document.querySelectorAll('.shell-tab-ctx,.shell-tab-ctx-backdrop').forEach(function(el) { el.remove(); });
-        }
+        function closeShellCtx() { closeConfirm(); }
 
         function showShellCtx(idx, x, y) {
-            closeShellCtx();
-            const backdrop = document.createElement('div');
-            backdrop.className = 'shell-tab-ctx-backdrop';
-            const menu = document.createElement('div');
-            menu.className = 'shell-tab-ctx';
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'danger';
-            closeBtn.textContent = 'Close Tab';
-            function doCloseTab(e) {
-                if (e) { e.preventDefault(); e.stopPropagation(); }
-                closeShellCtx();
-                closeShell(idx);
-            }
-            closeBtn.addEventListener('click', doCloseTab);
-            closeBtn.addEventListener('touchend', doCloseTab, { passive: false });
-            menu.appendChild(closeBtn);
-            document.body.appendChild(backdrop);
-            document.body.appendChild(menu);
-            const mw = 140, mh = 52;
-            const aboveY = y - mh - 16;
-            menu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
-            menu.style.top = (aboveY >= 8 ? aboveY : Math.min(y + 16, window.innerHeight - mh - 8)) + 'px';
-            menu.style.pointerEvents = 'none';
-            setTimeout(function() {
-                menu.style.pointerEvents = '';
-                backdrop.addEventListener('click', closeShellCtx);
-                backdrop.addEventListener('touchend', function(e) { e.preventDefault(); closeShellCtx(); }, { passive: false });
-            }, 200);
+            showConfirm('Close this tab?', null, [
+                { label: 'Close Tab', style: 'danger', onConfirm: function() { closeShell(idx); } }
+            ]);
         }
 
         function renderShellTabs(shells) {
