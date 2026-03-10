@@ -54,7 +54,7 @@ services:
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
       - ./services/web.Caddyfile:/etc/caddy/Caddyfile:ro
-      - roost-app:/srv:ro                 # serves /srv/web/index.html (Caddyfile unchanged)
+      - roost-app:/srv                    # serves /srv/web/index.html (Caddyfile unchanged)
       - ${ROOST_DIR:-~/.roost}/assets:/srv/assets:ro
     restart: unless-stopped
     networks:
