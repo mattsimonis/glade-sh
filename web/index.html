@@ -1530,6 +1530,7 @@
                     <button class="dbg-btn green"  id="dbg-conn-connected">Connected</button>
                     <button class="dbg-btn peach"  id="dbg-conn-reconnecting">Reconnecting</button>
                     <button class="dbg-btn red"    id="dbg-conn-disconnected">Disconnected</button>
+                    <button class="dbg-btn blue"   id="dbg-conn-show-badge">Show badge</button>
                 </div>
             </div>
 
@@ -5039,6 +5040,7 @@
             document.getElementById('dbg-conn-connected').onclick     = function () { consecutiveFailures = 0; setConnectionState('connected'); };
             document.getElementById('dbg-conn-reconnecting').onclick  = function () { reconnectInProgress = false; consecutiveFailures = MAX_FAIL_RECONNECTING; setConnectionState('reconnecting'); };
             document.getElementById('dbg-conn-disconnected').onclick  = function () { reconnectInProgress = false; consecutiveFailures = MAX_FAIL_DISCONNECTED; setConnectionState('disconnected'); };
+            document.getElementById('dbg-conn-show-badge').onclick    = function () { clearTimeout(statusFadeTimer); statusIndicator.classList.remove('fade-out'); };
 
             // Path footer tests
             document.getElementById('dbg-path-show').onclick = function () {
