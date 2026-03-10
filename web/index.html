@@ -2373,8 +2373,9 @@
             const pfEl   = document.getElementById('path-footer');
             const pfText = document.getElementById('path-footer-text');
             if (!pfEl) return;
+            // Hide only when no project is active (no content to show)
             const hasContent = pfText && pfText.textContent.trim().length > 0;
-            if (!hasContent) {
+            if (!hasContent && !currentProjectId) {
                 pfEl.classList.remove('pf-visible');
                 pfEl.style.bottom = '-50px';
                 return;
@@ -3670,12 +3671,12 @@
             // Reset OSC 7 wire so new iframe's WebSocket gets wired on load
             window._osc7Wired = false;
             _osc7WiredSocket = null;
-            // Clear stale path footer from previous project
+            // Clear stale path footer from previous project; pre-fill with stored directory
             const pfText = document.getElementById('path-footer-text');
-            if (pfText) pfText.textContent = '';
-            const pfEl = document.getElementById('path-footer');
-            if (pfEl) pfEl.classList.remove('pf-visible');
-            repositionShortcutBar();
+            const pfEl   = document.getElementById('path-footer');
+            const proj   = projects.find(function(p) { return p.id === pid; });
+            if (pfText) pfText.textContent = (proj && proj.directory) ? proj.directory : '';
+            repositionPathFooter();
             // Start project & get port
             try {
                 const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
