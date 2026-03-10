@@ -34,5 +34,5 @@ preexec() {
   fi
 }
 
-# copilot-sync wrapper — intercepts gh copilot calls and logs to SQLite
-[ -f /root/.copilot-sync/bin/copilot-wrap ] && source /root/.copilot-sync/bin/copilot-wrap
+# roost wrapper — intercepts gh copilot calls and logs to SQLite
+[ -f /root/.roost/bin/roost-wrap ] && source /root/.roost/bin/roost-wrap

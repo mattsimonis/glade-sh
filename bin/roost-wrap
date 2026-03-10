@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# copilot-sync/bin/copilot-wrap — Shell wrapper that intercepts `gh copilot` calls
+# roost/bin/roost-wrap — Shell wrapper that intercepts `gh copilot` calls
 #
 # Usage:
 #   Add this line to your ~/.zshrc or ~/.bashrc:
-#     source ~/.copilot-sync/bin/copilot-wrap
+#     source ~/.roost/bin/roost-wrap
 #
 #   Then use `gh copilot` as normal. All copilot interactions are transparently
 #   logged to SQLite. If logging fails for any reason, gh copilot still works
@@ -19,18 +19,18 @@
 # Resolve the real gh binary at source time to avoid infinite recursion.
 # We search PATH excluding any directory that contains this wrapper.
 # ---------------------------------------------------------------------------
-COPILOT_SYNC_DIR="${COPILOT_SYNC_DIR:-$HOME/.copilot-sync}"
-COPILOT_SYNC_REAL_GH=""
+ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
+ROOST_REAL_GH=""
 
 # Find the real gh binary, skipping any function/alias
-_copilot_sync_find_real_gh() {
+_roost_find_real_gh() {
     local candidate
     # Use `command -v` in a subshell with the function unset to find the binary
     # On macOS/Linux, `which -a` or iterating PATH works reliably
     local IFS=':'
     for dir in $PATH; do
         candidate="${dir}/gh"
-        if [[ -x "$candidate" && "$candidate" != */copilot-sync/* ]]; then
+        if [[ -x "$candidate" && "$candidate" != */roost/* ]]; then
             echo "$candidate"
             return 0
         fi
@@ -45,25 +45,25 @@ _copilot_sync_find_real_gh() {
     return 1
 }
 
-COPILOT_SYNC_REAL_GH="$(_copilot_sync_find_real_gh)"
+ROOST_REAL_GH="$(_roost_find_real_gh)"
 
 # If we can't find gh, don't define the wrapper — let the shell find gh normally
-if [[ -z "$COPILOT_SYNC_REAL_GH" ]]; then
+if [[ -z "$ROOST_REAL_GH" ]]; then
     return 0 2>/dev/null || exit 0
 fi
 
 # ---------------------------------------------------------------------------
 # Source the logger library (errors suppressed — logging is optional)
 # ---------------------------------------------------------------------------
-if [[ -f "${COPILOT_SYNC_DIR}/lib/logger.sh" ]]; then
+if [[ -f "${ROOST_DIR}/lib/logger.sh" ]]; then
     # shellcheck source=../lib/logger.sh
-    source "${COPILOT_SYNC_DIR}/lib/logger.sh" 2>/dev/null
+    source "${ROOST_DIR}/lib/logger.sh" 2>/dev/null
 fi
 
 # ---------------------------------------------------------------------------
 # Strip ANSI escape codes from text
 # ---------------------------------------------------------------------------
-_copilot_sync_strip_ansi() {
+_roost_strip_ansi() {
     # Use sed to remove ANSI escape sequences
     # Handles CSI sequences, OSC sequences, and simple escape codes
     sed -E \
@@ -78,7 +78,7 @@ _copilot_sync_strip_ansi() {
 # ---------------------------------------------------------------------------
 # Extract a usable prompt string from the arguments
 # ---------------------------------------------------------------------------
-_copilot_sync_extract_prompt() {
+_roost_extract_prompt() {
     local subcommand="$1"
     shift
     local args=("$@")
@@ -106,7 +106,7 @@ _copilot_sync_extract_prompt() {
 gh() {
     # If not a copilot command, pass through directly
     if [[ "${1:-}" != "copilot" ]]; then
-        "$COPILOT_SYNC_REAL_GH" "$@"
+        "$ROOST_REAL_GH" "$@"
         return $?
     fi
 
@@ -122,7 +122,7 @@ gh() {
 
     # If no subcommand (bare `gh copilot`), just pass through
     if [[ -z "$subcommand" ]]; then
-        "$COPILOT_SYNC_REAL_GH" copilot
+        "$ROOST_REAL_GH" copilot
         return $?
     fi
 
@@ -135,7 +135,7 @@ gh() {
 
     # --- Extract the prompt from arguments ---
     local prompt=""
-    prompt="$(_copilot_sync_extract_prompt "$subcommand" "${remaining_args[@]}" 2>/dev/null)" || true
+    prompt="$(_roost_extract_prompt "$subcommand" "${remaining_args[@]}" 2>/dev/null)" || true
 
     # --- Set up capture ---
     local capture_file=""
@@ -156,15 +156,15 @@ gh() {
         # Interactive mode: use `script` to capture PTY output while displaying live
         # macOS `script` syntax differs from Linux
         if [[ "$(uname)" == "Darwin" ]]; then
-            script -q "$capture_file" "$COPILOT_SYNC_REAL_GH" copilot "$subcommand" "${remaining_args[@]}"
+            script -q "$capture_file" "$ROOST_REAL_GH" copilot "$subcommand" "${remaining_args[@]}"
             cmd_exit_code=$?
         else
-            script -q -c "$COPILOT_SYNC_REAL_GH copilot $subcommand ${remaining_args[*]}" "$capture_file"
+            script -q -c "$ROOST_REAL_GH copilot $subcommand ${remaining_args[*]}" "$capture_file"
             cmd_exit_code=$?
         fi
     else
         # Non-interactive mode: use tee-based capture
-        "$COPILOT_SYNC_REAL_GH" copilot "$subcommand" "${remaining_args[@]}" 2>&1 | tee "$capture_file"
+        "$ROOST_REAL_GH" copilot "$subcommand" "${remaining_args[@]}" 2>&1 | tee "$capture_file"
         cmd_exit_code=${PIPESTATUS[0]}
     fi
 
@@ -184,13 +184,13 @@ gh() {
     {
         local response=""
         if [[ -n "$capture_file" && -f "$capture_file" ]]; then
-            response="$(cat "$capture_file" 2>/dev/null | _copilot_sync_strip_ansi | head -c 10000)" || true
+            response="$(cat "$capture_file" 2>/dev/null | _roost_strip_ansi | head -c 10000)" || true
         fi
 
         # Save raw log if content exists
         local raw_log_path=""
         if [[ -n "$capture_file" && -s "$capture_file" ]]; then
-            local log_dir="${COPILOT_SYNC_DIR}/logs/raw"
+            local log_dir="${ROOST_DIR}/logs/raw"
             mkdir -p "$log_dir" 2>/dev/null
             local log_name
             log_name="$(date +%Y%m%d_%H%M%S)_${subcommand}_$$.log"

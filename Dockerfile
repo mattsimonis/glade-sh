@@ -55,7 +55,7 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENV TERM=xterm-256color
-ENV COPILOT_SYNC_DIR=/root/.copilot-sync
+ENV ROOST_DIR=/root/.roost
 
 EXPOSE 7681 7683 7690 7691 7692 7693 7694 7695 7696 7697 7698 7699
 

@@ -1,11 +1,11 @@
-# Copilot Sync — web container file server
+# Roost — web container file server
 # Serves the HTML wrapper and static assets for caddy-proxy to front.
-# Mounted into the copilot-sync-web container at /etc/caddy/Caddyfile.
+# Mounted into the roost-web container at /etc/caddy/Caddyfile.
 
 :7682 {
 	# API proxy — routes to ttyd container (API runs there now)
 	handle /api/* {
-		reverse_proxy copilot-sync-ttyd:7683
+		reverse_proxy roost-ttyd:7683
 	}
 
 	# Assets (fonts, etc.) — long cache, they never change
@@ -26,11 +26,17 @@
 		X-Content-Type-Options nosniff
 	}
 
-	# No-cache for HTML, long cache for assets
-	@html {
-		path / /index.html
+	# No-cache for HTML and manifest so iOS always fetches fresh metadata
+	@nocache {
+		path / /index.html /manifest.json
 	}
-	header @html Cache-Control "no-cache, no-store, must-revalidate"
-	header @html Pragma "no-cache"
+	header @nocache Cache-Control "no-cache, no-store, must-revalidate"
+	header @nocache Pragma "no-cache"
+
+	# No-cache for icons too — rebrand/icon updates should be immediate
+	@icons {
+		path /icons/*
+	}
+	header @icons Cache-Control "no-cache, no-store, must-revalidate"
 }
 

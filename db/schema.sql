@@ -1,4 +1,4 @@
--- copilot-sync: SQLite schema for session and interaction history
+-- roost: SQLite schema for session and interaction history
 -- Initialize with: sqlite3 history.db < schema.sql
 
 CREATE TABLE IF NOT EXISTS sessions (

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# copilot-sync/bin/copilot-history — CLI tool for searching and browsing copilot interaction history
+# roost/bin/roost-history — CLI tool for searching and browsing copilot interaction history
 #
 # Usage:
 #   copilot-history                     Show last 20 interactions
@@ -14,16 +14,16 @@
 
 set -euo pipefail
 
-COPILOT_SYNC_DIR="${COPILOT_SYNC_DIR:-$HOME/.copilot-sync}"
-COPILOT_SYNC_DB="${COPILOT_SYNC_DIR}/db/history.db"
+ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
+ROOST_DB="${ROOST_DIR}/db/history.db"
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _check_db() {
-    if [[ ! -f "$COPILOT_SYNC_DB" ]]; then
-        echo "No history database found at: ${COPILOT_SYNC_DB}"
+    if [[ ! -f "$ROOST_DB" ]]; then
+        echo "No history database found at: ${ROOST_DB}"
         echo "Run a gh copilot command first to initialize the database."
         exit 0
     fi
@@ -34,11 +34,11 @@ _check_db() {
 }
 
 _sql() {
-    sqlite3 "$COPILOT_SYNC_DB" "$@"
+    sqlite3 "$ROOST_DB" "$@"
 }
 
 _sql_formatted() {
-    sqlite3 -header -column "$COPILOT_SYNC_DB" "$@"
+    sqlite3 -header -column "$ROOST_DB" "$@"
 }
 
 _truncate() {
@@ -354,10 +354,10 @@ Usage:
   copilot-history help                Show this help text
 
 Environment:
-  COPILOT_SYNC_DIR    Base directory (default: ~/.copilot-sync)
+  ROOST_DIR    Base directory (default: ~/.roost)
 
 Database location:
-  ${COPILOT_SYNC_DIR:-~/.copilot-sync}/db/history.db
+  ${ROOST_DIR:-~/.roost}/db/history.db
 HELPTEXT
 }
 

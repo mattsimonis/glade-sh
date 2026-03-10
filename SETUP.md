@@ -1,4 +1,4 @@
-# Copilot Sync — Setup Guide
+# Roost — Setup Guide
 
 ## Prerequisites
 
@@ -57,7 +57,7 @@ gh copilot suggest "list files in current directory"
 
 ## Step 3: Copy the Project to Mac Mini
 
-Copy the `copilot-sync` folder to the Mac Mini over SMB into `/Volumes/Photos/Dev/copilot-sync`.
+Copy the `roost` folder to the Mac Mini over SMB into `/Volumes/Photos/Dev/roost`.
 
 ---
 
@@ -70,12 +70,12 @@ ssh mac-mini
 
 Then run:
 ```bash
-cd /Volumes/Photos/Dev/copilot-sync
+cd /Volumes/Photos/Dev/roost
 ./install.sh
 ```
 
 This will:
-- Create `~/.copilot-sync/` with all subdirectories
+- Create `~/.roost/` with all subdirectories
 - Copy scripts, schema, web files into place
 - Initialize the SQLite database
 - Add shell integration to your `.zshrc` and `.bashrc`
@@ -93,7 +93,7 @@ source ~/.zshrc
 Copy the Regular Nerd Font variant into place:
 
 ```bash
-cp BerkeleyMonoNerdFont-Regular.ttf ~/.copilot-sync/assets/fonts/
+cp BerkeleyMonoNerdFont-Regular.ttf ~/.roost/assets/fonts/
 ```
 
 The filename must start with `BerkeleyMonoNerdFont-Regular` — that's what the `@font-face` declaration expects. If yours is named differently, rename it.
@@ -141,7 +141,7 @@ If `mkcert` isn't installed: `brew install mkcert && mkcert -install`
 **Docker (the only option — Caddy is handled by your standalone `caddy-proxy`):**
 
 ```bash
-cd /Volumes/Photos/Dev/copilot-sync
+cd /Volumes/Photos/Dev/roost
 docker compose up -d
 ```
 
@@ -167,7 +167,7 @@ ttyd --port 7681 --writable --reconnect 5 --max-clients 3 \
 
 For static asset serving, run in a second terminal:
 ```bash
-cd ~/.copilot-sync && python3 -m http.server 7682
+cd ~/.roost && python3 -m http.server 7682
 ```
 
 Point your standalone Caddy at `localhost:7681` and `localhost:7682` instead of the container names.
@@ -184,7 +184,7 @@ gh copilot suggest "how to list docker containers"
 copilot-history
 ```
 
-Also open a browser on the Mac Mini and go to `https://ai.home` — you should see the Copilot Sync web UI with a terminal.
+Also open a browser on the Mac Mini and go to `https://ai.home` — you should see the Roost web UI with a terminal.
 
 ---
 
@@ -219,13 +219,13 @@ The `docker-compose.yml` already has `restart: unless-stopped`, so Docker handle
 **If running natively**, create a launchd plist for ttyd:
 
 ```bash
-cat > ~/Library/LaunchAgents/com.copilot-sync.ttyd.plist << 'EOF'
+cat > ~/Library/LaunchAgents/com.roost.ttyd.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.copilot-sync.ttyd</string>
+    <string>com.roost.ttyd</string>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/ttyd</string>
@@ -241,7 +241,7 @@ cat > ~/Library/LaunchAgents/com.copilot-sync.ttyd.plist << 'EOF'
 </plist>
 EOF
 
-launchctl load ~/Library/LaunchAgents/com.copilot-sync.ttyd.plist
+launchctl load ~/Library/LaunchAgents/com.roost.ttyd.plist
 ```
 
 ---
@@ -256,4 +256,4 @@ launchctl load ~/Library/LaunchAgents/com.copilot-sync.ttyd.plist
 | `gh copilot` not found in terminal | Run `gh extension install github/gh-copilot` inside the container/terminal |
 | Docker first build is slow | Normal — building the image. Watch with `docker compose logs -f ttyd` |
 | Phone keyboard covers terminal | The toolbar should push the terminal up. If not, try "Add to Home Screen" for full-screen mode |
-| History not logging | Run `copilot-history` — if it says "No history database", run `source ~/.copilot-sync/bin/copilot-wrap` then try a `gh copilot` command |
+| History not logging | Run `copilot-history` — if it says "No history database", run `source ~/.roost/bin/copilot-wrap` then try a `gh copilot` command |

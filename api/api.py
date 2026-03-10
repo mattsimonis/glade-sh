@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-copilot-sync API — projects, snippets, keyboard layout, image uploads
+roost API — projects, snippets, keyboard layout, image uploads
 
 Runs inside the ttyd Docker container on port 7683.
 Manages project lifecycle: tmux sessions + ttyd child processes.
@@ -34,17 +34,19 @@ import base64
 import json
 import mimetypes
 import os
+import signal
 import sqlite3
 import subprocess
+import sys
 import threading
 import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 from socketserver import ThreadingTCPServer
 
-DB_PATH      = os.environ.get("DB_PATH", "/root/.copilot-sync/db/history.db")
+DB_PATH      = os.environ.get("DB_PATH", "/root/.roost/db/history.db")
 PORT         = int(os.environ.get("PORT", "7683"))
-UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.copilot-sync/uploads")
+UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.roost/uploads")
 
 PORT_POOL = list(range(7690, 7700))
 
@@ -231,7 +233,7 @@ def stop_project_proc(project_id):
 class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
-        pass
+        sys.stderr.write("[%s] %s\n" % (self.log_date_time_string(), fmt % args))
 
     def send_json(self, code, data):
         body = json.dumps(data).encode()
@@ -244,6 +246,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def read_json(self):
         length = int(self.headers.get("Content-Length", 0))
+        if length > 4 * 1024 * 1024:  # 4 MB hard cap
+            self.rfile.read(length)
+            raise ValueError("request body too large")
         return json.loads(self.rfile.read(length)) if length else {}
 
     def do_OPTIONS(self):
@@ -555,6 +560,8 @@ class Handler(BaseHTTPRequestHandler):
     def _upload_image(self):
         data = self.read_json()
         b64  = data.get("data", "")
+        if len(b64) > 20 * 1024 * 1024:  # ~15 MB decoded
+            return self.send_json(400, {"error": "image too large"})
         mime = data.get("type", "image/png")
         ext_map = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
         ext  = ext_map.get(mime, "png")
@@ -688,9 +695,22 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     ensure_tables()
+    # Kill any ttyd processes left over from a prior crash that still hold our ports.
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "ttyd.*-p 769"],
+            capture_output=True, text=True
+        )
+        for pid in result.stdout.strip().splitlines():
+            try:
+                os.kill(int(pid), signal.SIGTERM)
+            except (ProcessLookupError, ValueError):
+                pass
+    except Exception:
+        pass
     ThreadingTCPServer.allow_reuse_address = True
     server = ThreadingTCPServer(("0.0.0.0", PORT), Handler)
-    print(f"copilot-sync API listening on :{PORT}", flush=True)
+    print(f"roost API listening on :{PORT}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

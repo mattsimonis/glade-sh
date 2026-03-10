@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Copilot Sync — Installer
+# Roost — Installer
 #
-# Sets up the copilot-sync directory structure, initializes the SQLite database,
+# Sets up the Roost directory structure, initializes the SQLite database,
 # copies files into place, and adds shell integration to .zshrc / .bashrc.
 #
 # Usage:
-#   ./install.sh                              # Install to ~/.copilot-sync
-#   COPILOT_SYNC_DIR=/opt/copilot-sync ./install.sh   # Custom location
+#   ./install.sh                              # Install to ~/.roost
+#   ROOST_DIR=/opt/roost ./install.sh   # Custom location
 #
 # Safe to run multiple times (idempotent).
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,14 +30,15 @@ error()   { printf "${RED}[error]${RESET}   %s\n" "$*" >&2; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Configuration ────────────────────────────────────────────────────────────
-COPILOT_SYNC_DIR="${COPILOT_SYNC_DIR:-$HOME/.copilot-sync}"
+ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
 
 WARNINGS=()
 INSTALLED=()
 
-printf "\n${BOLD}Copilot Sync Installer${RESET}\n"
+printf "
+${BOLD}Roost Installer${RESET}\n"${RESET}\n"
 printf "%-20s %s\n" "Source:" "$SCRIPT_DIR"
-printf "%-20s %s\n" "Target:" "$COPILOT_SYNC_DIR"
+printf "%-20s %s\n" "Target:" "$ROOST_DIR"
 printf "\n"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -46,13 +47,13 @@ printf "\n"
 info "Creating directory structure..."
 
 dirs=(
-    "$COPILOT_SYNC_DIR/assets/fonts"
-    "$COPILOT_SYNC_DIR/bin"
-    "$COPILOT_SYNC_DIR/lib"
-    "$COPILOT_SYNC_DIR/db"
-    "$COPILOT_SYNC_DIR/logs/raw"
-    "$COPILOT_SYNC_DIR/web"
-    "$COPILOT_SYNC_DIR/services"
+    "$ROOST_DIR/assets/fonts"
+    "$ROOST_DIR/bin"
+    "$ROOST_DIR/lib"
+    "$ROOST_DIR/db"
+    "$ROOST_DIR/logs/raw"
+    "$ROOST_DIR/web"
+    "$ROOST_DIR/services"
 )
 
 for dir in "${dirs[@]}"; do
@@ -60,10 +61,10 @@ for dir in "${dirs[@]}"; do
 done
 
 success "Directory structure ready."
-INSTALLED+=("Directory structure at $COPILOT_SYNC_DIR")
+INSTALLED+=("Directory structure at $ROOST_DIR")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 2: Copy files from repo to COPILOT_SYNC_DIR
+# Step 2: Copy files from repo to ROOST_DIR
 # ─────────────────────────────────────────────────────────────────────────────
 info "Copying files..."
 
@@ -83,27 +84,27 @@ copy_if_exists() {
 }
 
 # bin/
-copy_if_exists "$SCRIPT_DIR/bin/copilot-wrap"    "$COPILOT_SYNC_DIR/bin/copilot-wrap"    "bin/copilot-wrap"
-copy_if_exists "$SCRIPT_DIR/bin/copilot-history"  "$COPILOT_SYNC_DIR/bin/copilot-history"  "bin/copilot-history"
+copy_if_exists "$SCRIPT_DIR/bin/roost-wrap"    "$ROOST_DIR/bin/roost-wrap"    "bin/roost-wrap"
+copy_if_exists "$SCRIPT_DIR/bin/roost-history"  "$ROOST_DIR/bin/roost-history"  "bin/roost-history"
 
 # lib/
-copy_if_exists "$SCRIPT_DIR/lib/logger.sh"        "$COPILOT_SYNC_DIR/lib/logger.sh"        "lib/logger.sh"
+copy_if_exists "$SCRIPT_DIR/lib/logger.sh"        "$ROOST_DIR/lib/logger.sh"        "lib/logger.sh"
 
 # db/
-copy_if_exists "$SCRIPT_DIR/db/schema.sql"        "$COPILOT_SYNC_DIR/db/schema.sql"        "db/schema.sql"
+copy_if_exists "$SCRIPT_DIR/db/schema.sql"        "$ROOST_DIR/db/schema.sql"        "db/schema.sql"
 
 # web/
-copy_if_exists "$SCRIPT_DIR/web/index.html"        "$COPILOT_SYNC_DIR/web/index.html"        "web/index.html"
+copy_if_exists "$SCRIPT_DIR/web/index.html"        "$ROOST_DIR/web/index.html"        "web/index.html"
 
 # services/
-copy_if_exists "$SCRIPT_DIR/services/Caddyfile"    "$COPILOT_SYNC_DIR/services/Caddyfile"    "services/Caddyfile"
+copy_if_exists "$SCRIPT_DIR/services/Caddyfile"    "$ROOST_DIR/services/Caddyfile"    "services/Caddyfile"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 3: Make bin/* executable
 # ─────────────────────────────────────────────────────────────────────────────
 info "Setting permissions..."
 
-for f in "$COPILOT_SYNC_DIR/bin/"*; do
+for f in "$ROOST_DIR/bin/"*; do
     [[ -f "$f" ]] && chmod +x "$f"
 done
 
@@ -112,8 +113,8 @@ success "Binaries are executable."
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 4: Initialize SQLite database
 # ─────────────────────────────────────────────────────────────────────────────
-DB_PATH="$COPILOT_SYNC_DIR/db/history.db"
-SCHEMA_PATH="$COPILOT_SYNC_DIR/db/schema.sql"
+DB_PATH="$ROOST_DIR/db/history.db"
+SCHEMA_PATH="$ROOST_DIR/db/schema.sql"
 
 if ! command -v sqlite3 &>/dev/null; then
     error "sqlite3 is required but not found. Please install it first."
@@ -139,7 +140,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 5: Check for Berkeley Mono Nerd Font
 # ─────────────────────────────────────────────────────────────────────────────
-FONT_DIR="$COPILOT_SYNC_DIR/assets/fonts"
+FONT_DIR="$ROOST_DIR/assets/fonts"
 FONT_FOUND=false
 
 for ext in woff2 woff ttf otf; do
@@ -174,7 +175,7 @@ if command -v gh &>/dev/null; then
     GH_VERSION="$(gh --version | head -1)"
     success "gh CLI found: $GH_VERSION"
 else
-    warn "gh CLI not found. Install it before using copilot-sync."
+    warn "gh CLI not found. Install it before using Roost."
     warn "  macOS:  brew install gh"
     warn "  Linux:  https://cli.github.com/"
     WARNINGS+=("gh CLI not installed")
@@ -201,8 +202,8 @@ success "sqlite3 is available: $(sqlite3 --version | head -1)"
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 9: Shell integration (.zshrc / .bashrc)
 # ─────────────────────────────────────────────────────────────────────────────
-PATH_LINE="export PATH=\"\$HOME/.copilot-sync/bin:\$PATH\""
-SOURCE_LINE="[[ -f \"\$HOME/.copilot-sync/bin/copilot-wrap\" ]] && source \"\$HOME/.copilot-sync/bin/copilot-wrap\""
+PATH_LINE="export PATH=\"\$HOME/.roost/bin:\$PATH\""
+SOURCE_LINE="[[ -f \"\$HOME/.roost/bin/roost-wrap\" ]] && source \"\$HOME/.roost/bin/roost-wrap\""
 
 add_shell_integration() {
     local rcfile="$1"
@@ -215,14 +216,14 @@ add_shell_integration() {
     fi
 
     # Add PATH entry if not already present
-    if ! grep -qF '.copilot-sync/bin' "$rcfile" 2>/dev/null; then
-        printf '\n# Copilot Sync — PATH\n%s\n' "$PATH_LINE" >> "$rcfile"
+    if ! grep -qF '.roost/bin' "$rcfile" 2>/dev/null; then
+        printf '\n# Roost — PATH\n%s\n' "$PATH_LINE" >> "$rcfile"
         changed=true
     fi
 
     # Add source line if not already present
-    if ! grep -qF 'copilot-wrap' "$rcfile" 2>/dev/null; then
-        printf '\n# Copilot Sync — wrapper integration\n%s\n' "$SOURCE_LINE" >> "$rcfile"
+    if ! grep -qF 'roost-wrap' "$rcfile" 2>/dev/null; then
+        printf '\n# Roost — wrapper integration\n%s\n' "$SOURCE_LINE" >> "$rcfile"
         changed=true
     fi
 

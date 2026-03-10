@@ -133,7 +133,7 @@ This gives us a single URL, automatic HTTPS via Tailscale certs, and a clean set
           reverse_proxy localhost:7681
       }
       handle {
-          root * /home/user/.copilot-sync/web
+          root * /home/user/.roost/web
           file_server
       }
   }
@@ -161,7 +161,7 @@ Create launchd plist files (macOS) so everything auto-starts on boot:
 If Docker is preferred, create a `docker-compose.yml` with:
 - ttyd container (with gh CLI, copilot, shell config, font file mounted in)
 - Caddy container (with Caddyfile and web assets mounted in)
-- Shared volume for `~/.copilot-sync/` (DB, logs, fonts, web assets)
+- Shared volume for `~/.roost/` (DB, logs, fonts, web assets)
 
 ---
 
@@ -174,7 +174,7 @@ A transparent shell wrapper that intercepts all `gh copilot` interactions and lo
 ### 2a. Project Structure
 
 ```
-~/.copilot-sync/
+~/.roost/
 ├── assets/
 │   └── fonts/
 │       └── BerkeleyMonoNerdFont.woff2  # Licensed, Nerd-patched Berkeley Mono
@@ -292,12 +292,12 @@ Usage:
 
 The installer should:
 
-1. Create the `~/.copilot-sync/` directory structure
+1. Create the `~/.roost/` directory structure
 2. Initialize the SQLite database with the schema
-3. Copy binaries to `~/.copilot-sync/bin/`
+3. Copy binaries to `~/.roost/bin/`
 4. Add the shell integration to `.zshrc` / `.bashrc`:
    - Source the `gh` wrapper function
-   - Add `~/.copilot-sync/bin/` to PATH
+   - Add `~/.roost/bin/` to PATH
 5. Verify `gh copilot` is installed and authenticated
 6. Verify Berkeley Mono Nerd Font .woff2 exists in assets/fonts/
 7. Install launchd services (or docker-compose) for ttyd + Caddy
@@ -354,7 +354,7 @@ A fixed toolbar at the bottom of the screen with touch-friendly buttons:
 
 ### 3d. Theming & Font
 
-- Berkeley Mono Nerd Font loaded via @font-face from `~/.copilot-sync/assets/fonts/`
+- Berkeley Mono Nerd Font loaded via @font-face from `~/.roost/assets/fonts/`
 - ttyd's xterm.js configured with Catppuccin Mocha theme (see 1b for full config)
 - The HTML wrapper UI matches: Mantle bg toolbar, Surface0 buttons, Text labels
 - Test on mobile: ensure font size is readable without zooming (14-16px is usually right)

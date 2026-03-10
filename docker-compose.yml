@@ -1,4 +1,4 @@
-# Copilot Sync — Docker Compose
+# Roost — Docker Compose
 #
 # Services:
 #   ttyd — terminal server + API (project lifecycle, snippets, layout)
@@ -10,41 +10,53 @@
 #
 # Prerequisites:
 #   - ~/.config/gh/ must contain valid gh CLI auth tokens (run `gh auth login` first)
-#   - ~/.copilot-sync/ must exist with web/, assets/, db/ populated (run install.sh first)
+#   - ~/.roost/ must exist with web/, assets/, db/ populated (run install.sh first)
 #   - Docker network 'shared_web' must exist: docker network create shared_web
 #   - ai.home DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
 #   - TLS cert for ai.home in your Caddy certs directory (see services/Caddyfile)
 #
 # Usage:
-#   docker compose up -d        # start (or restart) all services
-#   docker compose build ttyd   # rebuild after Dockerfile/api changes
-#   # Then visit https://ai.home from any device on your local network
+#   make up        # start all services
+#   make build     # rebuild image (only needed after Dockerfile changes)
+#   make logs      # tail logs
+#   make shell     # open a shell inside the container
+#   make auth      # run gh auth login inside the container
 
 services:
   ttyd:
-    build: .
-    container_name: copilot-sync-ttyd
+    build:
+      context: .
+      tags:
+        - roost-ttyd
+    container_name: roost-ttyd
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
-      - ~/.copilot-sync:/root/.copilot-sync
+      - ${ROOST_DIR:-~/.roost}:/root/.roost
       - ~/.config/gh:/root/.config/gh
       - copilot_bin:/root/.local/share/gh
-      - /Volumes/Photos/Dev:/mnt/dev
+      - ${DEV_DIR:-~/Dev}:/mnt/dev
+      - ./api/api.py:/app/api.py   # mount live — API changes only need `make restart`
     environment:
       - TERM=xterm-256color
-      - COPILOT_SYNC_DIR=/root/.copilot-sync
+      - ROOST_DIR=/root/.roost
     restart: unless-stopped
     networks:
       - shared_web
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:7683/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   web:
     image: caddy:2-alpine
-    container_name: copilot-sync-web
+    container_name: roost-web
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
       - ./services/web.Caddyfile:/etc/caddy/Caddyfile:ro
-      - ~/.copilot-sync/web:/srv/web:ro
-      - ~/.copilot-sync/assets:/srv/assets:ro
+      - ./web:/srv/web:ro                  # serve directly from repo — no scp needed
+      - ~/.roost/assets:/srv/assets:ro
     restart: unless-stopped
     networks:
       - shared_web
