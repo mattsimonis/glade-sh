@@ -47,7 +47,7 @@ The UI is a single-file PWA styled in Catppuccin Mocha with a mobile keyboard to
 - **Multi-project terminals** — each project gets an isolated tmux session and a ttyd instance on a dedicated port (7690–7699)
 - **Mobile-optimised PWA** — installable via "Add to Home Screen"; keyboard toolbar with Esc, Tab, Ctrl, Alt, arrows, and combos
 - **Key repeat** — hold any key on the custom keyboard or toolbar to repeat at 80ms intervals after a 400ms delay
-- **Interaction logging** — every `gh copilot` call is captured (prompt, response, cwd, device, duration) to SQLite with FTS5 search
+- **Session logging** — every terminal session is recorded automatically via tmux `pipe-pane` to flat files, browsable from the History tab
 - **Command snippets** — saved commands that inject directly into the terminal
 - **Connection recovery** — auto-reconnects on network drop or app background; force-reconnects after >5s in background
 - **Catppuccin Mocha** — consistent theme across terminal, UI chrome, and toolbar
@@ -64,7 +64,7 @@ The UI is a single-file PWA styled in Catppuccin Mocha with a mobile keyboard to
 | Standalone `caddy-proxy` container | Pre-existing; handles TLS for all `*.home` domains |
 | Pi-hole | Provides `ai.home` DNS record |
 | Tailscale | For remote access outside the home network |
-| GitHub account with Copilot access | `gh auth login` must succeed inside the container |
+| GitHub account *(optional, for gh CLI)* | `gh auth login` inside the container for Copilot |
 | Berkeley Mono Nerd Font `.woff2` or `.ttf` *(optional)* | Licensed; must be supplied by you |
 
 ---
@@ -78,8 +78,8 @@ roost/
 ├── assets/
 │   └── fonts/              # Place BerkeleyMonoNerdFont-Regular.{woff2,ttf} here
 ├── bin/
-│   ├── copilot-wrap        # Shell function: intercepts gh copilot, logs to SQLite
-│   └── copilot-history     # CLI tool: search/browse interaction history (legacy)
+│   ├── copilot-wrap        # Legacy shell wrapper (kept for reference)
+│   └── copilot-history     # Legacy CLI tool (replaced by web log viewer)
 ├── config/
 │   ├── zshrc               # Zsh config baked into container image
 │   ├── bashrc              # Bash config baked into container image
@@ -87,9 +87,10 @@ roost/
 ├── db/
 │   └── schema.sql          # SQLite schema (snippets, settings, projects)
 ├── docs/
+│   ├── plans/              # Design documents for major features
 │   └── working-from-anywhere.md  # How to SSH into a laptop from the terminal
 ├── lib/
-│   └── logger.sh           # Bash logging library (init DB, record interactions)
+│   └── logger.sh           # Legacy logging library (kept for reference)
 ├── logs/                   # Session logs (auto-recorded via tmux pipe-pane)
 │   ├── _main/              # Main shell logs
 │   └── {project-slug}/     # Per-project logs
@@ -97,9 +98,11 @@ roost/
 │   ├── Caddyfile           # ai.home block for the standalone caddy-proxy
 │   └── web.Caddyfile       # Caddy config for the roost-web container
 ├── web/
-│   ├── index.html          # Single-file PWA (~340 KB, all CSS + JS inline)
+│   ├── index.html          # Single-file PWA (~4900 lines, all CSS + JS inline)
 │   ├── manifest.json       # PWA manifest (icons, display: standalone)
 │   └── icons/              # App icons: 32×32, 192×192, 512×512
+├── CLAUDE.md               # Architecture reference (for AI assistants)
+├── COPILOT_INSTRUCTIONS.md # AI-specific codebase guide
 ├── .env.example            # Configuration template — copy to .env and edit
 ├── Dockerfile              # debian:bookworm-slim; installs ttyd, gh, oh-my-zsh
 ├── docker-compose.yml      # Two services: ttyd (app) + web (Caddy file server)
@@ -308,11 +311,11 @@ The Python API runs on port **7683** inside the container. All responses are JSO
 | `GET` | `/api/uploads` | List recent uploads (last 10) |
 | `GET` | `/api/uploads/:filename` | Serve upload |
 
-### History export
+### History export (legacy)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/export` | Export all interactions as JSON |
+| `GET` | `/api/export` | Export all interactions as JSON (legacy — from copilot-logging era) |
 
 ### Session Logs
 
@@ -332,8 +335,9 @@ SQLite at `~/.roost/db/history.db`. Schema lives in `db/schema.sql`.
 **`projects`** — name, directory, color, sort order, last active timestamp  
 **`snippets`** — saved commands  
 **`settings`** — key/value store for keyboard layout and UI preferences  
+**`sessions`** / **`interactions`** — legacy tables from the copilot-logging era (not used by current code)  
 
-Session logs are stored as flat files in `~/.roost/logs/`, not in the database.  
+Session logs are stored as flat files in `~/.roost/logs/`, not in the database.
 
 ---
 

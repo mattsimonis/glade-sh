@@ -51,7 +51,8 @@ dirs=(
     "$ROOST_DIR/bin"
     "$ROOST_DIR/lib"
     "$ROOST_DIR/db"
-    "$ROOST_DIR/logs/raw"
+    "$ROOST_DIR/logs/_main"
+    "$ROOST_DIR/uploads"
     "$ROOST_DIR/web"
     "$ROOST_DIR/services"
 )
@@ -182,15 +183,14 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7: Check for gh copilot extension
+# Step 7: Check for gh copilot extension (optional)
 # ─────────────────────────────────────────────────────────────────────────────
 if command -v gh &>/dev/null; then
     if gh extension list 2>/dev/null | grep -q "gh-copilot"; then
         success "gh copilot extension is installed."
     else
-        warn "gh copilot extension not found."
-        warn "  Install it with: gh extension install github/gh-copilot"
-        WARNINGS+=("gh copilot extension not installed")
+        info "gh copilot extension not found (optional)."
+        info "  Install with: gh extension install github/gh-copilot"
     fi
 fi
 
@@ -268,23 +268,20 @@ cat <<EOF
        brew install tailscale   # macOS
        # Then: enable in System Settings or run tailscaled
 
-  3. Start services (choose one):
+  3. Start services:
 
      Docker Compose (recommended):
-       cd $SCRIPT_DIR && docker compose up -d
+       cd $SCRIPT_DIR && make setup
 
-     Or manually install ttyd + Caddy:
-       brew install ttyd caddy
-       # Then create launchd plists or run them directly
+     Or just bring up the containers:
+       cd $SCRIPT_DIR && make up
 
-  4. From another device on your tailnet, visit:
-       http://<this-machine-tailscale-hostname>
+  4. From another device on your network, visit:
+       https://ai.home   (if Pi-hole DNS is configured)
+       or the Mac Mini's LAN IP
 
-  5. If you haven't already, authenticate gh CLI:
-       gh auth login
-
-  6. Install the copilot extension if needed:
-       gh extension install github/gh-copilot
+  5. (Optional) Authenticate gh CLI inside the container:
+       make auth
 
 EOF
 

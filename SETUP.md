@@ -4,7 +4,8 @@
 
 - Mac Mini is on and connected to your network
 - You have admin access to the Mac Mini (SSH or local keyboard)
-- A GitHub account with Copilot access
+- Docker Desktop installed
+- A GitHub account *(optional, for `gh copilot` inside the terminal)*
 
 ---
 
@@ -177,18 +178,18 @@ Point your standalone Caddy at `localhost:7681` and `localhost:7682` instead of 
 ## Step 7: Verify from the Mac Mini Itself
 
 ```bash
-# Test the wrapper logs correctly
-gh copilot suggest "how to list docker containers"
-
-# Check it was logged
-copilot-history
+# Open a browser on the Mac Mini and go to https://ai.home
+# You should see the Roost web UI with project cards and a terminal
 ```
 
-Also open a browser on the Mac Mini and go to `https://ai.home` — you should see the Roost web UI with a terminal.
+Also verify the API:
+```bash
+curl -s http://localhost:7683/api/health | python3 -m json.tool
+```
 
 ---
 
-## Step 10: Connect from Your Laptop
+## Step 8: Connect from Your Laptop
 
 1. Make sure you're on the same network (or Tailscale is connected)
 2. Open a browser
@@ -198,20 +199,20 @@ Also open a browser on the Mac Mini and go to `https://ai.home` — you should s
 
 ---
 
-## Step 11: Connect from Your Phone
+## Step 9: Connect from Your Phone
 
 1. Make sure you're on the same network (or Tailscale is connected)
 2. Open Safari (iOS) or Chrome (Android)
 3. Go to: `https://ai.home`
 4. The terminal loads with the mobile keyboard toolbar at the bottom
-5. Use the extra keys (Esc, Tab, Ctrl, arrows) to navigate `gh copilot` interactive menus
-6. Copy/Paste buttons are in the toolbar's second row
+5. Use the extra keys (Esc, Tab, Ctrl, arrows) to navigate interactive menus
+6. Copy/Paste buttons are in the toolbar
 
 **Tip:** On iOS, tap "Share → Add to Home Screen" to make it feel like a native app (full screen, no browser chrome).
 
 ---
 
-## Step 12: Make It Survive Reboots
+## Step 10: Make It Survive Reboots
 
 **If using Docker:**
 The `docker-compose.yml` already has `restart: unless-stopped`, so Docker handles this as long as Docker Desktop is set to start at login (Docker Desktop → Settings → General → "Start Docker Desktop when you sign in"). `caddy-proxy` handles itself the same way.
@@ -256,4 +257,4 @@ launchctl load ~/Library/LaunchAgents/com.roost.ttyd.plist
 | `gh copilot` not found in terminal | Run `gh extension install github/gh-copilot` inside the container/terminal |
 | Docker first build is slow | Normal — building the image. Watch with `docker compose logs -f ttyd` |
 | Phone keyboard covers terminal | The toolbar should push the terminal up. If not, try "Add to Home Screen" for full-screen mode |
-| History not logging | Run `copilot-history` — if it says "No history database", run `source ~/.roost/bin/copilot-wrap` then try a `gh copilot` command |
+| History not logging | Session logs are recorded via tmux pipe-pane. Check `ls ~/.roost/logs/` for files. Create a project and run a command to start recording. |
