@@ -4954,6 +4954,14 @@
             function toggleDesktopPanel() {
                 var open = document.body.classList.toggle('desktop-panel-open');
                 if (desktopPanelBtn) desktopPanelBtn.classList.toggle('active', open);
+                if (open) {
+                    // Clear inline styles left by mobile panel animations — they beat CSS rules
+                    panel.style.height = '';
+                    panel.style.opacity = '';
+                    panel.style.transform = '';
+                    panel.style.transition = '';
+                    panel.style.pointerEvents = '';
+                }
             }
             if (desktopPanelBtn) {
                 desktopPanelBtn.addEventListener('click', toggleDesktopPanel);
