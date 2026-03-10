@@ -60,7 +60,7 @@
             display:flex; align-items:center; padding:0 10px;
             background:#11111b; border-top:1px solid #313244;
             transform:translateY(105%); pointer-events:none;
-            transition:transform 260ms cubic-bezier(0.32,0.72,0,1);
+            transition:transform 260ms cubic-bezier(0.32,0.72,0,1), bottom 200ms ease;
         }
         #path-footer.pf-visible { transform:translateY(0); }
         #path-footer-text {
@@ -2353,8 +2353,32 @@
             });
         })();
 
-        // ── Shortcut bar ────────────────────────────────────────────────────────
+        // ── Path footer ─────────────────────────────────────────────────────────
         const appEl = document.getElementById('app');
+        function repositionPathFooter() {
+            const pfEl   = document.getElementById('path-footer');
+            const pfText = document.getElementById('path-footer-text');
+            if (!pfEl) return;
+            const hasContent = pfText && pfText.textContent.trim().length > 0;
+            if (!hasContent) {
+                pfEl.classList.remove('pf-visible');
+                pfEl.style.bottom = '-50px';
+                return;
+            }
+            if (window.innerWidth >= 768) {
+                // Desktop: bottom of viewport, rises above the 260px panel when open
+                pfEl.style.bottom = document.body.classList.contains('desktop-panel-open') ? '260px' : '0px';
+            } else {
+                // Mobile: always above the full toolbar stack
+                const navH = bottomNav.offsetHeight || 0;
+                pfEl.style.bottom = keyboardState === 'hidden'
+                    ? (navH + (shortcutBar.offsetHeight || 44)) + 'px'
+                    : (navH + (panel.offsetHeight || 0)) + 'px';
+            }
+            pfEl.classList.add('pf-visible');
+        }
+
+        // ── Shortcut bar ────────────────────────────────────────────────────────
         function repositionShortcutBar() {
             const terminalContainer = document.getElementById('terminal-container');
 
@@ -2391,30 +2415,16 @@
             const navH   = bottomNav.offsetHeight;
             // panel.offsetHeight is correct in all states: 0 when hidden, spacerH when standard/custom
             const panelH = panel.offsetHeight;
-            const pathFooterEl = document.getElementById('path-footer');
-            // Only reserve space for the footer once it has content (avoid empty gap on first load)
-            const pfHasContent = pathFooterEl && document.getElementById('path-footer-text') &&
-                                  document.getElementById('path-footer-text').textContent.length > 0;
-            const pfH = pfHasContent ? 22 : 0;
+            const pfH    = document.getElementById('path-footer-text')?.textContent.length > 0 ? 22 : 0;
 
             if (keyboardState === 'hidden') {
                 shortcutBar.style.bottom = navH + 'px';
             } else {
                 shortcutBar.style.bottom = (navH + panelH + pfH) + 'px';
             }
-            // Park footer off-screen when empty so translateY(105%) can't bleed into the keyboard panel
-            if (pathFooterEl) {
-                if (pfHasContent) {
-                    const pfBottom = keyboardState === 'hidden' ? (navH + 44) : (navH + panelH);
-                    pathFooterEl.style.bottom = pfBottom + 'px';
-                } else {
-                    pathFooterEl.style.bottom = '-50px';
-                }
-            }
             shortcutBar.classList.add('sb-visible');
-            // Only make footer visible when it has content
-            if (pathFooterEl && pfHasContent) pathFooterEl.classList.add('pf-visible');
             if (terminalContainer) terminalContainer.classList.add('has-shortcut-bar');
+            repositionPathFooter();
         }
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', repositionShortcutBar);
@@ -3991,9 +4001,7 @@
                 const path = inner[1].replace(/^\/root(?=\/|$)/, '~');
                 const el = document.getElementById('path-footer-text');
                 if (el) el.textContent = path;
-                // Show footer on first hit (initially hidden to avoid empty gap)
-                const pf = document.getElementById('path-footer');
-                if (pf && !pf.classList.contains('pf-visible')) repositionShortcutBar();
+                repositionPathFooter();
             });
         }
         function findTerminalWS() {
@@ -5002,6 +5010,7 @@
                     mainPanel.style.transition = '';
                     mainPanel.style.pointerEvents = '';
                 }
+                repositionPathFooter();
             }
             if (desktopPanelBtn) {
                 desktopPanelBtn.addEventListener('click', toggleDesktopPanel);

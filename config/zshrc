@@ -18,7 +18,12 @@ source $ZSH/oh-my-zsh.sh
 # ── OSC 7 — report CWD to the web UI footer on every prompt ──────────────────
 # Consumed by xterm.js parser.registerOscHandler(7, ...) in index.html
 _osc7_report() {
-  printf "\033]7;file://%s%s\033\\" "${HOST:-localhost}" "$PWD"
+  if [[ -n "$TMUX" ]]; then
+    # DCS passthrough: tmux unwraps this and forwards the inner OSC 7 to the terminal
+    printf "\033Ptmux;\033\033]7;file://%s%s\007\033\\" "${HOST:-localhost}" "$PWD"
+  else
+    printf "\033]7;file://%s%s\033\\" "${HOST:-localhost}" "$PWD"
+  fi
 }
 
 # ── Hooks ─────────────────────────────────────────────────────────────────────
