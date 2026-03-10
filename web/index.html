@@ -4584,12 +4584,12 @@
                 .then(function (data) {
                     const url = '/ttyd/' + data.port + '/';
                     iframe.src = 'about:blank';
-                    requestAnimationFrame(function () { iframe.src = url; startTerminalPoll(); });
+                    requestAnimationFrame(function () { iframe.src = url; startTerminalPoll(); startShellPoll(pid); });
                 })
                 .catch(function () {
                     const url = iframe.src;
                     iframe.src = 'about:blank';
-                    requestAnimationFrame(function () { iframe.src = url || '/'; startTerminalPoll(); });
+                    requestAnimationFrame(function () { iframe.src = url || '/'; startTerminalPoll(); startShellPoll(pid); });
                 });
             // Safety: clear the flag after 30s in case everything silently fails
             setTimeout(function () { reconnectInProgress = false; }, 30000);
