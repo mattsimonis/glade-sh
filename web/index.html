@@ -800,6 +800,10 @@
 
         /* ── Confirm modal ─────────────────────────────────────── */
         @keyframes ctxIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+        @keyframes confirmIn {
+            from { opacity:0; transform:translate(-50%,-50%) scale(0.92); }
+            to   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+        }
         .confirm-backdrop {
             position:fixed; inset:0; z-index:299;
             background:rgba(0,0,0,0.55);
@@ -815,7 +819,7 @@
             padding:24px 20px 16px;
             width:min(300px, calc(100vw - 48px));
             box-shadow:0 24px 64px rgba(0,0,0,0.7);
-            animation:ctxIn 150ms ease-out; text-align:center;
+            animation:confirmIn 150ms ease-out; text-align:center;
         }
         .confirm-title { font-size:15px; font-weight:600; color:#cdd6f4; margin-bottom:6px; }
         .confirm-msg { font-size:12px; color:#6c7086; font-family:var(--font-mono); margin-bottom:20px; word-break:break-all; }
@@ -3231,7 +3235,7 @@
             modal.appendChild(actionsEl);
             document.body.appendChild(backdrop);
             document.body.appendChild(modal);
-            setTimeout(function() { backdrop.addEventListener('click', closeConfirm); }, 50);
+            setTimeout(function() { backdrop.addEventListener('click', closeConfirm); }, 300);
         }
 
         function closeLogCtx() { closeConfirm(); }
