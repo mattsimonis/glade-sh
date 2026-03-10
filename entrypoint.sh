@@ -24,10 +24,10 @@ if git -C "$APP_DIR" pull --ff-only -q 2>/dev/null; then
 elif git -C "$APP_DIR" rev-parse HEAD >/dev/null 2>&1; then
     log "git pull failed — continuing with existing code"
 else
-    log "Cloning $ROOST_REPO_URL"
+    log "Cloning repo"
     # Can't rm the mountpoint itself — clear its contents instead
     find "$APP_DIR" -mindepth 1 -depth -delete 2>/dev/null || true
-    git clone -q "$ROOST_REPO_URL" "$APP_DIR"
+    git clone -q "$ROOST_REPO_URL" "$APP_DIR" || { log "Clone failed — check ROOST_REPO_URL"; exit 1; }
 fi
 
 # ── Background update poller ───────────────────────────────────────────────────

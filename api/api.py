@@ -919,32 +919,33 @@ class Handler(BaseHTTPRequestHandler):
             __import__("time").sleep(0.2),
             os._exit(42)
         ), daemon=True).start()
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    ensure_tables()
-    # Kill any ttyd processes left over from a prior crash that still hold our ports.
-    try:
-        result = subprocess.run(
-            ["pgrep", "-f", "ttyd.*-p 769"],
-            capture_output=True, text=True
-        )
-        for pid in result.stdout.strip().splitlines():
+
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+ensure_tables()
+# Kill any ttyd processes left over from a prior crash that still hold our ports.
+try:
+    result = subprocess.run(
+        ["pgrep", "-f", "ttyd.*-p 769"],
+        capture_output=True, text=True
+    )
+    for pid in result.stdout.strip().splitlines():
+        try:
+            os.kill(int(pid), signal.SIGTERM)
+        except (ProcessLookupError, ValueError):
+            pass
+except Exception:
+    pass
+ThreadingTCPServer.allow_reuse_address = True
+server = ThreadingTCPServer(("0.0.0.0", PORT), Handler)
+print(f"roost API listening on :{PORT}", flush=True)
+try:
+    server.serve_forever()
+except KeyboardInterrupt:
+    pass
+finally:
+    with _lock:
+        for info in _ttyd_procs.values():
             try:
-                os.kill(int(pid), signal.SIGTERM)
-            except (ProcessLookupError, ValueError):
+                info["process"].terminate()
+            except Exception:
                 pass
-    except Exception:
-        pass
-    ThreadingTCPServer.allow_reuse_address = True
-    server = ThreadingTCPServer(("0.0.0.0", PORT), Handler)
-    print(f"roost API listening on :{PORT}", flush=True)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        with _lock:
-            for info in _ttyd_procs.values():
-                try:
-                    info["process"].terminate()
-                except Exception:
-                    pass
