@@ -2146,8 +2146,8 @@
         function switchPanel(name, skipAnim) {
             currentPanel = name;
             const idx = panelOrder.indexOf(name);
-            const W   = panel.offsetWidth;
-            if (skipAnim || W === 0) {
+            const W   = panel.offsetWidth || document.getElementById('app').offsetWidth || window.innerWidth;
+            if (skipAnim) {
                 panelSlider.style.transition = 'none';
             } else {
                 panelSlider.style.transition = 'transform 300ms cubic-bezier(0.32,0.72,0,1)';
@@ -4924,7 +4924,9 @@
             function toggleDesktopPanel() {
                 var open = document.body.classList.toggle('desktop-panel-open');
                 if (desktopPanelBtn) desktopPanelBtn.classList.toggle('active', open);
-                if (open) { fetchSnippetsFromServer().then(renderSnippets); renderHistory(); }
+                if (open) {
+                    requestAnimationFrame(function() { switchPanel(currentPanel, true); });
+                }
             }
             if (desktopPanelBtn) {
                 desktopPanelBtn.addEventListener('click', toggleDesktopPanel);
