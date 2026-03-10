@@ -3068,27 +3068,36 @@
                     '<div class="snippet-name">' + escapeHtml(snip.name) + '</div>' +
                     '<div class="snippet-cmd">' + escapeHtml(snip.command) + '</div>';
 
-                let lpTimer = null, longPressed = false;
+                let lpTimer = null, longPressed = false, scrolled = false, startX = 0, startY = 0;
                 tile.addEventListener('touchstart', function(e) {
-                    longPressed = false;
-                    const t = e.touches[0];
+                    scrolled = false; longPressed = false;
+                    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
                     lpTimer = setTimeout(function() {
+                        if (scrolled) return;
                         lpTimer = null; longPressed = true;
                         tile.classList.add('lp-active');
-                        showSnippetCtx(snip, t.clientX, t.clientY);
+                        showSnippetCtx(snip, startX, startY);
                     }, 450);
                 }, { passive: true });
-                tile.addEventListener('touchmove', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
+                tile.addEventListener('touchmove', function(e) {
+                    if (!e.touches.length) return;
+                    if (Math.abs(e.touches[0].clientX - startX) > 8 || Math.abs(e.touches[0].clientY - startY) > 8) {
+                        scrolled = true;
+                        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+                    }
+                }, { passive: true });
                 tile.addEventListener('touchend', function(e) {
-                    e.preventDefault(); // suppress synthetic click that follows touchend
+                    e.preventDefault();
                     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
                     if (longPressed) { return; } // leave longPressed=true; click handler clears it
+                    if (scrolled) { return; }    // leave scrolled=true; click handler clears it
                     sendSnippetCommand(snip);
                 }, { passive: false });
                 // Desktop: click to run, right-click for context menu.
-                // Also absorbs the iOS synthetic click that fires after a long-press touchend.
+                // Also absorbs iOS synthetic click after long-press or scroll touchend.
                 tile.addEventListener('click', function(e) {
                     if (longPressed) { longPressed = false; return; }
+                    if (scrolled) { scrolled = false; return; }
                     sendSnippetCommand(snip);
                 });
                 tile.addEventListener('contextmenu', function(e) {
@@ -3111,15 +3120,28 @@
                 card.innerHTML =
                     '<div class="preset-card-name">' + escapeHtml(preset.name)    + '</div>' +
                     '<div class="preset-card-cmd">'  + escapeHtml(preset.command) + '</div>';
-                let longPressTimer = null;
-                card.addEventListener('touchstart', function () {
-                    longPressTimer = setTimeout(function () { longPressTimer = null; openPresetEditor(preset.id); }, 400);
+                let longPressTimer = null, presetScrolled = false, psX = 0, psY = 0;
+                card.addEventListener('touchstart', function(e) {
+                    presetScrolled = false;
+                    psX = e.touches[0].clientX; psY = e.touches[0].clientY;
+                    longPressTimer = setTimeout(function() {
+                        if (presetScrolled) return;
+                        longPressTimer = null; openPresetEditor(preset.id);
+                    }, 400);
                 }, { passive: true });
-                card.addEventListener('touchend', function () {
+                card.addEventListener('touchmove', function(e) {
+                    if (!e.touches.length) return;
+                    if (Math.abs(e.touches[0].clientX - psX) > 8 || Math.abs(e.touches[0].clientY - psY) > 8) {
+                        presetScrolled = true;
+                        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                    }
+                }, { passive: true });
+                card.addEventListener('touchend', function() {
                     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
                 }, { passive: true });
                 card.addEventListener('click', function () {
-                    if (longPressTimer) return; // long-press opened editor
+                    if (longPressTimer) return;
+                    if (presetScrolled) { presetScrolled = false; return; }
                     card.style.background = 'rgba(137,180,250,0.12)';
                     setTimeout(function () { card.style.background = ''; }, 180);
                     sendString(preset.command + '\r');
@@ -3312,25 +3334,34 @@
                         '<span class="session-time">' + escapeHtml(relativeTime(log.mtime)) + '</span>' +
                     '</div>';
                 // Long-press (touch) or right-click (desktop) → delete menu
-                var lpTimer = null, longPressed = false;
+                var lpTimer = null, longPressed = false, scrolled = false, startX = 0, startY = 0;
                 card.addEventListener('touchstart', function(e) {
-                    longPressed = false;
-                    var t = e.touches[0];
+                    scrolled = false; longPressed = false;
+                    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
                     lpTimer = setTimeout(function() {
+                        if (scrolled) return;
                         lpTimer = null; longPressed = true;
                         haptic(20);
-                        showLogCtx(log, t.clientX, t.clientY);
+                        showLogCtx(log, startX, startY);
                     }, 500);
                 }, { passive: true });
-                card.addEventListener('touchmove', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
+                card.addEventListener('touchmove', function(e) {
+                    if (!e.touches.length) return;
+                    if (Math.abs(e.touches[0].clientX - startX) > 8 || Math.abs(e.touches[0].clientY - startY) > 8) {
+                        scrolled = true;
+                        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+                    }
+                }, { passive: true });
                 card.addEventListener('touchend', function(e) {
                     e.preventDefault();
                     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
                     if (longPressed) { return; } // leave longPressed=true; click handler clears it
+                    if (scrolled) { return; }    // leave scrolled=true; click handler clears it
                     openLogViewer(log.project, log.file, log.display_name, log.active);
                 }, { passive: false });
                 card.addEventListener('click', function() {
                     if (longPressed) { longPressed = false; return; }
+                    if (scrolled) { scrolled = false; return; }
                     openLogViewer(log.project, log.file, log.display_name, log.active);
                 });
                 card.addEventListener('contextmenu', function(e) {
