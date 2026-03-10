@@ -513,9 +513,10 @@ class Handler(BaseHTTPRequestHandler):
         with _lock:
             info = _ttyd_procs.get(pid)
             running = bool(info and info["process"].poll() is None)
-        if not running:
+        sname = session_name(pid)
+        if not running and not tmux_session_exists(sname):
             return self.send_json(200, [])
-        self.send_json(200, list_shells_tmux(session_name(pid)))
+        self.send_json(200, list_shells_tmux(sname))
 
     def _new_shell(self, pid):
         conn = open_db()

@@ -3681,6 +3681,8 @@
             try {
                 const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
                 const port = data.port;
+                // Render shells immediately from the start response — no extra round-trip needed
+                if (Array.isArray(data.shells)) renderShellTabs(data.shells);
                 const ifrm = document.getElementById('terminal-iframe');
                 ifrm.src = '/ttyd/' + port + '/';
                 startShellPoll(pid);
