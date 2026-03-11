@@ -593,6 +593,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def _delete_project(self, pid):
         stop_project_proc(pid)
+        # Kill the tmux session so no shells linger after deletion
+        sname = session_name(pid)
+        subprocess.run(["tmux", "kill-session", "-t", sname], capture_output=True)
         conn = open_db()
         try:
             conn.execute("DELETE FROM projects WHERE id=?", (pid,))
