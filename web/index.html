@@ -1661,6 +1661,7 @@
         let currentProjectId = null;
         let activityBadges = {};   // projectId -> bool
         let shellPollTimer = null;
+        let currentShells = [];    // [{index, name, active, port}] — last fetched shell list
         let activityPollTimer = null;
         let selectedProjectColor = '#89b4fa';
         const PROJECT_COLORS = [
@@ -3680,8 +3681,11 @@
             // Start project & get port
             try {
                 const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
-                const port = data.port;
                 const ifrm = document.getElementById('terminal-iframe');
+                // Use the active shell's port (if available) so we land on the right window
+                const active = (data.shells || []).find(function(s) { return s.active; });
+                const port = (active && active.port) || data.port;
+                if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
                 ifrm.src = '/ttyd/' + port + '/';
                 startShellPoll(pid);
                 markProjectViewed(pid);
@@ -3701,6 +3705,7 @@
             if (!currentProjectId) return;
             let shells = [];
             try { shells = await apiJson('/api/projects/' + currentProjectId + '/shells'); } catch(e) { return; }
+            currentShells = shells;
             renderShellTabs(shells);
         }
 
@@ -3762,27 +3767,25 @@
             bar.appendChild(addBtn);
         }
 
-        async function switchShell(idx) {
+        function switchShell(idx) {
             if (!currentProjectId) return;
-            // Optimistic tab highlight first so the UI feels instant
+            const shell = currentShells.find(function(s) { return s.index === idx; });
+            if (!shell || !shell.port) return;
+            // Optimistic tab highlight
             const bar = document.getElementById('shell-tabs-bar');
             if (bar) {
                 bar.querySelectorAll('.shell-tab').forEach(function(t, i) {
-                    t.classList.toggle('active', i === idx);
+                    t.classList.toggle('active', currentShells[i] && currentShells[i].index === idx);
                 });
             }
-            try {
-                await apiJson('/api/projects/' + currentProjectId + '/shells/' + idx + '/select', { method: 'PUT' });
-                // ttyd doesn't redraw automatically on an external tmux window switch —
-                // reload the iframe so the WebSocket reconnects and shows the new window.
-                if (iframe && iframe.src && iframe.src !== 'about:blank') {
-                    const url = iframe.src;
-                    iframe.src = 'about:blank';
-                    // Brief delay so tmux finishes repainting the new window into the
-                    // pty before the browser reconnects and reads the buffer.
-                    setTimeout(function() { iframe.src = url; }, 150);
-                }
-            } catch(e) { console.warn('switchShell failed', e); }
+            // Each shell has its own ttyd port — just load its URL directly.
+            const url = '/ttyd/' + shell.port + '/';
+            if (iframe.src.endsWith(url)) {
+                // Same shell clicked again — no reload needed
+                return;
+            }
+            iframe.src = 'about:blank';
+            setTimeout(function() { iframe.src = url; }, 50);
         }
 
         async function addShell() {
@@ -3797,7 +3800,10 @@
                     result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
                 }
                 await refreshShells();
-                if (result && result.index != null) switchShell(result.index);
+                if (result && result.port) {
+                    iframe.src = 'about:blank';
+                    setTimeout(function() { iframe.src = '/ttyd/' + result.port + '/'; }, 50);
+                }
             } catch (e) { console.warn('addShell failed', e); }
         }
 
@@ -4590,11 +4596,16 @@
             if (!pid) { reconnectInProgress = false; location.reload(); return; }
             if (reconnectTitle) reconnectTitle.textContent = 'Reconnecting\u2026';
             terminalInstance = null; xtermTextarea = null; selListenerAdded = false;
-            // Call /start (idempotent) to ensure ttyd is alive, then do a true iframe reload.
-            // iframe.src = iframe.src is a no-op on Safari — must navigate blank→url.
+            // Call /start (idempotent) to ensure all ttyd processes are alive.
+            // /start returns the port for window 0 AND a full shell list with per-shell ports.
+            // We reconnect to whichever shell was last active.
             apiJson('/api/projects/' + pid + '/start', { method: 'POST' })
                 .then(function (data) {
-                    const url = '/ttyd/' + data.port + '/';
+                    // Prefer the currently active shell's port; fall back to window-0 port
+                    const active = (data.shells || []).find(function(s) { return s.active; });
+                    const port = (active && active.port) || data.port;
+                    const url = '/ttyd/' + port + '/';
+                    if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
                     iframe.src = 'about:blank';
                     requestAnimationFrame(function () { iframe.src = url; startTerminalPoll(); startShellPoll(pid); });
                 })
