@@ -1,5 +1,10 @@
 # Roost — Setup Guide
 
+> **DNS is automatic.** `roost.local` resolves via mDNS on macOS, iOS, and Linux — no Pi-hole needed.  
+> **Tailscale is optional** — required only for remote access outside your home network. Start without it.
+
+---
+
 ## Prerequisites
 
 - Mac Mini is on and connected to your network
@@ -8,65 +13,67 @@
 
 ---
 
-## Step 1: Install Tailscale on All Devices
-
-**Mac Mini:**
-```bash
-brew install tailscale
-```
-Then open System Settings → Tailscale → Sign in with your account.
-
-**Laptop:**
-Download from [tailscale.com/download](https://tailscale.com/download) for your OS. Sign in with the same account.
-
-**Phone:**
-- iOS: App Store → "Tailscale" → Install → Sign in
-- Android: Google Play → "Tailscale" → Install → Sign in
-
-**Verify:** On the Mac Mini, run:
-```bash
-tailscale status
-```
-You should see all your devices listed. Note the Mac Mini's Tailscale hostname (e.g., `mac-mini`).
-
-**Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) and enable MagicDNS so you can use hostnames instead of IPs.
-
----
-
-## Step 2: Install Dependencies on Mac Mini
+## Step 1: Install Dependencies on Mac Mini
 
 ```bash
 # Homebrew (if not installed)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Core tools
-brew install sqlite3 git docker
+brew install sqlite3 git
 ```
 
 ---
 
-## Step 3: Copy the Project to Mac Mini
-
-Copy the `roost` folder to the Mac Mini over SMB into `/Volumes/Photos/Dev/roost`.
-
----
-
-## Step 4: Run the Installer on Mac Mini
+## Step 2: Clone the Project to Mac Mini
 
 SSH into the Mac Mini from your laptop:
 ```bash
 ssh mac-mini
 ```
 
-Then run:
+Then clone the repo:
 ```bash
-cd /Volumes/Photos/Dev/roost
+git clone https://github.com/mattsimonis/roost ~/Dev/roost
+cd ~/Dev/roost
+```
+
+> Already have the project folder on your laptop? Copy it over SMB into a convenient path (e.g. `/Volumes/Photos/Dev/roost`) and `cd` into that directory instead.
+
+---
+
+## Step 3: Configure
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+```bash
+HOST=mac-mini      # hostname of the machine running Docker
+DOMAIN=roost.local # domain you'll use to access the UI
+```
+
+To mount personal directories (e.g. your code) inside the container, create a gitignored `docker-compose.override.yml`:
+
+```yaml
+services:
+  ttyd:
+    volumes:
+      - /your/dev/dir:/mnt/dev
+```
+
+---
+
+## Step 4: Run the Installer
+
+```bash
 ./install.sh
 ```
 
 This will:
 - Create `~/.roost/` with all subdirectories
-- Copy scripts, schema, web files into place
+- Copy scripts, schema, and config files into place
 - Initialize the SQLite database
 - Add shell integration to your `.zshrc` and `.bashrc`
 - Print warnings for anything missing
@@ -88,83 +95,53 @@ cp BerkeleyMonoNerdFont-Regular.ttf ~/.roost/assets/fonts/
 
 The filename must start with `BerkeleyMonoNerdFont-Regular` — that's what the `@font-face` declaration expects. If yours is named differently, rename it.
 
-If you skip this, the UI falls back to JetBrains Mono / Fira Code / system monospace.
+If you skip this, the UI falls back to JetBrains Mono → Fira Code → system monospace.
 
 ---
 
-## Step 6: Set Up Pi-hole DNS for roost.local
+## Step 6: Set Up TLS — mkcert cert
 
-On the machine running Pi-hole, add a local DNS record:
-
-1. Open Pi-hole admin → **Local DNS** → **DNS Records**
-2. Add:
-   - **Domain:** `roost.local`
-   - **IP Address:** Mac Mini's LAN IP (find it with `ipconfig getifaddr en0`)
-3. Click **Add**
-
-Verify from any device on the network:
-```bash
-ping roost.local
-```
-
----
-
-## Step 7: Add roost.local to Your Standalone Caddy
-
-Copy the contents of `services/Caddyfile` (the `roost.local` block) into your Caddy project's `Caddyfile`, then generate a TLS cert with `mkcert` using the same CA already installed for `fizzy.home` and `yoto.home`:
+On the machine where `caddy-proxy` is managed:
 
 ```bash
-cd /Volumes/Photos/Dev/caddy
 mkcert roost.local
-mv roost.local.pem certs/roost.local.pem
-mv roost.local-key.pem certs/roost.local-key.pem
-
-docker restart caddy-proxy
+mv roost.local.pem       /path/to/caddy/certs/roost.local.pem
+mv roost.local-key.pem   /path/to/caddy/certs/roost.local-key.pem
 ```
 
 If `mkcert` isn't installed: `brew install mkcert && mkcert -install`
 
 ---
 
-## Step 7: Start Services
+## Step 7: Add roost.local to Your Standalone Caddy
 
-**Docker (the only option — Caddy is handled by your standalone `caddy-proxy`):**
+Copy the contents of `services/Caddyfile` (the `roost.local` block) into your Caddy project's `Caddyfile`, then restart:
 
 ```bash
-cd /Volumes/Photos/Dev/roost
-docker compose up -d
+docker restart caddy-proxy
 ```
 
-First build takes ~2 minutes (installs packages into the image). Subsequent starts are instant.
+---
+
+## Step 8: Start Services
+
+```bash
+cd ~/Dev/roost
+make setup
+```
+
+This creates the Docker network, builds the image, and starts everything. First build takes ~2 minutes. Subsequent starts are instant.
+
 Watch the build: `docker compose logs -f`
 
 To rebuild after `Dockerfile` or `entrypoint.sh` changes:
 ```bash
-docker compose build ttyd && docker compose up -d
+make build
 ```
-
-**Native (no Docker) — ttyd only:**
-
-```bash
-brew install ttyd
-
-ttyd --port 7681 --writable --reconnect 5 --max-clients 3 \
-  -t 'theme={"background":"#1e1e2e","foreground":"#cdd6f4","cursor":"#f5e0dc","cursorAccent":"#1e1e2e","selectionBackground":"#585b70","selectionForeground":"#cdd6f4","black":"#45475a","red":"#f38ba8","green":"#a6e3a1","yellow":"#f9e2af","blue":"#89b4fa","magenta":"#f5c2e7","cyan":"#94e2d5","white":"#bac2de","brightBlack":"#585b70","brightRed":"#f38ba8","brightGreen":"#a6e3a1","brightYellow":"#f9e2af","brightBlue":"#89b4fa","brightMagenta":"#f5c2e7","brightCyan":"#94e2d5","brightWhite":"#a6adc8"}' \
-  -t fontSize=14 \
-  -t 'fontFamily=Berkeley Mono Nerd Font,JetBrains Mono,Fira Code,monospace' \
-  -t cursorStyle=bar -t cursorBlink=true /bin/zsh
-```
-
-For static asset serving, run in a second terminal:
-```bash
-cd ~/.roost && python3 -m http.server 7682
-```
-
-Point your standalone Caddy at `localhost:7681` and `localhost:7682` instead of the container names.
 
 ---
 
-## Step 8: Verify from the Mac Mini Itself
+## Step 9: Verify from the Mac Mini Itself
 
 ```bash
 # Open a browser on the Mac Mini and go to https://roost.local
@@ -178,19 +155,20 @@ curl -s http://localhost:7683/api/health | python3 -m json.tool
 
 ---
 
-## Step 9: Connect from Your Laptop
+## Step 10: Connect from Your Laptop
 
-1. Make sure you're on the same network (or Tailscale is connected)
+1. Make sure you're on the same network
 2. Open a browser
 3. Go to: `https://roost.local`
-4. You should see the terminal UI with Catppuccin Mocha theme
-5. Create a project and run a command — it executes on the Mac Mini
+4. First visit: run `mkcert -install` on the laptop to trust the local CA (avoids cert warning)
+5. You should see the terminal UI with Catppuccin Mocha theme
+6. Create a project and run a command — it executes on the Mac Mini
 
 ---
 
-## Step 10: Connect from Your Phone
+## Step 11: Connect from Your Phone
 
-1. Make sure you're on the same network (or Tailscale is connected)
+1. Make sure you're on the same network
 2. Open Safari (iOS) or Chrome (Android)
 3. Go to: `https://roost.local`
 4. The terminal loads with the mobile keyboard toolbar at the bottom
@@ -199,40 +177,59 @@ curl -s http://localhost:7683/api/health | python3 -m json.tool
 
 **Tip:** On iOS, tap "Share → Add to Home Screen" to make it feel like a native app (full screen, no browser chrome).
 
+On iOS: to avoid cert warnings, import the mkcert root CA profile → Settings → General → VPN & Device Management → trust it.
+
 ---
 
-## Step 11: Make It Survive Reboots
+## Step 12: Make It Survive Reboots
 
-**If using Docker:**
-The `docker-compose.yml` already has `restart: unless-stopped`, so Docker handles this as long as Docker Desktop is set to start at login (Docker Desktop → Settings → General → "Start Docker Desktop when you sign in"). `caddy-proxy` handles itself the same way.
+The `docker-compose.yml` already has `restart: unless-stopped`, so Docker handles this as long as Docker Desktop is set to start at login:
 
-**If running natively**, create a launchd plist for ttyd:
+**Docker Desktop → Settings → General → "Start Docker Desktop when you sign in"**
 
+`caddy-proxy` handles itself the same way.
+
+---
+
+## Optional: Tailscale (Remote Access)
+
+Skip this entirely if you only need LAN access. Add it later when you want to reach Roost from outside the home network.
+
+**Mac Mini:**
 ```bash
-cat > ~/Library/LaunchAgents/com.roost.ttyd.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.roost.ttyd</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/opt/homebrew/bin/ttyd</string>
-        <string>--port</string><string>7681</string>
-        <string>--writable</string>
-        <string>--reconnect</string><string>5</string>
-        <string>--max-clients</string><string>3</string>
-        <string>/bin/zsh</string>
-    </array>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
-</dict>
-</plist>
-EOF
-
-launchctl load ~/Library/LaunchAgents/com.roost.ttyd.plist
+brew install tailscale
 ```
+Then open System Settings → Tailscale → Sign in.
+
+**Laptop:** Download from [tailscale.com/download](https://tailscale.com/download). Sign in with the same account.
+
+**Phone:**
+- iOS: App Store → "Tailscale" → Install → Sign in
+- Android: Google Play → "Tailscale" → Install → Sign in
+
+**Verify:** On the Mac Mini:
+```bash
+tailscale status
+```
+You should see all your devices listed.
+
+**Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) and enable MagicDNS so you can use `roost.local` over Tailscale instead of an IP.
+
+Once connected, `https://roost.local` works from anywhere your Tailscale devices can reach the Mac Mini.
+
+---
+
+## Optional: Pi-hole DNS
+
+`roost.local` resolves automatically via mDNS on macOS, iOS, and modern Linux. **You do not need Pi-hole.**
+
+If you already run Pi-hole and want an explicit DNS entry (e.g. for devices that don't support mDNS), add a record:
+
+1. Open Pi-hole admin → **Local DNS** → **DNS Records**
+2. Add:
+   - **Domain:** `roost.local`
+   - **IP Address:** Mac Mini's LAN IP (find it with `ipconfig getifaddr en0`)
+3. Click **Add**
 
 ---
 
@@ -240,7 +237,7 @@ launchctl load ~/Library/LaunchAgents/com.roost.ttyd.plist
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://roost.local` | Verify Pi-hole DNS record. Check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
+| Can't reach `https://roost.local` | Try `ping roost.local` — mDNS should resolve it automatically. If not, check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
 | Docker first build is slow | Normal — building the image. Watch with `docker compose logs -f ttyd` |

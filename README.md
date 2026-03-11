@@ -19,8 +19,40 @@ It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywher
 
 ---
 
+## Quick Start
+
+Local network only. Tailscale and Pi-hole not required.
+
+```bash
+git clone https://github.com/mattsimonis/roost
+cd roost
+cp .env.example .env         # set HOST= to your server's hostname
+```
+
+Add the `roost.local` block from `services/Caddyfile` to your standalone `caddy-proxy`, generate a cert:
+
+```bash
+mkcert roost.local
+# move the cert files into your caddy certs directory, restart caddy-proxy
+```
+
+Then start everything:
+
+```bash
+make setup   # creates Docker network, builds image (~2 min), starts containers
+```
+
+Open `https://roost.local`. That's it.
+
+> **No Pi-hole needed.** `roost.local` resolves automatically via mDNS on macOS, iOS, and Linux.  
+> **Tailscale is optional** — add it only if you need remote access outside the home network.  
+> See [SETUP.md](SETUP.md) for the full walkthrough: font, Caddy config, Tailscale, reboots.
+
+---
+
 ## Contents
 
+- [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [Features](#features)
 - [Why Roost?](#why-roost)
@@ -69,9 +101,9 @@ It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywher
        └──────────────────────────────────────┘
 ```
 
-**DNS:** Pi-hole maps `roost.local` → Mac Mini LAN IP  
+**DNS:** `roost.local` resolves via mDNS on macOS, iOS, and Linux — no Pi-hole required  
 **TLS:** mkcert cert managed by the standalone `caddy-proxy`  
-**Remote access:** Tailscale connects devices outside the home network  
+**Remote access:** Tailscale connects devices outside the home network (optional)  
 
 ---
 
@@ -131,9 +163,10 @@ Most mobile terminal apps either cost money, lock you to one platform, or drop y
 | Mac Mini (or always-on Linux host) | The execution hub; everything runs here |
 | Docker Desktop | For the container stack |
 | Standalone `caddy-proxy` container | Pre-existing; handles TLS for all `*.home` domains |
-| Pi-hole | Provides `roost.local` DNS record |
-| Tailscale | For remote access outside the home network |
+| Tailscale *(optional)* | Remote access outside the home network — not needed for LAN-only use |
 | Berkeley Mono Nerd Font `.woff2` or `.ttf` *(optional)* | Licensed; must be supplied by you |
+
+> **DNS is automatic.** `roost.local` resolves via mDNS on macOS, iOS, and modern Linux — no Pi-hole required. If you already run Pi-hole, you can optionally add a DNS record pointing `roost.local` at the Mac Mini's LAN IP, but it's not necessary.
 
 ---
 
@@ -212,11 +245,11 @@ services:
       - /your/dev/dir:/mnt/dev
 ```
 
-### 2. DNS — Pi-hole
+### 2. DNS
 
-Add a local DNS record in Pi-hole admin → **Local DNS → DNS Records**:
-- Domain: `roost.local` (or whatever you set `DOMAIN` to)
-- IP: the machine's LAN IP (`ipconfig getifaddr en0` on macOS)
+`roost.local` resolves automatically via mDNS — no configuration needed on macOS, iOS, or Linux. Skip this step.
+
+If you run Pi-hole and want an explicit override: **Pi-hole admin → Local DNS → DNS Records**, add `roost.local` pointing at the Mac Mini's LAN IP (`ipconfig getifaddr en0` on macOS). Completely optional.
 
 ### 3. TLS — mkcert cert
 
@@ -490,7 +523,7 @@ Personal directory mounts (e.g. your code) belong in a gitignored `docker-compos
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://roost.local` | Check Pi-hole DNS record. Verify `caddy-proxy` is running: `docker ps`. Try Mac Mini's LAN IP directly. |
+| Can't reach `https://roost.local` | Try `ping roost.local` — mDNS should resolve it automatically. If not, check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
 | Browser shows cert warning | Run `mkcert -install` on the client, or import the mkcert root CA on iOS. |
 | Terminal loads but no input | Ensure ttyd is running with `--writable` (it is by default in Dockerfile). |
 | First Docker build is slow | Normal — downloads ~200 MB of packages. Watch with `docker compose logs -f ttyd`. |
@@ -515,7 +548,7 @@ Personal directory mounts (e.g. your code) belong in a gitignored `docker-compos
 | Font | Berkeley Mono Nerd Font | Licensed; Nerd-patched for terminal glyphs |
 | Reverse proxy | [Caddy](https://caddyserver.com/) | Auto TLS, simple config, shared with other home services |
 | Remote access | [Tailscale](https://tailscale.com/) | Zero-config mesh VPN, iOS/Android apps |
-| DNS | Pi-hole | Local `roost.local` record; already running |
+| DNS | mDNS (built-in) | `roost.local` resolves automatically; Pi-hole optional |
 | Containerisation | Docker Compose | Two services; `restart: unless-stopped` |
 
 ---
