@@ -3468,28 +3468,30 @@
             modal.appendChild(actionsEl);
             document.body.appendChild(backdrop);
             document.body.appendChild(modal);
-            // iOS can retarget touch events onto elements that appear mid-touch.
-            // Block all modal interaction until the triggering touch is fully cleared.
-            modal.style.pointerEvents    = 'none';
-            backdrop.style.pointerEvents = 'none';
+            // The backdrop ALWAYS blocks touches to underlying elements (terminal iframe, etc.)
+            // — no pointer-events: none on it. Only the modal buttons are held off during
+            // the settle window to absorb the synthetic click iOS fires after touchend.
+            modal.style.pointerEvents = 'none';
             function armModal() {
-                modal.style.pointerEvents    = '';
-                backdrop.style.pointerEvents = '';
+                modal.style.pointerEvents = '';
                 backdrop.addEventListener('click', closeConfirm);
             }
-            if (activeTouchCount > 0) {
-                // Touch is still held (long-press path) — wait for finger to lift,
-                // then add a small settle buffer before enabling interaction.
-                var maxTimer = setTimeout(armModal, 800);
-                document.addEventListener('touchend', function() {
-                    clearTimeout(maxTimer);
-                    setTimeout(armModal, 80);
-                }, { once: true, passive: true });
-            } else {
-                // Called from touchend handler or mouse click — iOS may still fire
-                // a synthetic click (~300ms). Block for long enough to absorb it.
-                setTimeout(armModal, 350);
-            }
+            // Defer the activeTouchCount check one tick: when showConfirm is called from
+            // a touchend handler, the document-level decrement hasn't run yet, so the
+            // count would read 1 even though the finger just lifted.
+            setTimeout(function() {
+                if (activeTouchCount > 0) {
+                    // Finger is genuinely still held (long-press) — wait for lift, then settle.
+                    var maxTimer = setTimeout(armModal, 800);
+                    document.addEventListener('touchend', function() {
+                        clearTimeout(maxTimer);
+                        setTimeout(armModal, 80);
+                    }, { once: true, passive: true });
+                } else {
+                    // Touch already cleared — wait out the iOS synthetic-click window (~300ms).
+                    setTimeout(armModal, 350);
+                }
+            }, 0);
         }
 
         function closeLogCtx() { closeConfirm(); }
