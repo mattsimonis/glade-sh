@@ -3846,9 +3846,21 @@
             if (!currentProjectId) return;
             try {
                 await fetch('/api/projects/' + currentProjectId + '/shells/' + index, { method: 'DELETE' });
-                // If the closed shell was the active one, let tmux decide which is next
-                if (currentShellIdx === index) currentShellIdx = null;
+                const wasDisplayed = (currentShellIdx === index);
+                if (wasDisplayed) currentShellIdx = null;
                 await refreshShells();
+                // If we closed the shell that was on screen, navigate to the next one
+                if (wasDisplayed && currentShells.length > 0) {
+                    const next = currentShells.find(function(s) { return s.active; }) || currentShells[0];
+                    if (next && next.port) {
+                        currentShellIdx = next.index;
+                        renderShellTabs(currentShells);
+                        terminalInstance = null; xtermTextarea = null;
+                        window._osc7Wired = false; _osc7WiredSocket = null;
+                        iframe.src = 'about:blank';
+                        setTimeout(function() { iframe.src = '/ttyd/' + next.port + '/'; startTerminalPoll(); }, 50);
+                    }
+                }
             } catch (e) { console.warn('closeShell failed', e); }
         }
 
