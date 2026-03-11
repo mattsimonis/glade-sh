@@ -1,4 +1,4 @@
-.PHONY: up down restart build logs shell deploy-web ps setup dev
+.PHONY: up down restart build logs shell deploy-web ps setup dev test test-cov test-e2e
 
 # Load .env if present — provides HOST, DOMAIN, DEV_DIR, ROOST_DIR
 ifneq (,$(wildcard .env))
@@ -63,3 +63,17 @@ dev:
 # Override host: make deploy-web HOST=other-machine
 deploy-web:
 	scp web/index.html $(HOST):~/.roost/web/index.html
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+
+# Run API unit tests
+test:
+	python3 -m pytest tests/api/ -v --tb=short
+
+# Run API tests with coverage report
+test-cov:
+	python3 -m pytest tests/api/ -v --cov=api --cov-report=term-missing --tb=short
+
+# Run Playwright E2E tests (requires a running Roost instance at BASE_URL)
+test-e2e:
+	cd tests/e2e && npx playwright test

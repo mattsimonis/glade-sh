@@ -49,3 +49,47 @@ make setup
 ## Reporting security issues
 
 Don't open a public issue. Email directly instead (see the repo owner's GitHub profile).
+
+## Testing
+
+### Install test dependencies
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+### Run API unit tests
+
+```bash
+make test
+# or with coverage:
+make test-cov
+```
+
+The API tests start a real `ThreadingTCPServer` on a free port, use a
+temporary SQLite database, and mock out all `subprocess` calls so no tmux or
+ttyd processes are spawned. They run entirely offline in under a second.
+
+### Run E2E tests
+
+```bash
+make test-e2e
+```
+
+E2E tests use Playwright and require a running Roost instance. By default
+they target `http://localhost:3000` (the `make dev` server). Override with:
+
+```bash
+BASE_URL=https://roost.local make test-e2e
+```
+
+### Writing new tests
+
+New features and bug fixes should include tests. Place API unit tests in
+`tests/api/test_<topic>.py` and follow the patterns in the existing files:
+
+- Use the `client` fixture from `conftest.py` — it provides a fresh DB,
+  clean global state, and mocked subprocess calls for every test.
+- Use `assert_cors(headers)` to verify the CORS header on every response.
+- Name tests after the behavior they verify:
+  `test_create_project_missing_name_returns_400` not `test_create`.
