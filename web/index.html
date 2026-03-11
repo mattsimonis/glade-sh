@@ -364,7 +364,8 @@
             border-top:1px solid #313244; z-index:40;
             transform:translateY(0); opacity:1;
             transition:transform 200ms cubic-bezier(0.25,0.46,0.45,0.94),
-                       opacity 180ms ease;
+                       opacity 180ms ease,
+                       height 200ms ease;
             will-change:transform, opacity;
         }
         #panel-slider { display:flex; width:300%; height:100%; will-change:transform; }
@@ -1023,7 +1024,7 @@
         .toast {
             --glow-color: #89b4fa;  /* default: blue */
             position:relative;
-            width:min(208px,calc(100vw - 32px)); height:44px;
+            width:calc(100vw - 32px); height:44px;
             background:#000000;
             transform: translateZ(0);
             backface-visibility: hidden;
