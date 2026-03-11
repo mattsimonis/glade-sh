@@ -41,3 +41,8 @@ preexec() {
 
 # roost wrapper — intercepts gh copilot calls and logs to SQLite
 [ -f /root/.roost/bin/roost-wrap ] && source /root/.roost/bin/roost-wrap
+
+# ── User config ───────────────────────────────────────────────────────────────
+# Edit ~/.roost/config/zshrc.local for aliases, exports, extra plugins, etc.
+# This file lives on the host volume — no rebuild needed.
+[ -f /root/.roost/config/zshrc.local ] && source /root/.roost/config/zshrc.local
