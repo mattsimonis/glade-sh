@@ -171,8 +171,8 @@ def start_pipe_pane(sname, log_slug):
 def create_tmux_session(sname, directory, log_slug="_main"):
     if tmux_session_exists(sname):
         return
-    dir_args = ["-c", directory] if directory and os.path.isdir(directory) else []
-    subprocess.run(["tmux", "new-session", "-d", "-s", sname] + dir_args,
+    effective_dir = directory if (directory and os.path.isdir(directory)) else "/root"
+    subprocess.run(["tmux", "new-session", "-d", "-s", sname, "-c", effective_dir],
                    capture_output=True)
     subprocess.run(["tmux", "set", "-t", sname, "mouse", "on"], capture_output=True)
     subprocess.run(["tmux", "set", "-t", sname, "automatic-rename", "off"],
@@ -202,9 +202,9 @@ def list_shells_tmux(sname):
 def new_shell_tmux(sname, directory):
     # -d: create in background so existing ttyd clients keep their current window
     # Only pass -c if the directory actually exists in the container
-    dir_args = ["-c", directory] if directory and os.path.isdir(directory) else []
+    effective_dir = directory if (directory and os.path.isdir(directory)) else "/root"
     r = subprocess.run(
-        ["tmux", "new-window", "-d", "-t", sname] + dir_args + ["-P", "-F", "#{window_index}"],
+        ["tmux", "new-window", "-d", "-t", sname, "-c", effective_dir, "-P", "-F", "#{window_index}"],
         capture_output=True, text=True
     )
     s = r.stdout.strip()
