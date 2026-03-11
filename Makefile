@@ -1,4 +1,4 @@
-.PHONY: up down restart build logs shell deploy-web ps setup
+.PHONY: up down restart build logs shell deploy-web ps setup dev
 
 # Load .env if present — provides HOST, DOMAIN, DEV_DIR, ROOST_DIR
 ifneq (,$(wildcard .env))
@@ -49,6 +49,13 @@ shell:
 # Show running container status
 ps:
 	docker compose ps
+
+# ── Local dev (edit index.html and see changes live) ─────────────────────────
+
+# Opens an SSH tunnel to casper and starts the dev server on http://localhost:3000.
+# Edit web/index.html and refresh — no deploy step needed.
+dev:
+	node bin/dev-server.js
 
 # ── Remote deploy (only needed when not running directly on the host) ─────────
 
