@@ -5,13 +5,9 @@ ZSH_THEME=""
 PROMPT='> '
 RPROMPT=''
 
-plugins=(
-  git
-  zsh-autosuggestions
-  zsh-syntax-highlighting
-  extract
-  z
-)
+plugins=(git extract z)
+[[ -d $ZSH/custom/plugins/zsh-autosuggestions ]] && plugins+=(zsh-autosuggestions)
+[[ -d $ZSH/custom/plugins/zsh-syntax-highlighting ]] && plugins+=(zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 

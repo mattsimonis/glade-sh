@@ -21,16 +21,8 @@ RUN DPKG_ARCH=$(dpkg --print-architecture) && \
         -O /usr/local/bin/ttyd && \
     chmod +x /usr/local/bin/ttyd
 
-# ── Shell setup (zsh + Oh My Zsh + Spaceship) ─────────────────────────────────
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
-    git clone --depth=1 https://github.com/spaceship-prompt/spaceship-prompt.git \
-        /root/.oh-my-zsh/custom/themes/spaceship-prompt && \
-    ln -s /root/.oh-my-zsh/custom/themes/spaceship-prompt/spaceship.zsh-theme \
-        /root/.oh-my-zsh/custom/themes/spaceship.zsh-theme && \
-    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
-        /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting && \
-    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
-        /root/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+# ── Shell setup (zsh + Oh My Zsh) ────────────────────────────────────────────
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
 COPY config/zshrc /root/.zshrc
 COPY config/bashrc /root/.bashrc

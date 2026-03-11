@@ -4,6 +4,18 @@
 # Runs at Docker build time as root.  Rebuild after editing: make build
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── Oh My Zsh extras ─────────────────────────────────────────────────────────
+# Spaceship prompt, zsh-syntax-highlighting, zsh-autosuggestions.
+# Plugins are loaded automatically if present — no zshrc edit needed.
+# git clone --depth=1 https://github.com/spaceship-prompt/spaceship-prompt.git \
+#     /root/.oh-my-zsh/custom/themes/spaceship-prompt
+# ln -sf /root/.oh-my-zsh/custom/themes/spaceship-prompt/spaceship.zsh-theme \
+#     /root/.oh-my-zsh/custom/themes/spaceship.zsh-theme
+# git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
+#     /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+# git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
+#     /root/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+
 # ── GitHub CLI + Copilot extension ───────────────────────────────────────────
 # ARCH=$(dpkg --print-architecture)
 # curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \

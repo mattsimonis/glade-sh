@@ -17,6 +17,10 @@ __pycache__/
 *.swp
 *.orig
 
+# Personal config (use *.example as starting point)
+config/zshrc
+config/packages.sh
+
 # Runtime / local state
 logs/raw/*.log
 db/history.db
