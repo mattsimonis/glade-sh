@@ -62,7 +62,7 @@
             transform:translateY(105%); pointer-events:none;
             transition:transform 260ms cubic-bezier(0.32,0.72,0,1), bottom 200ms ease;
         }
-        #path-footer.pf-visible { transform:translateY(-44px); }
+        #path-footer.pf-visible { transform:translateY(0); }
         #path-footer-text {
             font-family:var(--font-mono); font-size:10px; color:#a6adc8;
             white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -659,7 +659,7 @@
             will-change:transform;
         }
         #shortcut-bar::-webkit-scrollbar { display:none; }
-        #shortcut-bar.sb-visible { transform:translateY(22px); pointer-events:auto; }
+        #shortcut-bar.sb-visible { transform:translateY(0); pointer-events:auto; }
         .sb-btn {
             flex-shrink:0; height:32px; min-width:36px; padding:0 8px;
             background:#313244; color:#cdd6f4; border:none; border-radius:6px;
@@ -3845,21 +3845,14 @@
         async function closeShell(index) {
             if (!currentProjectId) return;
             try {
-                await fetch('/api/projects/' + currentProjectId + '/shells/' + index, { method: 'DELETE' });
                 const wasDisplayed = (currentShellIdx === index);
+                await fetch('/api/projects/' + currentProjectId + '/shells/' + index, { method: 'DELETE' });
                 if (wasDisplayed) currentShellIdx = null;
-                await refreshShells();
-                // If we closed the shell that was on screen, navigate to the next one
+                await refreshShells(); // updates currentShells
+                // If we just closed the visible shell, navigate the iframe to the next one
                 if (wasDisplayed && currentShells.length > 0) {
                     const next = currentShells.find(function(s) { return s.active; }) || currentShells[0];
-                    if (next && next.port) {
-                        currentShellIdx = next.index;
-                        renderShellTabs(currentShells);
-                        terminalInstance = null; xtermTextarea = null;
-                        window._osc7Wired = false; _osc7WiredSocket = null;
-                        iframe.src = 'about:blank';
-                        setTimeout(function() { iframe.src = '/ttyd/' + next.port + '/'; startTerminalPoll(); }, 50);
-                    }
+                    switchShell(next.index);
                 }
             } catch (e) { console.warn('closeShell failed', e); }
         }
