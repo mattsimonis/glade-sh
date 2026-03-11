@@ -64,7 +64,34 @@ success "Directory structure ready."
 INSTALLED+=("Directory structure at $ROOST_DIR")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 2: Copy files from repo to ROOST_DIR
+# Step 2: Initialize personal config files from examples
+# ─────────────────────────────────────────────────────────────────────────────
+info "Checking personal config files..."
+
+init_from_example() {
+    local name="$1"
+    local example="$SCRIPT_DIR/config/${name}.example"
+    local target="$SCRIPT_DIR/config/${name}"
+    if [[ ! -f "$target" ]]; then
+        if [[ -f "$example" ]]; then
+            cp "$example" "$target"
+            [[ "$name" == "packages.sh" ]] && chmod +x "$target"
+            success "Created config/$name from example"
+            INSTALLED+=("config/$name (from example)")
+        else
+            warn "No example found for config/$name — skipping"
+            WARNINGS+=("Missing config/$name.example")
+        fi
+    else
+        info "config/$name already exists (skipping)"
+    fi
+}
+
+init_from_example "zshrc"
+init_from_example "packages.sh"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Step 3: Copy files from repo to ROOST_DIR
 # ─────────────────────────────────────────────────────────────────────────────
 info "Copying files..."
 
