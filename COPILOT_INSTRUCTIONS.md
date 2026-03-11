@@ -23,12 +23,13 @@ docker-compose.yml          ← Two services: roost-ttyd + roost-web
 Makefile                    ← Daily ops: up, down, restart, build, logs, shell
 services/Caddyfile          ← caddy-proxy config (roost.local routes)
 services/web.Caddyfile      ← Inner Caddy for roost-web (file server + API proxy)
-config/zshrc                ← Shell config baked into Docker image
+config/zshrc                ← Personal Zsh config (gitignored; edit in place, no rebuild)
+config/zshrc.example        ← Starter template (committed; plain prompt, tmux hooks, roost-wrap)
 config/tmux.conf            ← Tmux config (Catppuccin Mocha status bar)
-config/packages.sh          ← Build-time hook for user packages (empty by default)
-config/packages.sh.example  ← Recipe examples: gh CLI, Node.js, pip, Rust, apt
+config/packages.sh          ← Personal build-time packages (gitignored)
+config/packages.sh.example  ← Recipe examples: gh CLI, Oh My Zsh, Node.js, pip, Rust (committed)
 db/schema.sql               ← SQLite schema (projects, snippets, settings)
-install.sh                  ← Host-side installer (optional, for non-Docker use)
+install.sh                  ← Host-side installer (copies files, initialises DB, copies *.example → actual)
 ```
 
 ### Runtime data (not in repo, lives at `~/.roost/` on host)
@@ -146,6 +147,8 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 | `attachHandlers()` | Set up custom keyboard with key-repeat logic |
 | `renderShortcutBar()` | Arrow keys + Enter buttons above keyboard |
 | `startProject(id)` / `stopProject(id)` | Project lifecycle from UI |
+| `loadShellUrl(url)` | Clear iframe `onbeforeunload`, then navigate to url |
+| `attachSwipeToDismiss(handleEl, sheetEl, closeFn, backdropEl)` | Wire swipe-down-to-dismiss on a bottom sheet |
 
 ---
 
@@ -211,3 +214,7 @@ make shell
 9. **iOS viewport math** — The PWA panel height is `31vh`, tuned for iOS Safari's viewport with keyboard open. Changing this requires testing on an actual iPhone.
 
 10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes roost.local traffic). `services/web.Caddyfile` is for the roost-web container (serves files, proxies API).
+
+11. **`config/zshrc` and `config/packages.sh` are gitignored** — They are personal copies, never committed. `config/zshrc.example` and `config/packages.sh.example` are the committed templates. `install.sh` copies `*.example` → actual on first run if the actual doesn't exist.
+
+12. **Personal directory mounts belong in `docker-compose.override.yml`** — This file is gitignored. Do not add volume mounts for personal directories (e.g. `~/Dev`) to `docker-compose.yml`.

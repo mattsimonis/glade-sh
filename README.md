@@ -78,11 +78,16 @@ It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywher
 ## Features
 
 - **Multi-project terminals** — each project gets an isolated tmux session and a ttyd instance on a dedicated port (7690–7699)
+- **Shell tabs** — each project supports multiple shell tabs (tmux windows); each tab gets its own ttyd instance. Add with **＋**, close with a long-press
 - **Mobile-optimised PWA** — installable via "Add to Home Screen"; keyboard toolbar with Esc, Tab, Ctrl, Alt, arrows, and combos
+- **Desktop panel** — on hover-capable devices the panel opens as a side-by-side overlay; `Ctrl+\`` toggles it
+- **Swipe-to-dismiss** — all bottom sheets (key editor, snippet editor, command palette, etc.) dismiss on swipe-down via the handle
 - **Key repeat** — hold any key on the custom keyboard or toolbar to repeat at 80ms intervals after a 400ms delay
 - **Session logging** — every terminal session is recorded automatically via tmux `pipe-pane` to flat files, browsable from the History tab
 - **Command snippets** — saved commands that inject directly into the terminal
 - **Connection recovery** — auto-reconnects on network drop or app background; force-reconnects after >5s in background
+- **In-app rebuild trigger** — `make trigger` queues a `git pull && docker compose build && up` via a launchd WatchPaths agent (macOS only)
+- **User shell config** — `~/.roost/config/zshrc.local` is sourced every session; put aliases and exports there (survives rebuilds, no restart needed)
 - **Catppuccin Mocha** — consistent theme across terminal, UI chrome, and toolbar
 - **Berkeley Mono Nerd Font** — optional; falls back to JetBrains Mono → Fira Code → system monospace
 
@@ -144,7 +149,10 @@ roost/
 │   ├── copilot-wrap        # Legacy shell wrapper (kept for reference)
 │   └── copilot-history     # Legacy CLI tool (replaced by web log viewer)
 ├── config/
-│   ├── zshrc               # Zsh config baked into container image
+│   ├── zshrc               # Personal Zsh config (gitignored; edit in place, no rebuild)
+│   ├── zshrc.example       # Starter template (committed)
+│   ├── packages.sh         # Personal build-time packages (gitignored)
+│   ├── packages.sh.example # Recipe examples: gh CLI, Oh My Zsh, Node.js, pip, Rust (committed)
 │   ├── bashrc              # Bash config baked into container image
 │   └── tmux.conf           # Tmux status bar (Catppuccin Mocha, minimal)
 ├── db/
@@ -167,8 +175,9 @@ roost/
 ├── CLAUDE.md               # Architecture reference (for AI assistants)
 ├── COPILOT_INSTRUCTIONS.md # AI-specific codebase guide
 ├── .env.example            # Configuration template — copy to .env and edit
-├── Dockerfile              # debian:bookworm-slim; installs ttyd, gh, oh-my-zsh
+├── Dockerfile              # debian:bookworm-slim; installs ttyd and zsh
 ├── docker-compose.yml      # Two services: ttyd (app) + web (Caddy file server)
+├── docker-compose.override.yml  # Personal overrides (gitignored; e.g. ~/Dev volume mount)
 ├── entrypoint.sh           # Container start: checks gh auth, launches api.py
 ├── install.sh              # Host machine installer (copies files, initialises DB)
 ├── Makefile                # Common operations: setup, up, build, logs, shell, auth
@@ -192,7 +201,15 @@ Edit `.env`:
 ```bash
 HOST=mac-mini      # hostname of the machine running Docker
 DOMAIN=roost.local     # domain you'll use to access the UI
-DEV_DIR=~/Dev      # local directory to mount as /mnt/dev inside the container
+```
+
+To mount personal directories (e.g. your code) inside the container, create a gitignored `docker-compose.override.yml`:
+
+```yaml
+services:
+  ttyd:
+    volumes:
+      - /your/dev/dir:/mnt/dev
 ```
 
 ### 2. DNS — Pi-hole
@@ -239,11 +256,10 @@ make build    # rebuild image
 
 ### 6. Custom packages (optional)
 
-To add tools to the container image (gh CLI, Node.js, pip packages, etc.), edit `config/packages.sh` and rebuild:
+To add tools to the container image (gh CLI, Node.js, pip packages, etc.), `install.sh` already created `config/packages.sh` from the example on first run. Edit it and rebuild:
 
 ```bash
-cp config/packages.sh.example config/packages.sh
-# Uncomment the sections you want, then:
+# Uncomment the sections you want in config/packages.sh, then:
 make build
 ```
 
@@ -276,7 +292,7 @@ On iOS: import the mkcert root CA profile → Settings → General → VPN & Dev
 - Tap **＋** to create a project (name, directory path, colour)
 - Each project opens its own tmux session; closing the browser doesn't kill it
 - Tap the project card to connect; the terminal loads in the browser
-- Multiple shells per project — use the tmux window tabs inside the terminal
+- **Shell tabs** — tap **＋** in the shell tab bar to open additional shells within the same project; each tab gets its own isolated ttyd instance. Long-press a tab to close it.
 
 ### Custom keyboard (mobile)
 
@@ -313,6 +329,7 @@ Browse and search session logs from the **History** tab in the UI. Tap a session
 | `GET` | `/api/logs/:project/:file` | Raw log content (`?tail=N` for last N lines) |
 | `GET` | `/api/logs/current/:project` | Tail active session (last 200 lines) |
 | `GET` | `/api/logs/search?q=term` | Search across all logs (grep, ANSI-stripped excerpts) |
+| `DELETE` | `/api/logs/:project/:file` | Delete a log file |
 
 ---
 
@@ -346,6 +363,7 @@ The Python API runs on port **7683** inside the container. All responses are JSO
 |--------|------|-------------|
 | `GET` | `/api/projects/:id/shells` | List tmux windows `[{index, name, active}]` |
 | `POST` | `/api/projects/:id/shells` | Create new window → `{index}` |
+| `PUT` | `/api/projects/:id/shells/:n/select` | Switch active window |
 | `DELETE` | `/api/projects/:id/shells/:n` | Kill window n |
 
 ### Snippets
@@ -388,6 +406,7 @@ The Python API runs on port **7683** inside the container. All responses are JSO
 | `GET` | `/api/logs/:project/:file` | Raw log content (`?tail=N` for last N lines) |
 | `GET` | `/api/logs/current/:project` | Tail active session (last 200 lines) |
 | `GET` | `/api/logs/search?q=term` | Search across all logs |
+| `DELETE` | `/api/logs/:project/:file` | Delete a log file |
 
 ---
 
@@ -425,6 +444,7 @@ That's it for web and API changes — the containers read directly from the repo
 | `api/api.py` | `git pull && make restart` |
 | `Dockerfile`, `entrypoint.sh`, `config/` | `git pull && make build` |
 | `docker-compose.yml` | `git pull && make down && make up` |
+| Local UI iteration | `make dev` — dev server at `http://localhost:3000/` |
 
 ### Common commands (via `make`)
 
@@ -452,6 +472,8 @@ Runtime data lives outside the repo in `~/.roost/`:
 |---|---|---|
 | `~/.roost/` | `/root/.roost` | SQLite DB, logs, uploads |
 | `~/.roost/assets/` | `/srv/assets` | Fonts (not in repo — user-provided) |
+
+Personal directory mounts (e.g. your code) belong in a gitignored `docker-compose.override.yml`, not in `docker-compose.yml`.
 
 ### Ports (inside container / on Mac Mini LAN)
 
@@ -484,7 +506,7 @@ Runtime data lives outside the repo in `~/.roost/`:
 | Layer | Technology | Why |
 |---|---|---|
 | Terminal server | [ttyd](https://github.com/tsl0922/ttyd) | Single binary, xterm.js frontend, WebSocket protocol |
-| Shell | Zsh + Oh My Zsh + Spaceship | Familiar, plugin ecosystem, git-aware prompt |
+| Shell | Zsh (base); Oh My Zsh + Spaceship optional via `config/packages.sh` | Plain shell ships in the image; personal config in `config/zshrc`, no rebuild needed |
 | Multiplexer | tmux | One session per project; survives disconnects |
 | API | Python stdlib (`BaseHTTPRequestHandler`) | Zero dependencies, runs anywhere |
 | Storage | SQLite + FTS5 | Single file, full-text search built in |
