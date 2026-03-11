@@ -236,6 +236,14 @@ HOST=mac-mini      # hostname of the machine running Docker
 DOMAIN=roost.local     # domain you'll use to access the UI
 ```
 
+Optional settings in `.env`:
+
+| Variable | Default | Description |
+|---|---|---|
+| `ROOST_REPO_URL` | `https://github.com/mattsimonis/roost.git` | Override if using a fork |
+| `ROOST_DIR` | `~/.roost` | Where Roost stores its DB, logs, and uploads |
+| `DISABLE_UPDATE_CHECK` | _(unset)_ | Set to `1` to suppress the update-available banner |
+
 To mount personal directories (e.g. your code) inside the container, create a gitignored `docker-compose.override.yml`:
 
 ```yaml
