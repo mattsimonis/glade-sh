@@ -15,144 +15,65 @@ Your terminal is open on your phone. The session is alive on your server. Close 
 
 It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywhere: on LAN through Caddy, remotely through Tailscale. No subscriptions. No cloud. Nothing leaves your machine.
 
-> **Screenshots and GIFs welcome.** If you set this up and want to contribute visuals to the README, open a PR.
-
 ---
 
 ## Quick Start
 
-Local network only. Tailscale and Pi-hole not required.
-
 ```bash
 git clone https://github.com/mattsimonis/roost
 cd roost
-cp .env.example .env         # set HOST= to your server's hostname
+cp .env.example .env   # set HOST= to your server's hostname
 ```
 
-Add the `roost.local` block from `services/Caddyfile` to your standalone `caddy-proxy`, generate a cert:
+Add the `roost.local` block from `services/Caddyfile` to your standalone `caddy-proxy` and generate a cert:
 
 ```bash
 mkcert roost.local
-# move the cert files into your caddy certs directory, restart caddy-proxy
+# move cert files into your Caddy certs directory, restart caddy-proxy
 ```
 
-Then start everything:
+Then:
 
 ```bash
-make setup   # creates Docker network, builds image (~2 min), starts containers
+make setup   # builds image (~2 min) and starts containers
 ```
 
-Open `https://roost.local`. That's it.
+Open `https://roost.local`. Tap **Share → Add to Home Screen** to install the PWA.
 
-> **No Pi-hole needed.** `roost.local` resolves automatically via mDNS on macOS, iOS, and Linux.  
-> **Tailscale is optional** — add it only if you need remote access outside the home network.  
-> See [SETUP.md](SETUP.md) for the full walkthrough: font, Caddy config, Tailscale, reboots.
-
----
-
-## Contents
-
-- [Quick Start](#quick-start)
-- [Architecture](#architecture)
-- [Features](#features)
-- [Why Roost?](#why-roost)
-- [Use Cases](#use-cases)
-- [Prerequisites](#prerequisites)
-- [Directory Structure](#directory-structure)
-- [Setup](#setup)
-- [Accessing the UI](#accessing-the-ui)
-- [Using the Terminal](#using-the-terminal)
-- [Session Logs](#session-logs)
-- [API Reference](#api-reference)
-- [Database Schema](#database-schema)
-- [Development](#development)
-- [Troubleshooting](#troubleshooting)
-- [Tech Stack](#tech-stack)
-- [FAQ](#faq)
-- [Contributing](#contributing)
-
----
-
-## Architecture
-
-```
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│   Laptop     │   │   Phone      │   │  Other PC    │
-│  (browser)   │   │ (Safari PWA) │   │  (browser)   │
-└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       └──────────┬───────┴───────────────────┘
-                  │  LAN / Tailscale (VPN)
-                  ▼
-       ┌──────────────────────────────────────┐
-       │           Mac Mini (Docker)          │
-       │                                      │
-       │  caddy-proxy (standalone container)  │
-       │    https://roost.local → :7682 (web UI)  │
-       │    /ttyd/* → :7681 + :7690–7699      │
-       │                                      │
-       │  roost-web  (:7682)           │
-       │    serves index.html + assets        │
-       │                                      │
-       │  roost-ttyd (:7681, :7683)    │
-       │    ttyd     — main terminal shell    │
-       │    api.py   — REST API (:7683)       │
-       │    per-project ttyd (:7690–7699)     │
-       │    SQLite   — interaction history    │
-       └──────────────────────────────────────┘
-```
-
-**DNS:** `roost.local` resolves via mDNS on macOS, iOS, and Linux — no Pi-hole required  
-**TLS:** mkcert cert managed by the standalone `caddy-proxy`  
-**Remote access:** Tailscale connects devices outside the home network (optional)  
+> `roost.local` resolves automatically via mDNS — no Pi-hole or extra DNS config needed.  
+> Tailscale is optional — only needed for remote access outside your home network.  
+> See [SETUP.md](SETUP.md) for the full walkthrough.
 
 ---
 
 ## Features
 
-- **Multi-project terminals** — each project gets an isolated tmux session and a ttyd instance on a dedicated port (7690–7699)
-- **Shell tabs** — each project supports multiple shell tabs (tmux windows); each tab gets its own ttyd instance. Add with **＋**, close with a long-press
-- **Mobile-optimised PWA** — installable via "Add to Home Screen"; keyboard toolbar with Esc, Tab, Ctrl, Alt, arrows, and combos
-- **Desktop panel** — on hover-capable devices the panel opens as a side-by-side overlay; `Ctrl+\`` toggles it
-- **Swipe-to-dismiss** — all bottom sheets (key editor, snippet editor, command palette, etc.) dismiss on swipe-down via the handle
-- **Key repeat** — hold any key on the custom keyboard or toolbar to repeat at 80ms intervals after a 400ms delay
-- **Session logging** — every terminal session is recorded automatically via tmux `pipe-pane` to flat files, browsable from the History tab
-- **Command snippets** — saved commands that inject directly into the terminal
-- **Connection recovery** — auto-reconnects on network drop or app background; force-reconnects after >5s in background
-- **In-app rebuild trigger** — `make trigger` queues a `git pull && docker compose build && up` via a launchd WatchPaths agent (macOS only)
-- **User shell config** — `~/.roost/config/zshrc.local` is sourced every session; put aliases and exports there (survives rebuilds, no restart needed)
-- **Catppuccin Mocha** — consistent theme across terminal, UI chrome, and toolbar
-- **Berkeley Mono Nerd Font** — optional; falls back to JetBrains Mono → Fira Code → system monospace
+- **Persistent sessions** — tmux keeps every session alive on the server; close and reopen from any device
+- **Installable PWA** — Add to Home Screen on iOS or Android; full-screen, no browser chrome
+- **Custom mobile keyboard** — Esc, Tab, Ctrl, arrows, combos; long-press to repeat; drag to reorder
+- **Project isolation** — each project gets its own tmux session and ttyd instance; multiple shell tabs per project
+- **Session logging** — every session recorded automatically via `tmux pipe-pane`; browse and search from History tab
+- **Command snippets** — saved commands that inject directly into the terminal with one tap
+- **Command palette** — keyboard-accessible actions: `^C`, `^Z`, `^A`, new shell, history, snippets, and more
+- **Auto-reconnect** — recovers from network drops and app backgrounding automatically
+- **In-app rebuild** — queue a `git pull && docker compose build` from the UI; no SSH needed
+- **Catppuccin Mocha** — consistent theme across terminal, UI, and toolbar
 
 ---
 
 ## Why Roost?
 
-Most mobile terminal apps either cost money, lock you to one platform, or drop your session when you close the app. Roost runs *on your server* — the session lives there, and any browser is just a window into it.
+Most mobile terminal apps drop your session, cost money, or only work on one platform. Roost runs *on your server* — the session lives there, and any browser is just a window into it.
 
 |  | **Roost** | Termius | Blink Shell | JuiceSSH | Raw SSH |
 |---|---|---|---|---|---|
 | Self-hosted | ✅ | ❌ | ❌ | ❌ | ✅ |
 | Free | ✅ MIT | Freemium | $20 | Freemium | ✅ |
-| Works on any device | ✅ browser | ✅ | iOS only | Android only | With client |
+| Any device | ✅ browser | ✅ | iOS only | Android only | With client |
 | Persistent sessions | ✅ tmux | ❌ | ❌ | ❌ | With tmux |
 | Custom mobile keyboard | ✅ | ❌ | Limited | ❌ | ❌ |
 | Session recording | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Multi-project isolation | ✅ | ❌ | ❌ | ❌ | ❌ |
-| No cloud dependency | ✅ | ❌ | ❌ | ❌ | ✅ |
-
----
-
-## Use Cases
-
-**Homelab from the couch.** Each project gets its own tmux session. Switch between them from your phone without losing context.
-
-**Check on a long build.** Start a job on your server. Close the laptop. Open Roost on your phone an hour later — session still running, logs still scrolling.
-
-**Always-on AI assistant.** Mount your dev directory into the container. Keep a session with your AI tools running. Pick it back up from any device.
-
-**Remote access from anywhere.** Tailscale connects your devices over a mesh VPN. Roost is accessible on the same `roost.local` URL whether you're home or not.
-
-**One keyboard layout for every device.** Configure your key toolbar once. It syncs across devices via the API — your Esc, Tab, and arrow keys are always where you put them.
+| No cloud | ✅ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -160,83 +81,24 @@ Most mobile terminal apps either cost money, lock you to one platform, or drop y
 
 | Requirement | Notes |
 |---|---|
-| Mac Mini (or always-on Linux host) | The execution hub; everything runs here |
-| Docker Desktop | For the container stack |
-| Standalone `caddy-proxy` container | Pre-existing; handles TLS for all `*.home` domains |
-| Tailscale *(optional)* | Remote access outside the home network — not needed for LAN-only use |
-| Berkeley Mono Nerd Font `.woff2` or `.ttf` *(optional)* | Licensed; must be supplied by you |
-
-> **DNS is automatic.** `roost.local` resolves via mDNS on macOS, iOS, and modern Linux — no Pi-hole required. If you already run Pi-hole, you can optionally add a DNS record pointing `roost.local` at the Mac Mini's LAN IP, but it's not necessary.
+| Always-on host (Mac Mini, Linux server) | Docker runs here |
+| Docker Desktop | Container runtime |
+| Standalone `caddy-proxy` container | Handles TLS for `*.local` domains |
+| Tailscale *(optional)* | Remote access outside the home network |
+| Berkeley Mono Nerd Font `.woff2` *(optional)* | Licensed; supply your own |
 
 ---
 
-## Directory Structure
+## Configuration
 
-```
-roost/
-├── api/
-│   └── api.py              # Python REST API (BaseHTTPRequestHandler, port 7683)
-├── assets/
-│   └── fonts/              # Place BerkeleyMonoNerdFont-Regular.{woff2,ttf} here
-├── bin/
-│   ├── copilot-wrap        # Legacy shell wrapper (kept for reference)
-│   └── copilot-history     # Legacy CLI tool (replaced by web log viewer)
-├── config/
-│   ├── zshrc               # Personal Zsh config (gitignored; edit in place, no rebuild)
-│   ├── zshrc.example       # Starter template (committed)
-│   ├── packages.sh         # Personal build-time packages (gitignored)
-│   ├── packages.sh.example # Recipe examples: gh CLI, Oh My Zsh, Node.js, pip, Rust (committed)
-│   ├── bashrc              # Bash config baked into container image
-│   └── tmux.conf           # Tmux status bar (Catppuccin Mocha, minimal)
-├── db/
-│   └── schema.sql          # SQLite schema (snippets, settings, projects)
-├── docs/
-│   ├── plans/              # Design documents for major features
-│   └── working-from-anywhere.md  # How to SSH into a laptop from the terminal
-├── lib/
-│   └── logger.sh           # Legacy logging library (kept for reference)
-├── logs/                   # Session logs (auto-recorded via tmux pipe-pane)
-│   ├── _main/              # Main shell logs
-│   └── {project-slug}/     # Per-project logs
-├── services/
-│   ├── Caddyfile           # roost.local block for the standalone caddy-proxy
-│   └── web.Caddyfile       # Caddy config for the roost-web container
-├── web/
-│   ├── index.html          # Single-file PWA (~4900 lines, all CSS + JS inline)
-│   ├── manifest.json       # PWA manifest (icons, display: standalone)
-│   └── icons/              # App icons: 32×32, 192×192, 512×512
-├── CLAUDE.md               # Architecture reference (for AI assistants)
-├── COPILOT_INSTRUCTIONS.md # AI-specific codebase guide
-├── .env.example            # Configuration template — copy to .env and edit
-├── Dockerfile              # debian:bookworm-slim; installs ttyd and zsh
-├── docker-compose.yml      # Two services: ttyd (app) + web (Caddy file server)
-├── docker-compose.override.yml  # Personal overrides (gitignored; e.g. ~/Dev volume mount)
-├── entrypoint.sh           # Container start: checks gh auth, launches api.py
-├── install.sh              # Host machine installer (copies files, initialises DB)
-├── Makefile                # Common operations: setup, up, build, logs, shell, auth
-└── SETUP.md                # Full step-by-step setup walkthrough
-```
-
----
-
-## Setup
-
-See **[SETUP.md](SETUP.md)** for the full walkthrough. The short version:
-
-### 1. Configure
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
+Copy `.env.example` to `.env` and edit:
 
 ```bash
 HOST=mac-mini      # hostname of the machine running Docker
-DOMAIN=roost.local     # domain you'll use to access the UI
+DOMAIN=roost.local # domain for the web UI
 ```
 
-Optional settings in `.env`:
+Optional environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
@@ -244,7 +106,7 @@ Optional settings in `.env`:
 | `ROOST_DIR` | `~/.roost` | Where Roost stores its DB, logs, and uploads |
 | `DISABLE_UPDATE_CHECK` | _(unset)_ | Set to `1` to suppress the update-available banner |
 
-To mount personal directories (e.g. your code) inside the container, create a gitignored `docker-compose.override.yml`:
+To mount personal directories inside the container, create a gitignored `docker-compose.override.yml`:
 
 ```yaml
 services:
@@ -253,328 +115,8 @@ services:
       - /your/dev/dir:/mnt/dev
 ```
 
-### 2. DNS
-
-`roost.local` resolves automatically via mDNS — no configuration needed on macOS, iOS, or Linux. Skip this step.
-
-If you run Pi-hole and want an explicit override: **Pi-hole admin → Local DNS → DNS Records**, add `roost.local` pointing at the Mac Mini's LAN IP (`ipconfig getifaddr en0` on macOS). Completely optional.
-
-### 3. TLS — mkcert cert
-
-On the machine where `caddy-proxy` is managed:
-
-```bash
-mkcert roost.local
-mv roost.local.pem       /path/to/caddy/certs/roost.local.pem
-mv roost.local-key.pem   /path/to/caddy/certs/roost.local-key.pem
-```
-
-Add the `roost.local` block from `services/Caddyfile` into your `caddy-proxy` Caddyfile, then restart it.
-
-### 4. Font — Berkeley Mono Nerd Font (optional)
-
-Copy the Regular weight into the assets directory:
-
-```bash
-cp BerkeleyMonoNerdFont-Regular.woff2 ~/.roost/assets/fonts/
-# .ttf also works; filename must start with BerkeleyMonoNerdFont-Regular
-```
-
-The UI falls back to JetBrains Mono → Fira Code → system monospace if the font is absent.
-
-### 5. First-time start
-
-```bash
-make setup
-```
-
-This creates the Docker network, builds and starts the containers.
-
-If the container was already running when you cloned:
-```bash
-make build    # rebuild image
-```
-
-### 6. Custom packages (optional)
-
-To add tools to the container image (gh CLI, Node.js, pip packages, etc.), `install.sh` already created `config/packages.sh` from the example on first run. Edit it and rebuild:
-
-```bash
-# Uncomment the sections you want in config/packages.sh, then:
-make build
-```
-
----
-
-## Accessing the UI
-
-| Device | URL | Notes |
-|---|---|---|
-| Laptop / desktop | `https://roost.local` | LAN or Tailscale |
-| Phone (iOS) | `https://roost.local` → Share → Add to Home Screen | Full-screen PWA |
-| Phone (Android) | `https://roost.local` → Install app | Full-screen PWA |
-| Remote (Tailscale) | `https://roost.local` via Tailscale | Works anywhere |
-
-### First visit — trust the mkcert CA
-
-```bash
-mkcert -install   # desktop/laptop
-```
-
-On iOS: import the mkcert root CA profile → Settings → General → VPN & Device Management → trust it.
-
----
-
-## Using the Terminal
-
-
-### Projects
-
-- Tap **＋** to create a project (name, directory path, colour)
-- Each project opens its own tmux session; closing the browser doesn't kill it
-- Tap the project card to connect; the terminal loads in the browser
-- **Shell tabs** — tap **＋** in the shell tab bar to open additional shells within the same project; each tab gets its own isolated ttyd instance. Long-press a tab to close it.
-
-### Custom keyboard (mobile)
-
-The panel at the bottom has two layouts (toggle with the compact/full button):
-
-- **Full:** 7 rows of configurable keys
-- **Compact:** 4 rows
-
-Long-press any key to edit its label, value, and type. Drag to reorder.  
-Hold a key to repeat it (400ms initial delay, 80ms interval).
-
-### Shortcut bar (always visible)
-
-Fixed row above the keyboard/panel: `↵ Enter`, `Ctrl`, `Alt`, `^C`, `◀ ▲ ▼ ▶`.  
-Arrow keys and Enter support hold-to-repeat.
-
-### Command snippets
-
-Saved commands in the Snippets tab — tap to inject into the terminal.
-
----
-
-## Session Logs
-
-Every terminal session is recorded automatically via tmux `pipe-pane`. Logs are stored as flat files in `~/.roost/logs/{project-slug}/`.
-
-Browse and search session logs from the **History** tab in the UI. Tap a session card to open the log viewer with client-side search. Active sessions show a live-updating tail.
-
-### Log API
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/logs` | List all log files (newest first, grouped by project) |
-| `GET` | `/api/logs/:project/:file` | Raw log content (`?tail=N` for last N lines) |
-| `GET` | `/api/logs/current/:project` | Tail active session (last 200 lines) |
-| `GET` | `/api/logs/search?q=term` | Search across all logs (grep, ANSI-stripped excerpts) |
-| `DELETE` | `/api/logs/:project/:file` | Delete a log file |
-
----
-
-## API Reference
-
-The Python API runs on port **7683** inside the container. All responses are JSON.
-
-### Health
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/health` | Returns `{"ok": true}` |
-
-### Projects
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/projects` | List all projects |
-| `POST` | `/api/projects` | Create project `{name, directory, color}` |
-| `GET` | `/api/projects/:id` | Get project |
-| `PUT` | `/api/projects/:id` | Update project |
-| `DELETE` | `/api/projects/:id` | Delete project and stop ttyd |
-| `POST` | `/api/projects/:id/start` | Start ttyd → `{port}` |
-| `POST` | `/api/projects/:id/stop` | Stop ttyd (tmux session kept) |
-| `GET` | `/api/projects/activity` | Activity status for all projects (for badge polling) |
-| `PUT` | `/api/projects/:id/viewed` | Mark project as viewed (clears activity badge) |
-
-### Shells (tmux windows per project)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/projects/:id/shells` | List tmux windows `[{index, name, active}]` |
-| `POST` | `/api/projects/:id/shells` | Create new window → `{index}` |
-| `PUT` | `/api/projects/:id/shells/:n/select` | Switch active window |
-| `DELETE` | `/api/projects/:id/shells/:n` | Kill window n |
-
-### Snippets
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/snippets` | List all snippets |
-| `POST` | `/api/snippets` | Create `{name, command}` |
-| `PUT` | `/api/snippets/:id` | Update snippet |
-| `DELETE` | `/api/snippets/:id` | Delete snippet |
-
-### Settings
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/settings/layout` | Get custom keyboard layout (JSON) |
-| `PUT` | `/api/settings/layout` | Save keyboard layout |
-| `GET` | `/api/settings/compact-layout` | Get compact layout |
-| `PUT` | `/api/settings/compact-layout` | Save compact layout |
-
-### Uploads
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/upload-image` | Upload base64 image → `{path, url, filename}` |
-| `GET` | `/api/uploads` | List recent uploads (last 10) |
-| `GET` | `/api/uploads/:filename` | Serve upload |
-
-### History export (legacy)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/export` | Export all interactions as JSON (legacy — from copilot-logging era) |
-
-### Session Logs
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/logs` | List all log files (newest first) |
-| `GET` | `/api/logs/:project/:file` | Raw log content (`?tail=N` for last N lines) |
-| `GET` | `/api/logs/current/:project` | Tail active session (last 200 lines) |
-| `GET` | `/api/logs/search?q=term` | Search across all logs |
-| `DELETE` | `/api/logs/:project/:file` | Delete a log file |
-
----
-
-## Database Schema
-
-SQLite at `~/.roost/db/history.db`. Schema lives in `db/schema.sql`.
-
-**`projects`** — name, directory, color, sort order, last active timestamp  
-**`snippets`** — saved commands  
-**`settings`** — key/value store for keyboard layout and UI preferences  
-**`sessions`** / **`interactions`** — legacy tables from the copilot-logging era (not used by current code)  
-
-Session logs are stored as flat files in `~/.roost/logs/`, not in the database.
-
----
-
-## Development
-
-The repo lives on your server (the machine running Docker). All services mount files directly from the repo via bind mounts — `web/` into the web container, `api/api.py` into the ttyd container. This means a `git pull` on the server is the deploy step for most changes.
-
-### Updating and deploying
-
-Edit files on any machine, commit, and push. Then on the server:
-
-```bash
-cd /path/to/roost          # wherever you cloned the repo
-git pull
-```
-
-That's it for web and API changes — the containers read directly from the repo. For changes that touch the Docker image itself, rebuild after pulling:
-
-| What changed | Deploy command |
-|---|---|
-| `web/index.html`, icons, manifest | `git pull` — refresh browser |
-| `api/api.py` | `git pull && make restart` |
-| `Dockerfile`, `entrypoint.sh`, `config/` | `git pull && make build` |
-| `docker-compose.yml` | `git pull && make down && make up` |
-| Local UI iteration | `make dev` — dev server at `http://localhost:3000/` |
-
-### Common commands (via `make`)
-
-```bash
-make up          # start all services
-make down        # stop all services
-make restart     # restart ttyd only (picks up api.py changes — no rebuild needed)
-make build       # full rebuild (only needed after Dockerfile / config/ changes)
-make logs        # tail logs for all services
-make shell       # open a Zsh shell inside the container
-make ps          # show container status
-```
-
-### What's mounted where
-
-| Repo path | Container path | Service | Hot-reload? |
-|---|---|---|---|
-| `./web/` | `/srv/web` | roost-web | Yes — refresh browser |
-| `./api/api.py` | `/app/api.py` | roost-ttyd | `make restart` |
-| `./services/web.Caddyfile` | `/etc/caddy/Caddyfile` | roost-web | `make restart` |
-
-Runtime data lives outside the repo in `~/.roost/`:
-
-| Host path | Container path | Purpose |
-|---|---|---|
-| `~/.roost/` | `/root/.roost` | SQLite DB, logs, uploads |
-| `~/.roost/assets/` | `/srv/assets` | Fonts (not in repo — user-provided) |
-
-Personal directory mounts (e.g. your code) belong in a gitignored `docker-compose.override.yml`, not in `docker-compose.yml`.
-
-### Ports (inside container / on Mac Mini LAN)
-
-| Port | Service |
-|------|---------|
-| 7681 | ttyd — default shell (exposed to Caddy) |
-| 7682 | Caddy web server — serves index.html and assets |
-| 7683 | Python API |
-| 7690–7699 | Per-project ttyd instances (allocated dynamically) |
-
----
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| Can't reach `https://roost.local` | Try `ping roost.local` — mDNS should resolve it automatically. If not, check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
-| Browser shows cert warning | Run `mkcert -install` on the client, or import the mkcert root CA on iOS. |
-| Terminal loads but no input | Ensure ttyd is running with `--writable` (it is by default in Dockerfile). |
-| First Docker build is slow | Normal — downloads ~200 MB of packages. Watch with `docker compose logs -f ttyd`. |
-| Phone keyboard covers terminal | Open as a PWA ("Add to Home Screen"). The shortcut bar handles Esc/Tab/Ctrl without the native keyboard. |
-| History tab empty | Start a project — session logging begins when a tmux session spawns. Check `~/.roost/logs/` for log files. |
-| "Press ↵ to Reconnect" stuck | Tap it — it should reconnect. If it doesn't, quit and reopen the PWA. The overlay auto-dismisses once the WebSocket is established. |
-| Container keeps restarting | Check `docker compose logs ttyd` for startup errors, usually a missing volume or DB permission issue. |
-
----
-
-## Tech Stack
-
-| Layer | Technology | Why |
-|---|---|---|
-| Terminal server | [ttyd](https://github.com/tsl0922/ttyd) | Single binary, xterm.js frontend, WebSocket protocol |
-| Shell | Zsh (base); Oh My Zsh + Spaceship optional via `config/packages.sh` | Plain shell ships in the image; personal config in `config/zshrc`, no rebuild needed |
-| Multiplexer | tmux | One session per project; survives disconnects |
-| API | Python stdlib (`BaseHTTPRequestHandler`) | Zero dependencies, runs anywhere |
-| Storage | SQLite + FTS5 | Single file, full-text search built in |
-| Frontend | Vanilla JS + xterm.js | No build step; inline CSS + JS in one file |
-| Theme | [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) | Consistent palette, works well in terminals |
-| Font | Berkeley Mono Nerd Font | Licensed; Nerd-patched for terminal glyphs |
-| Reverse proxy | [Caddy](https://caddyserver.com/) | Auto TLS, simple config, shared with other home services |
-| Remote access | [Tailscale](https://tailscale.com/) | Zero-config mesh VPN, iOS/Android apps |
-| DNS | mDNS (built-in) | `roost.local` resolves automatically; Pi-hole optional |
-| Containerisation | Docker Compose | Two services; `restart: unless-stopped` |
-
----
-
-## FAQ
-
-**Why is `web/index.html` ~5,000 lines?**
-
-It's a deliberate choice. All CSS and JavaScript are inline in a single file — no bundler, no build step, no `node_modules`. Deploying a change is `git pull` on the server and a browser refresh. The container reads the file directly via bind mount. There's no compilation stage that can break.
-
-The tradeoff is that the file is large and not split by concern. The payoff is that the entire frontend is one `cat`, one `scp`, one file to audit. For a self-hosted tool that one person runs and maintains, that's the right call.
-
-If you want to add a feature, you edit one file. That's it.
-
 ---
 
 ## Contributing
 
-Screenshots, GIFs, and bug reports are the most useful contributions right now. If you run Roost and want to share a screenshot or screen recording, open a PR adding them to `assets/`.
-
-For code contributions, see [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). The test suite runs with `make test`.
