@@ -1,6 +1,6 @@
 {
-  "name": "Glade",
-  "short_name": "Glade",
+  "name": "Glade.sh",
+  "short_name": "Glade.sh",
   "description": "Self-hosted terminal — identical on every device",
   "start_url": "/",
   "display": "standalone",

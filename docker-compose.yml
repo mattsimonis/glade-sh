@@ -1,5 +1,5 @@
-# Glade — Docker Compose
-name: glade
+# Glade.sh — Docker Compose
+name: glade-sh
 #
 # Services:
 #   ttyd — terminal server + API (project lifecycle, snippets, layout)
@@ -37,7 +37,7 @@ services:
     environment:
       - TERM=xterm-256color
       - GLADE_DIR=/root/.glade
-      - GLADE_REPO_URL=${GLADE_REPO_URL:-https://github.com/mattsimonis/glade.git}
+      - GLADE_REPO_URL=${GLADE_REPO_URL:-https://github.com/mattsimonis/glade-sh.git}
       # Uncomment to disable the update-available banner entirely:
       # - DISABLE_UPDATE_CHECK=1
     restart: unless-stopped

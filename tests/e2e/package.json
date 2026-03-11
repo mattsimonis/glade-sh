@@ -1,5 +1,5 @@
 {
-  "name": "glade-e2e",
+  "name": "glade-sh-e2e",
   "private": true,
   "scripts": {
     "test": "playwright test",

@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="assets/glade_logo.png" width="140" alt="Glade">
-  <h1>Glade</h1>
+  <img src="assets/glade_logo.png" width="140" alt="Glade.sh">
+  <h1>Glade.sh</h1>
   <p>A self-hosted terminal that lives on your server and runs on every device.</p>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-cba6f7.svg?style=flat-square&labelColor=313244)](LICENSE)
