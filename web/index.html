@@ -1662,6 +1662,7 @@
         let activityBadges = {};   // projectId -> bool
         let shellPollTimer = null;
         let currentShells = [];    // [{index, name, active, port}] — last fetched shell list
+        let currentShellIdx = null; // index of shell currently displayed in the iframe
         let activityPollTimer = null;
         let selectedProjectColor = '#89b4fa';
         const PROJECT_COLORS = [
@@ -2378,6 +2379,7 @@
             if (!hasContent && !currentProjectId) {
                 pfEl.classList.remove('pf-visible');
                 pfEl.style.bottom = '-50px';
+                updateTerminalPad();
                 return;
             }
             if (window.innerWidth >= 768) {
@@ -2391,9 +2393,26 @@
                     : (navH + (panel.offsetHeight || 0)) + 'px';
             }
             pfEl.classList.add('pf-visible');
+            updateTerminalPad();
         }
 
         // ── Shortcut bar ────────────────────────────────────────────────────────
+        // Recalculate terminal container padding to keep bottom rows visible above
+        // the shortcut bar + path footer stack.
+        function updateTerminalPad() {
+            const tc = document.getElementById('terminal-container');
+            if (!tc) return;
+            if (!tc.classList.contains('has-shortcut-bar')) {
+                tc.style.paddingBottom = '';
+                return;
+            }
+            const pfEl = document.getElementById('path-footer');
+            const pfVisible = pfEl && pfEl.classList.contains('pf-visible');
+            // When keyboard is hidden, path footer stacks above the shortcut bar — add 22px
+            const extraPad = (keyboardState === 'hidden' && pfVisible) ? 22 : 0;
+            tc.style.paddingBottom = extraPad > 0 ? (44 + extraPad) + 'px' : '';
+        }
+
         function repositionShortcutBar() {
             const terminalContainer = document.getElementById('terminal-container');
 
@@ -2401,7 +2420,10 @@
                 shortcutBar.classList.remove('sb-visible');
                 const pf = document.getElementById('path-footer');
                 if (pf) pf.classList.remove('pf-visible');
-                if (terminalContainer) terminalContainer.classList.remove('has-shortcut-bar');
+                if (terminalContainer) {
+                    terminalContainer.classList.remove('has-shortcut-bar');
+                    terminalContainer.style.paddingBottom = '';
+                }
                 return;
             }
 
@@ -3660,6 +3682,7 @@
 
         async function switchProject(pid) {
             currentProjectId = pid;
+            currentShellIdx = null;  // reset — belongs to new project
             localStorage.setItem('lastProjectId', pid);
             renderProjectTabs();
             stopShellPoll();
@@ -3685,6 +3708,7 @@
                 // Use the active shell's port (if available) so we land on the right window
                 const active = (data.shells || []).find(function(s) { return s.active; });
                 const port = (active && active.port) || data.port;
+                if (active) currentShellIdx = active.index;
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
                 ifrm.src = '/ttyd/' + port + '/';
                 startShellPoll(pid);
@@ -3723,7 +3747,8 @@
             bar.innerHTML = '';
             shells.forEach(function(sh) {
                 const btn = document.createElement('button');
-                btn.className = 'shell-tab' + (sh.active ? ' active' : '');
+            const isActive = currentShellIdx !== null ? (sh.index === currentShellIdx) : sh.active;
+                btn.className = 'shell-tab' + (isActive ? ' active' : '');
                 const lbl = document.createElement('span');
                 lbl.textContent = sh.name || ('shell ' + (sh.index + 1));
                 btn.appendChild(lbl);
@@ -3771,6 +3796,7 @@
             if (!currentProjectId) return;
             const shell = currentShells.find(function(s) { return s.index === idx; });
             if (!shell || !shell.port) return;
+            currentShellIdx = idx;
             // Optimistic tab highlight
             const bar = document.getElementById('shell-tabs-bar');
             if (bar) {
@@ -3802,6 +3828,8 @@
                     await apiJson('/api/projects/' + currentProjectId + '/start', { method: 'POST' });
                     result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
                 }
+                // Set tracking before refreshShells so the new tab renders as active
+                if (result && result.index !== undefined) currentShellIdx = result.index;
                 await refreshShells();
                 if (result && result.port) {
                     terminalInstance = null; xtermTextarea = null;
@@ -3816,6 +3844,8 @@
             if (!currentProjectId) return;
             try {
                 await fetch('/api/projects/' + currentProjectId + '/shells/' + index, { method: 'DELETE' });
+                // If the closed shell was the active one, let tmux decide which is next
+                if (currentShellIdx === index) currentShellIdx = null;
                 await refreshShells();
             } catch (e) { console.warn('closeShell failed', e); }
         }
@@ -4606,9 +4636,13 @@
             // We reconnect to whichever shell was last active.
             apiJson('/api/projects/' + pid + '/start', { method: 'POST' })
                 .then(function (data) {
-                    // Prefer the currently active shell's port; fall back to window-0 port
-                    const active = (data.shells || []).find(function(s) { return s.active; });
+                    // Prefer the shell currently on screen; fall back to tmux's active flag
+                    const preferred = currentShellIdx !== null
+                        ? (data.shells || []).find(function(s) { return s.index === currentShellIdx; })
+                        : null;
+                    const active = preferred || (data.shells || []).find(function(s) { return s.active; });
                     const port = (active && active.port) || data.port;
+                    if (active) currentShellIdx = active.index;
                     const url = '/ttyd/' + port + '/';
                     if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
                     iframe.src = 'about:blank';
