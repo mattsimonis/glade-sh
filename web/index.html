@@ -582,7 +582,8 @@
             transform:translateY(100%); transition:transform 300ms cubic-bezier(0.32,0.72,0,1);
         }
         #key-editor-sheet.open, #snippet-editor-sheet.open, #preset-editor-sheet.open { transform:translateY(0); }
-        .sheet-handle { width:36px; height:4px; background:#45475a; border-radius:2px; margin:12px auto 16px; }
+        .sheet-handle { width:36px; height:4px; background:#45475a; border-radius:2px; margin:12px auto 16px; cursor:grab; touch-action:none; position:relative; }
+        .sheet-handle::before { content:''; position:absolute; inset:-14px -48px; }
         .sheet-title  { font-size:15px; font-weight:600; color:#cdd6f4; text-align:center; margin-bottom:16px; }
         .sheet-field  { margin-bottom:12px; }
         .sheet-label  { display:block; font-size:10px; font-weight:700; color:#6c7086; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:5px; }
@@ -960,7 +961,8 @@
             padding-bottom:calc(16px + env(safe-area-inset-bottom));
         }
         #debug-panel.open #debug-sheet { transform:translateY(0); }
-        #debug-sheet-handle { width:36px; height:4px; background:#45475a; border-radius:2px; margin:12px auto 4px; }
+        #debug-sheet-handle { width:36px; height:4px; background:#45475a; border-radius:2px; margin:12px auto 4px; cursor:grab; touch-action:none; position:relative; }
+        #debug-sheet-handle::before { content:''; position:absolute; inset:-14px -48px; }
         #debug-sheet-title { font-size:15px; font-weight:700; color:#cba6f7; font-family:var(--font-mono); text-align:center; padding:8px 20px 16px; border-bottom:1px solid #313244; }
         .dbg-section { padding:14px 16px 0; }
         .dbg-section-label { font-size:10px; font-weight:700; color:#6c7086; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
@@ -3131,6 +3133,54 @@
             };
         }
 
+        // ── Swipe-to-dismiss for bottom sheets ─────────────────────────────────
+        // Attach to any sheet that has a drag handle. Dragging the handle down
+        // past DISMISS_Y px, or releasing with velocity > DISMISS_VX px/ms,
+        // triggers closeFn(). Otherwise the sheet springs back.
+        function attachSwipeToDismiss(handleEl, sheetEl, closeFn, backdropEl) {
+            if (!handleEl || !sheetEl) return;
+            const DISMISS_Y  = 80;   // px
+            const DISMISS_VX = 0.4;  // px/ms
+            let startY = 0, lastY = 0, startTime = 0, active = false;
+
+            handleEl.addEventListener('touchstart', function(e) {
+                if (e.touches.length !== 1) return;
+                startY = lastY = e.touches[0].clientY;
+                startTime = Date.now();
+                active = true;
+                sheetEl.style.transition = 'none';
+            }, { passive: true });
+
+            handleEl.addEventListener('touchmove', function(e) {
+                if (!active) return;
+                e.preventDefault();
+                lastY = e.touches[0].clientY;
+                const delta = Math.max(0, lastY - startY);
+                sheetEl.style.transform = 'translateY(' + delta + 'px)';
+                if (backdropEl) {
+                    const p = Math.min(delta / (sheetEl.offsetHeight || 400), 1);
+                    backdropEl.style.opacity = String(1 - p);
+                }
+            }, { passive: false });
+
+            handleEl.addEventListener('touchend', function() {
+                if (!active) return;
+                active = false;
+                const delta    = Math.max(0, lastY - startY);
+                const elapsed  = Math.max(Date.now() - startTime, 1);
+                const velocity = delta / elapsed;
+                sheetEl.style.transition = '';
+                if (delta > DISMISS_Y || velocity > DISMISS_VX) {
+                    sheetEl.style.transform = 'translateY(100%)';
+                    if (backdropEl) backdropEl.style.opacity = '';
+                    setTimeout(function() { sheetEl.style.transform = ''; closeFn(); }, 320);
+                } else {
+                    sheetEl.style.transform = '';
+                    if (backdropEl) backdropEl.style.opacity = '';
+                }
+            }, { passive: true });
+        }
+
         // ── Key editor sheet ────────────────────────────────────────────────────
         const KEY_VALUE_HINTS = {
             key:    'Escape, Tab, ArrowUp, Home, PageUp, F1\u2026',
@@ -3175,6 +3225,7 @@
         }
         keyTypeSelect.addEventListener('change', updateValueHint);
         keyEditorBackdrop.addEventListener('click', closeKeyEditor);
+        attachSwipeToDismiss(keyEditorSheet.querySelector('.sheet-handle'), keyEditorSheet, closeKeyEditor, keyEditorBackdrop);
         sheetCancelBtn.addEventListener('click', closeKeyEditor);
         sheetDeleteBtn.addEventListener('click', function () {
             if (editorTargetIndex !== null) {
@@ -3229,6 +3280,7 @@
             setTimeout(function () { snippetBackdrop.style.display = 'none'; }, 300);
         }
         snippetBackdrop.addEventListener('click', closeSnippetEditor);
+        attachSwipeToDismiss(snippetSheet.querySelector('.sheet-handle'), snippetSheet, closeSnippetEditor, snippetBackdrop);
         snippetCancelBtn.addEventListener('click', closeSnippetEditor);
         snippetDeleteBtn.addEventListener('click', async function () {
             if (editingSnippetId) { await deleteSnippet(editingSnippetId); snippets = await fetchSnippetsFromServer(); }
@@ -3402,6 +3454,7 @@
             setTimeout(function () { presetBackdrop.style.display = 'none'; }, 300);
         }
         presetBackdrop.addEventListener('click', closePresetEditor);
+        attachSwipeToDismiss(presetSheet.querySelector('.sheet-handle'), presetSheet, closePresetEditor, presetBackdrop);
         presetCancelBtn.addEventListener('click', closePresetEditor);
         presetDeleteBtn.addEventListener('click', async function () {
             if (editingPresetId) { await deletePreset(editingPresetId); presets = await fetchPresetsFromServer(); }
@@ -4033,6 +4086,7 @@
         }
 
         apBackdrop.addEventListener('click', closeAddProjectSheet);
+        attachSwipeToDismiss(apSheet.querySelector('.sheet-handle'), apSheet, closeAddProjectSheet, apBackdrop);
         apCancelBtn.addEventListener('click', closeAddProjectSheet);
         apCreateBtn.addEventListener('click', async function() {
             const name = apNameIn.value.trim();
@@ -5007,6 +5061,7 @@
         cpCancelBtn.addEventListener('click', closePalette);
         cpCancelBtn.addEventListener('touchend', function(e){ e.preventDefault(); closePalette(); }, { passive:false });
         cpBackdrop.addEventListener('click', closePalette);
+        attachSwipeToDismiss(cpSheet.querySelector('.sheet-handle'), cpSheet, closePalette, cpBackdrop);
 
         // ── Smart Snippet Templates ──────────────────────────────────────────────
         const PLACEHOLDER_RE = /\$\{([^}]+)\}/g;
@@ -5074,6 +5129,7 @@
         sfCancelBtn.addEventListener('click', closeFillSheet);
         sfCancelBtn.addEventListener('touchend', function(e){ e.preventDefault(); closeFillSheet(); }, { passive:false });
         sfBackdrop.addEventListener('click', closeFillSheet);
+        attachSwipeToDismiss(sfSheet.querySelector('.sheet-handle'), sfSheet, closeFillSheet, sfBackdrop);
         sfSendBtn.addEventListener('click', function(){
             let cmd = fillCommand;
             sfFields.querySelectorAll('.sf-input').forEach(function(inp){
@@ -5153,6 +5209,7 @@
                 refreshState();
             }
             function closeDebug() { panel.classList.remove('open'); }
+            attachSwipeToDismiss(document.getElementById('debug-sheet-handle'), document.getElementById('debug-sheet'), closeDebug);
 
             // ── Desktop panel toggle ──────────────────────────────────────────────
             var desktopPanelBtn = document.getElementById('desktop-panel-btn');
