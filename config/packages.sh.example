@@ -4,6 +4,9 @@
 # Runs at Docker build time as root.  Rebuild after editing: make build
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── Oh My Zsh ────────────────────────────────────────────────────────────────
+# sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
 # ── Oh My Zsh extras ─────────────────────────────────────────────────────────
 # Spaceship prompt, zsh-syntax-highlighting, zsh-autosuggestions.
 # Plugins are loaded automatically if present — no zshrc edit needed.

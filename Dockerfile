@@ -21,9 +21,6 @@ RUN DPKG_ARCH=$(dpkg --print-architecture) && \
         -O /usr/local/bin/ttyd && \
     chmod +x /usr/local/bin/ttyd
 
-# ── Shell setup (zsh + Oh My Zsh) ────────────────────────────────────────────
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-
 COPY config/zshrc /root/.zshrc
 COPY config/bashrc /root/.bashrc
 COPY config/tmux.conf /root/.tmux.conf
