@@ -130,9 +130,22 @@
         }
         .shell-tab:hover .shell-close, .shell-tab.active .shell-close { opacity: 0.7; }
         .shell-close:active { opacity: 1; background: #45475a; }
-        /* On touch devices: hide tiny ×, long-press closes instead */
+        /* On touch devices: hide tiny ×, long-press enters close mode instead */
         @media (pointer: coarse) {
             .shell-close { display: none; }
+        }
+        /* Close mode: × visible and red-tinted */
+        #shell-tabs-bar.close-mode .shell-close {
+            display: inline !important;
+            opacity: 1 !important;
+            color: #f38ba8;
+            background: rgba(243,139,168,0.15);
+        }
+        @keyframes tab-shake {
+            0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)}
+        }
+        #shell-tabs-bar.close-mode .shell-tab {
+            animation: tab-shake 120ms ease-in-out;
         }
         #shell-add-btn {
             flex-shrink: 0; width: 36px; height: 26px;
@@ -143,7 +156,9 @@
         }
         #shell-add-btn:active { background: #313244; color: #cdd6f4; }
         @media (pointer: coarse) {
-            #shell-add-btn { width: 40px; height: 28px; font-size: 19px; }
+            #shell-add-btn { width: 40px; height: 32px; font-size: 19px; }
+            .shell-tab { height: 32px; padding: 0 12px; }
+            #shell-tabs-bar { height: 36px; }
         }
 
         /* ── Project grid overlay ─────────────────────────────── */
@@ -191,7 +206,8 @@
         }
         .proj-card-status { display: flex; align-items: center; gap: 5px; margin-top: auto; }
         .proj-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #45475a; }
-        .proj-status-dot.running { background: #a6e3a1; }
+        .proj-status-dot.running { background: #a6e3a1; animation: running-glow 2.4s ease-in-out infinite; }
+        @keyframes running-glow { 0%,100%{box-shadow:0 0 3px rgba(166,227,161,0.4)} 50%{box-shadow:0 0 7px rgba(166,227,161,0.9)} }
         .proj-status-label { font-size: 10px; color: #45475a; }
         .proj-status-dot.running + .proj-status-label { color: #6c7086; }
         .proj-card-add {
@@ -440,7 +456,7 @@
             outline:none; box-sizing:border-box; -webkit-appearance:none;
         }
         #snippets-search:focus { border-color:#89b4fa; }
-        #snippets-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 6px; display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content:start; }
+        #snippets-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 6px; display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content:start; overscroll-behavior:contain; }
         #snippets-list::-webkit-scrollbar { display:none; }
         .snippet-tile {
             background:#313244; border-radius:8px; padding:8px 10px; cursor:pointer;
@@ -1123,6 +1139,17 @@
         @keyframes shimmer { 0%{opacity:0.4} 50%{opacity:0.8} 100%{opacity:0.4} }
         .grid-skeleton { height:72px; background:#1e1e2e; border-radius:12px; animation:shimmer 1.2s infinite; margin-bottom:8px; }
 
+        /* ── Project card appear animation ───────────────────── */
+        @keyframes card-appear { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+        .proj-card-new { animation: card-appear 180ms cubic-bezier(0.34,1.2,0.64,1) both; }
+
+        /* ── Snippet tile insert flash ───────────────────────── */
+        .snippet-tile.flash-insert { background: rgba(166,227,161,0.18) !important; transition: none !important; }
+
+        /* ── Project grid empty state ────────────────────────── */
+        .proj-grid-empty { grid-column:1/-1; text-align:center; padding:28px 16px 8px; color:#45475a; font-size:12px; line-height:1.7; }
+        .proj-grid-empty-icon { font-size:28px; margin-bottom:4px; }
+
         /* ── Keyboard key ripple ─────────────────────────────── */
         .kb-btn { position:relative; overflow:hidden; }
         .kb-btn::after { content:''; position:absolute; inset:0; background:rgba(205,214,244,0.08); border-radius:inherit; opacity:0; transform:scale(0.6); transition:opacity 300ms, transform 300ms; pointer-events:none; }
@@ -1152,7 +1179,7 @@
                 </button>
             </div>
             <iframe id="terminal-iframe" src="about:blank" title="Terminal"></iframe>
-            <div id="status-indicator">
+            <div id="status-indicator" role="status" aria-live="polite" aria-label="Connection status">
                 <span class="status-dot connected" id="status-dot"></span>
                 <span id="status-text">Connected</span>
             </div>
@@ -1861,7 +1888,7 @@
                     { type: 'char', label: '*', value: '*' },
                     { type: 'char', label: '$', value: '$' },
                     { type: 'char', label: '%', value: '%' },
-                    { type: 'char', label: '^', value: '^' },
+                    { type: 'char', label: '|', value: '|' },
                     { type: 'char', label: '<', value: '<' },
                     { type: 'char', label: '>', value: '>' },
                     { type: 'char', label: '(', value: '(' },
@@ -1874,7 +1901,7 @@
                     { type: 'char', label: ']', value: ']' },
                     { type: 'char', label: '~', value: '~' },
                     { type: 'char', label: '-', value: '-' },
-                    { type: 'char', label: '_', value: '_' },
+                    { type: 'char', label: '`', value: '`' },
                     { type: 'char', label: '@', value: '@' },
                 ],
                 [
@@ -3362,6 +3389,8 @@
                     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
                     if (longPressed) { return; } // leave longPressed=true; click handler clears it
                     if (scrolled) { return; }    // leave scrolled=true; click handler clears it
+                    tile.classList.add('flash-insert');
+                    setTimeout(function() { tile.classList.remove('flash-insert'); }, 180);
                     sendSnippetCommand(snip);
                 }, { passive: false });
                 // Desktop: click to run, right-click for context menu.
@@ -3369,6 +3398,8 @@
                 tile.addEventListener('click', function(e) {
                     if (longPressed) { longPressed = false; return; }
                     if (scrolled) { scrolled = false; return; }
+                    tile.classList.add('flash-insert');
+                    setTimeout(function() { tile.classList.remove('flash-insert'); }, 180);
                     sendSnippetCommand(snip);
                 });
                 tile.addEventListener('contextmenu', function(e) {
@@ -3812,6 +3843,21 @@
             ]);
         }
 
+        function enterCloseMode() {
+            var bar = document.getElementById('shell-tabs-bar');
+            if (bar) { bar.classList.add('close-mode'); haptic(15); }
+        }
+        function exitCloseMode() {
+            var bar = document.getElementById('shell-tabs-bar');
+            if (bar) bar.classList.remove('close-mode');
+        }
+        // Tap anywhere outside the tab bar to leave close mode
+        document.addEventListener('touchstart', function(e) {
+            var bar = document.getElementById('shell-tabs-bar');
+            if (!bar || !bar.classList.contains('close-mode')) return;
+            if (!bar.contains(e.target)) exitCloseMode();
+        }, { passive: true });
+
         function renderShellTabs(shells) {
             const bar = document.getElementById('shell-tabs-bar');
             if (!bar) return;
@@ -3831,14 +3877,37 @@
                     cls.setAttribute('aria-label', 'Close shell');
                     function doClose(e) { e.preventDefault(); e.stopPropagation(); closeShell(sh.index); }
                     cls.addEventListener('click', doClose);
+                    // On touch: prevent long-press timer from starting on ×, and close on tap
+                    cls.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: true });
+                    cls.addEventListener('touchend', function(e) { e.preventDefault(); e.stopPropagation(); closeShell(sh.index); }, { passive: false });
                     btn.appendChild(cls);
                     btn.addEventListener('contextmenu', function(e) {
                         e.preventDefault();
                         showShellCtx(sh.index, e.clientX, e.clientY);
                     });
                 }
+                // Long-press (300ms) enters or exits close mode
+                var lpFired = false, lpTimer = null;
+                btn.addEventListener('touchstart', function() {
+                    lpFired = false;
+                    lpTimer = setTimeout(function() {
+                        lpTimer = null; lpFired = true;
+                        if (bar.classList.contains('close-mode')) exitCloseMode();
+                        else enterCloseMode();
+                    }, 300);
+                }, { passive: true });
+                function cancelLp() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+                btn.addEventListener('touchend', cancelLp, { passive: true });
+                btn.addEventListener('touchmove', cancelLp, { passive: true });
+
                 function doSwitch(e) {
                     if (e) { e.preventDefault(); e.stopPropagation(); }
+                    if (lpFired) { lpFired = false; return; }
+                    if (bar.classList.contains('close-mode')) {
+                        exitCloseMode();
+                        if (!btn.classList.contains('active')) switchShell(sh.index);
+                        return;
+                    }
                     if (btn.classList.contains('active') && shells.length > 1) {
                         // Tap the active tab again → show close menu
                         const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
@@ -3974,9 +4043,10 @@
             const grid = document.getElementById('project-grid-cards');
             if (!grid) return;
             grid.innerHTML = '';
-            projects.forEach(function(p) {
+            projects.forEach(function(p, i) {
                 const card = document.createElement('div');
-                card.className = 'proj-card' + (p.id === currentProjectId ? ' active-proj' : '');
+                card.className = 'proj-card' + (p.id === currentProjectId ? ' active-proj' : '') + ' proj-card-new';
+                card.style.animationDelay = (i * 30) + 'ms';
                 const accent = document.createElement('div');
                 accent.className = 'proj-card-accent';
                 accent.style.background = p.color || '#585b70';
@@ -4029,6 +4099,13 @@
                 });
                 grid.appendChild(card);
             });
+            // Empty state when no projects exist yet
+            if (projects.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'proj-grid-empty';
+                empty.innerHTML = '<div class="proj-grid-empty-icon">🪺</div><div>No projects yet.<br>Create one to get started.</div>';
+                grid.appendChild(empty);
+            }
             // Add card
             const addCard = document.createElement('div');
             addCard.className = 'proj-card-add';
@@ -4753,10 +4830,16 @@
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'hidden') {
                 hiddenAt = Date.now();
+                // Stop polling while backgrounded — saves battery and avoids stale requests
+                stopShellPoll();
+                if (activityPollTimer) { clearInterval(activityPollTimer); activityPollTimer = null; }
             } else {
                 const wasHiddenMs = hiddenAt ? Date.now() - hiddenAt : Infinity;
                 hiddenAt = 0;
                 reconnectInProgress = false; // any prior attempt is stale — timers were frozen
+                // Resume polls
+                startActivityPoll();
+                if (currentProjectId) startShellPoll(currentProjectId);
                 // Always reconnect after meaningful background time, not just when "disconnected"
                 if (wasHiddenMs > 5000 || connectionState !== 'connected') {
                     forceReconnect();
@@ -4781,7 +4864,10 @@
                 reconnectOverlay.classList.add('visible');
                 reconnectOverlay.classList.toggle('disconnected', state === 'disconnected');
                 reconnectTitle.textContent = state === 'disconnected' ? 'Disconnected' : 'Reconnecting...';
-                reconnectHint.textContent  = 'Tap or press Enter to reconnect';
+                var activeProj = projects && currentProjectId && projects.find(function(p) { return p.id === currentProjectId; });
+                reconnectHint.textContent = activeProj
+                    ? (state === 'disconnected' ? 'Tap to reconnect to ' + activeProj.name : 'Reconnecting to ' + activeProj.name + '…')
+                    : 'Tap or press Enter to reconnect';
                 if (state === 'disconnected') haptic([50,30,50]);
                 setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
             } else {
@@ -4929,13 +5015,39 @@
             { id:'explain-last', label:'Explain last command',desc:'Explain what just ran',        cmd:'gh copilot explain "$(fc -ln -1 2>/dev/null || history 1)"', partial:false },
         ];
         const CP_ACTIONS = [
-            { id:'ctrl-c',    label:'Cancel (^C)',           desc:'Send interrupt',                 fn:function(){ sendKey('c',{ctrl:true}); } },
+            { id:'ctrl-c',    label:'Cancel (^C)',           desc:'Send interrupt',                 fn:function(){ sendKey('c',{ctrl:true}); },    badge:'^C' },
             { id:'ctrl-d',    label:'EOF (^D)',              desc:'Send end-of-file / logout',       fn:function(){ sendKey('d',{ctrl:true}); } },
-            { id:'clear',     label:'Clear screen',          desc:'Send clear command',              fn:function(){ sendKey('l',{ctrl:true}); } },
+            { id:'clear',     label:'Clear screen',          desc:'Send clear command',              fn:function(){ sendKey('l',{ctrl:true}); },    badge:'^L' },
             { id:'copy',      label:'Copy selection',        desc:'Copy terminal text',              fn:handleCopy },
             { id:'paste',     label:'Paste clipboard',       desc:'Paste to terminal',               fn:handlePaste },
             { id:'focus',     label:'Focus mode',            desc:'Full-screen terminal',            fn:toggleFocusMode },
             { id:'reconnect', label:'Reconnect terminal',    desc:'Reload terminal iframe',          fn:function(){ forceReconnect(); } },
+            { id:'ctrl-z',    label:'Suspend (^Z)',          desc:'Send SIGTSTP / suspend job',      fn:function(){ sendKey('z',{ctrl:true}); } },
+            { id:'ctrl-a',    label:'Line start (^A)',       desc:'Jump to beginning of line',       fn:function(){ sendKey('a',{ctrl:true}); } },
+            { id:'ctrl-e',    label:'Line end (^E)',          desc:'Jump to end of line',             fn:function(){ sendKey('e',{ctrl:true}); } },
+            { id:'ctrl-w',    label:'Delete word (^W)',       desc:'Delete word before cursor',       fn:function(){ sendKey('w',{ctrl:true}); } },
+            { id:'ctrl-r',    label:'History search (^R)',   desc:'Reverse history search',          fn:function(){ sendKey('r',{ctrl:true}); } },
+            { id:'new-shell', label:'New shell tab',         desc:'Open another shell in this project', fn:function(){ if(currentProjectId) addShell(); } },
+            { id:'close-shell',label:'Close current tab',    desc:'Close the active shell tab',      fn:function(){
+                if(currentShellIdx !== null) {
+                    var idx = currentShellIdx;
+                    showConfirm('Close this tab?', null, [{ label:'Close Tab', style:'danger', onConfirm:function(){ closeShell(idx); } }]);
+                }
+            }},
+            { id:'next-shell',  label:'Next shell tab',      desc:'Switch to next shell',            fn:function(){
+                if (!currentShells || !currentShells.length) return;
+                var cur = currentShells.findIndex(function(s){ return s.index === currentShellIdx; });
+                var next = currentShells[(cur + 1) % currentShells.length];
+                if (next) switchShell(next.index);
+            }},
+            { id:'prev-shell',  label:'Previous shell tab', desc:'Switch to previous shell',        fn:function(){
+                if (!currentShells || !currentShells.length) return;
+                var cur = currentShells.findIndex(function(s){ return s.index === currentShellIdx; });
+                var prev = currentShells[(cur - 1 + currentShells.length) % currentShells.length];
+                if (prev) switchShell(prev.index);
+            }},
+            { id:'open-history', label:'Open history',      desc:'Browse session logs',             fn:function(){ navPanelAction('history'); } },
+            { id:'open-snippets',label:'Open snippets',     desc:'Browse saved commands',           fn:function(){ navPanelAction('snippets'); } },
         ];
 
         let cpListScrolled = false, cpListTouchY = 0;
@@ -5044,7 +5156,7 @@
                 matchedActions.forEach(function(a){
                     const item = makeItem('action',
                         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-                        a.label, a.desc, null,
+                        a.label, a.desc, a.badge || null,
                         function(){ closePalette(); setTimeout(function(){ a.fn(); haptic(8); }, 80); }
                     );
                     sec.appendChild(item);
