@@ -48,6 +48,8 @@ import subprocess
 import sys
 import threading
 import uuid
+from contextlib import contextmanager
+from urllib.parse import unquote
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 from socketserver import ThreadingTCPServer
@@ -82,17 +84,24 @@ _ttyd_procs = {}   # shell_key (sname:widx) -> {"process": Popen|None, "port": i
 _baselines  = {}   # project_id -> int (tmux history_size at last view)
 
 
+@contextmanager
 def open_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def ensure_tables():
-    conn = open_db()
-    try:
+    with open_db() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS snippets (
                 id         TEXT PRIMARY KEY,
@@ -128,9 +137,6 @@ def ensure_tables():
                 raw_log_path TEXT
             );
         """)
-        conn.commit()
-    finally:
-        conn.close()
 
 
 # ---- tmux helpers -----------------------------------------------------------
@@ -417,7 +423,19 @@ class Handler(BaseHTTPRequestHandler):
         if length > 4 * 1024 * 1024:  # 4 MB hard cap
             self.rfile.read(length)
             raise ValueError("request body too large")
-        return json.loads(self.rfile.read(length)) if length else {}
+        raw = self.rfile.read(length) if length else b"{}"
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid JSON: {exc}") from exc
+
+    def _read_body(self):
+        """Parse JSON request body; returns (data, None) on success or (None, True) on failure."""
+        try:
+            return self.read_json(), None
+        except ValueError as exc:
+            self.send_json(400, {"error": str(exc)})
+            return None, True
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -520,14 +538,11 @@ class Handler(BaseHTTPRequestHandler):
     # -- projects --
 
     def _list_projects(self):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             rows = conn.execute(
                 "SELECT id,name,directory,color,sort_order,created_at,last_active "
                 "FROM projects ORDER BY sort_order, created_at"
             ).fetchall()
-        finally:
-            conn.close()
         result = []
         for r in rows:
             d = dict(r)
@@ -541,11 +556,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, result)
 
     def _get_project(self, pid):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             row = conn.execute("SELECT * FROM projects WHERE id=?", (pid,)).fetchone()
-        finally:
-            conn.close()
         if not row:
             return self.send_json(404, {"error": "not found"})
         d = dict(row)
@@ -558,25 +570,25 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, d)
 
     def _create_project(self):
-        data = self.read_json()
+        data, err = self._read_body()
+        if err:
+            return
         name = (data.get("name") or "").strip()
         directory = (data.get("directory") or "/").strip() or "/"
         color = (data.get("color") or "#89b4fa").strip()
         if not name:
             return self.send_json(400, {"error": "name required"})
         pid = str(uuid.uuid4())
-        conn = open_db()
-        try:
+        with open_db() as conn:
             conn.execute("INSERT INTO projects (id,name,directory,color) VALUES (?,?,?,?)",
                          (pid, name, directory, color))
-            conn.commit()
-        finally:
-            conn.close()
         self.send_json(201, {"id": pid, "name": name, "directory": directory,
                               "color": color, "running": False, "port": None})
 
     def _update_project(self, pid):
-        data = self.read_json()
+        data, err = self._read_body()
+        if err:
+            return
         fields, vals = [], []
         for col in ("name", "directory", "color", "sort_order"):
             if col in data:
@@ -585,12 +597,8 @@ class Handler(BaseHTTPRequestHandler):
         if not fields:
             return self.send_json(400, {"error": "nothing to update"})
         vals.append(pid)
-        conn = open_db()
-        try:
+        with open_db() as conn:
             conn.execute(f"UPDATE projects SET {','.join(fields)} WHERE id=?", vals)
-            conn.commit()
-        finally:
-            conn.close()
         self.send_json(200, {"ok": True})
 
     def _delete_project(self, pid):
@@ -598,26 +606,18 @@ class Handler(BaseHTTPRequestHandler):
         # Kill the tmux session so no shells linger after deletion
         sname = session_name(pid)
         subprocess.run(["tmux", "kill-session", "-t", sname], capture_output=True)
-        conn = open_db()
-        try:
+        with open_db() as conn:
             conn.execute("DELETE FROM projects WHERE id=?", (pid,))
-            conn.commit()
-        finally:
-            conn.close()
         self.send_json(200, {"ok": True})
 
     def _start_project(self, pid):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             row = conn.execute("SELECT name, directory FROM projects WHERE id=?", (pid,)).fetchone()
             if not row:
                 return self.send_json(404, {"error": "not found"})
             directory = row["directory"]
             project_name = row["name"]
             conn.execute("UPDATE projects SET last_active=CURRENT_TIMESTAMP WHERE id=?", (pid,))
-            conn.commit()
-        finally:
-            conn.close()
         port = ensure_project_running(pid, directory, project_name=project_name)
         if port is None:
             return self.send_json(503, {"error": "no ports available"})
@@ -655,11 +655,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, self._shells_with_ports(pid, sname))
 
     def _new_shell(self, pid):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             row = conn.execute("SELECT directory FROM projects WHERE id=?", (pid,)).fetchone()
-        finally:
-            conn.close()
         if not row:
             return self.send_json(404, {"error": "not found"})
         sname = session_name(pid)
@@ -694,18 +691,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, {"ok": True})
 
     def _get_activity(self):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             rows = conn.execute("SELECT id FROM projects").fetchall()
-        finally:
-            conn.close()
         result = []
         for row in rows:
             pid = row["id"]
             sname = session_name(pid)
+            key0 = _ttyd_shell_key(sname, 0)
             with _lock:
-                info = _ttyd_procs.get(pid)
-                running = bool(info and info["process"].poll() is None)
+                info    = _ttyd_procs.get(key0)
+                running = _shell_proc_alive(info)
             has_activity = False
             if running and tmux_session_exists(sname):
                 current = tmux_history_size(sname)
@@ -723,59 +718,50 @@ class Handler(BaseHTTPRequestHandler):
     # -- snippets --
 
     def _list_snippets(self):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             rows = conn.execute(
                 "SELECT id,name,command,sort_order FROM snippets ORDER BY sort_order,created_at"
             ).fetchall()
-        finally:
-            conn.close()
         self.send_json(200, [dict(r) for r in rows])
 
     def _create_snippet(self):
-        data = self.read_json()
+        data, err = self._read_body()
+        if err:
+            return
         name    = (data.get("name") or "").strip()
         command = (data.get("command") or "").strip()
         if not name or not command:
             return self.send_json(400, {"error": "name and command required"})
         sid = str(uuid.uuid4())
-        conn = open_db()
-        try:
+        with open_db() as conn:
             conn.execute("INSERT INTO snippets (id,name,command,sort_order) VALUES (?,?,?,?)",
                          (sid, name, command, data.get("sort_order", 0)))
-            conn.commit()
-        finally:
-            conn.close()
         self.send_json(201, {"id": sid, "name": name, "command": command})
 
     def _update_snippet(self, sid):
-        data    = self.read_json()
+        data, err = self._read_body()
+        if err:
+            return
         name    = (data.get("name") or "").strip()
         command = (data.get("command") or "").strip()
         if not name or not command:
             return self.send_json(400, {"error": "name and command required"})
-        conn = open_db()
-        try:
+        with open_db() as conn:
             cur = conn.execute("UPDATE snippets SET name=?,command=?,sort_order=? WHERE id=?",
                                (name, command, data.get("sort_order", 0), sid))
-            conn.commit()
             if cur.rowcount == 0:
                 return self.send_json(404, {"error": "not found"})
-        finally:
-            conn.close()
         self.send_json(200, {"ok": True})
 
     def _delete_snippet(self, sid):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             conn.execute("DELETE FROM snippets WHERE id=?", (sid,))
-            conn.commit()
-        finally:
-            conn.close()
         self.send_json(200, {"ok": True})
 
     def _upload_image(self):
-        data = self.read_json()
+        data, err = self._read_body()
+        if err:
+            return
         b64  = data.get("data", "")
         if len(b64) > 20 * 1024 * 1024:  # ~15 MB decoded
             return self.send_json(400, {"error": "image too large"})
@@ -812,6 +798,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
 
@@ -834,15 +821,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, entries[:10])
 
     def _export_interactions(self):
-        conn = open_db()
         try:
-            rows = conn.execute(
-                "SELECT * FROM interactions ORDER BY timestamp DESC LIMIT 500"
-            ).fetchall()
+            with open_db() as conn:
+                rows = conn.execute(
+                    "SELECT * FROM interactions ORDER BY timestamp DESC LIMIT 500"
+                ).fetchall()
         except Exception:
             rows = []
-        finally:
-            conn.close()
         data = [dict(r) for r in rows]
         body = json.dumps(data, indent=2).encode()
         self.send_response(200)
@@ -854,59 +839,32 @@ class Handler(BaseHTTPRequestHandler):
 
     # -- settings --
 
-    def _get_layout(self):
-        conn = open_db()
-        try:
+    def _get_setting(self, key):
+        with open_db() as conn:
             row = conn.execute(
-                "SELECT value FROM settings WHERE key='keyboard_layout'"
+                "SELECT value FROM settings WHERE key=?", (key,)
             ).fetchone()
-        finally:
-            conn.close()
         if row:
             self.send_json(200, json.loads(row["value"]))
         else:
-            self.send_json(404, {"error": "no layout saved"})
+            self.send_json(404, {"error": f"no {key} saved"})
 
-    def _save_layout(self):
-        data = self.read_json()
-        conn = open_db()
-        try:
+    def _put_setting(self, key):
+        data, err = self._read_body()
+        if err:
+            return
+        with open_db() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO settings (key,value,updated_at) "
-                "VALUES ('keyboard_layout',?,CURRENT_TIMESTAMP)",
-                (json.dumps(data),)
+                "VALUES (?,?,CURRENT_TIMESTAMP)",
+                (key, json.dumps(data))
             )
-            conn.commit()
-        finally:
-            conn.close()
         self.send_json(200, {"ok": True})
 
-    def _get_compact_layout(self):
-        conn = open_db()
-        try:
-            row = conn.execute(
-                "SELECT value FROM settings WHERE key='compact_keyboard_layout'"
-            ).fetchone()
-        finally:
-            conn.close()
-        if row:
-            self.send_json(200, json.loads(row["value"]))
-        else:
-            self.send_json(404, {"error": "no compact layout saved"})
-
-    def _save_compact_layout(self):
-        data = self.read_json()
-        conn = open_db()
-        try:
-            conn.execute(
-                "INSERT OR REPLACE INTO settings (key,value,updated_at) "
-                "VALUES ('compact_keyboard_layout',?,CURRENT_TIMESTAMP)",
-                (json.dumps(data),)
-            )
-            conn.commit()
-        finally:
-            conn.close()
-        self.send_json(200, {"ok": True})
+    def _get_layout(self):         return self._get_setting("keyboard_layout")
+    def _get_compact_layout(self): return self._get_setting("compact_keyboard_layout")
+    def _save_layout(self):        return self._put_setting("keyboard_layout")
+    def _save_compact_layout(self): return self._put_setting("compact_keyboard_layout")
 
     # -- session logs --
 
@@ -916,29 +874,19 @@ class Handler(BaseHTTPRequestHandler):
         return set(r.stdout.strip().splitlines()) if r.returncode == 0 else set()
 
     def _project_slug_map(self):
-        conn = open_db()
-        try:
+        with open_db() as conn:
             rows = conn.execute("SELECT id, name FROM projects").fetchall()
-        finally:
-            conn.close()
         return {slugify(r["name"]): r["name"] for r in rows}
 
     def _list_logs(self):
         if not os.path.isdir(LOGS_DIR):
             return self.send_json(200, [])
         active_sessions = self._active_tmux_sessions()
-        slug_names = self._project_slug_map()
-        # Build slug→active by checking which projects have a running tmux session
-        conn = open_db()
-        try:
+        with open_db() as conn:
             rows = conn.execute("SELECT id, name FROM projects").fetchall()
-        finally:
-            conn.close()
-        active_slugs = set()
-        for row in rows:
-            sname = session_name(row["id"])
-            if sname in active_sessions:
-                active_slugs.add(slugify(row["name"]))
+        slug_names   = {slugify(r["name"]): r["name"] for r in rows}
+        active_slugs = {slugify(r["name"]) for r in rows
+                        if session_name(r["id"]) in active_sessions}
         results = []
         for slug in sorted(os.listdir(LOGS_DIR)):
             slug_dir = os.path.join(LOGS_DIR, slug)
@@ -1022,7 +970,6 @@ class Handler(BaseHTTPRequestHandler):
         query = ""
         for part in qs.split("&"):
             if part.startswith("q="):
-                from urllib.parse import unquote
                 query = unquote(part.split("=", 1)[1])
         if not query or not os.path.isdir(LOGS_DIR):
             return self.send_json(200, [])
@@ -1080,9 +1027,11 @@ class Handler(BaseHTTPRequestHandler):
     def _trigger_rebuild(self):
         try:
             # Clear previous log so the UI starts fresh
-            open(REBUILD_LOG, "w").close()
+            with open(REBUILD_LOG, "w"):
+                pass
             # Write trigger file — the host launchd watcher picks this up
-            open(REBUILD_TRIGGER, "w").close()
+            with open(REBUILD_TRIGGER, "w"):
+                pass
         except OSError as e:
             return self.send_json(500, {"error": str(e)})
         self.send_json(200, {"ok": True})
