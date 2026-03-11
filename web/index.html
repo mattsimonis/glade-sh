@@ -3784,8 +3784,11 @@
                 // Same shell clicked again — no reload needed
                 return;
             }
+            // Reset cached terminal refs so findTerminal() re-wires for the new page
+            terminalInstance = null; xtermTextarea = null;
+            window._osc7Wired = false; _osc7WiredSocket = null;
             iframe.src = 'about:blank';
-            setTimeout(function() { iframe.src = url; }, 50);
+            setTimeout(function() { iframe.src = url; startTerminalPoll(); }, 50);
         }
 
         async function addShell() {
@@ -3801,8 +3804,10 @@
                 }
                 await refreshShells();
                 if (result && result.port) {
+                    terminalInstance = null; xtermTextarea = null;
+                    window._osc7Wired = false; _osc7WiredSocket = null;
                     iframe.src = 'about:blank';
-                    setTimeout(function() { iframe.src = '/ttyd/' + result.port + '/'; }, 50);
+                    setTimeout(function() { iframe.src = '/ttyd/' + result.port + '/'; startTerminalPoll(); }, 50);
                 }
             } catch (e) { console.warn('addShell failed', e); }
         }
