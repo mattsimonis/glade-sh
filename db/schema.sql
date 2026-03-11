@@ -1,4 +1,4 @@
--- roost: SQLite schema
+-- glade: SQLite schema
 -- Initialize with: sqlite3 history.db < schema.sql
 
 -- ── Active tables (used by current code) ────────────────────────────────────
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- ── Legacy tables (from copilot-logging era, not used by current code) ──────
 -- Session logs are now recorded via tmux pipe-pane to flat files in
--- ~/.roost/logs/{project-slug}/. These tables remain for backward compat
+-- ~/.glade/logs/{project-slug}/. These tables remain for backward compat
 -- but no new data is written to them.
 
 CREATE TABLE IF NOT EXISTS sessions (

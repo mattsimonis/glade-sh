@@ -1,4 +1,4 @@
-# Working From Anywhere — Roost Setup Guide
+# Working From Anywhere — Glade Setup Guide
 
 Your Mac Mini runs the hub. Every device reaches it through Tailscale.
 The terminal is a ttyd session inside Docker — your tools run there.
@@ -37,11 +37,11 @@ Allow access for your user account. Note the machine name shown (e.g., `matts-ma
 
 ### One-time setup: Add your Mac Mini's key to your laptop
 
-This avoids password prompts. Run this from **inside the roost terminal** (the Mac Mini):
+This avoids password prompts. Run this from **inside the glade terminal** (the Mac Mini):
 
 ```sh
 # Generate a key if one doesn't exist
-ssh-keygen -t ed25519 -C "roost@mac-mini" -f ~/.ssh/id_ed25519 -N ""
+ssh-keygen -t ed25519 -C "glade@mac-mini" -f ~/.ssh/id_ed25519 -N ""
 
 # Copy it to your laptop (use your Tailscale hostname)
 ssh-copy-id matt@matts-macbook
@@ -51,7 +51,7 @@ You'll enter your laptop password once. After that — no passwords.
 
 ### Daily workflow
 
-1. Open the Roost web UI on your phone
+1. Open the Glade web UI on your phone
 2. In the terminal, type:
    ```sh
    ssh matt@matts-macbook
@@ -62,7 +62,7 @@ You'll enter your laptop password once. After that — no passwords.
 
 ### Create a project shortcut for it
 
-In Roost, add a project:
+In Glade, add a project:
 - **Name:** My Project (or whatever)
 - **Directory:** `/root` (it'll change once you SSH in — this is just the starting point)
 
@@ -89,7 +89,7 @@ mkdir -p ~/projects
 git clone git@github.com:you/your-project.git ~/projects/your-project
 ```
 
-Then create a project in Roost pointing to `~/projects/your-project`.
+Then create a project in Glade pointing to `~/projects/your-project`.
 
 ### Keeping it in sync
 
@@ -129,11 +129,11 @@ Mutagen syncs in real-time, both directions. Edit on laptop, run on Mac Mini, ch
 
 ## Setting Up Another Local Project
 
-You have a second project on your laptop. Add it to Roost:
+You have a second project on your laptop. Add it to Glade:
 
 ### If using SSH (Option 1)
 
-No setup needed on the Mac Mini. Just SSH to your laptop and `cd` to the project. Create a Roost project entry as a reminder/shortcut.
+No setup needed on the Mac Mini. Just SSH to your laptop and `cd` to the project. Create a Glade project entry as a reminder/shortcut.
 
 Add an alias inside the Docker container:
 ```sh
@@ -148,7 +148,7 @@ alias work2='ssh matt@matts-macbook -t "cd ~/Dev/project-two && exec zsh"'
 git clone git@github.com:you/project-two.git ~/projects/project-two
 ```
 
-Create a project in Roost → directory: `~/projects/project-two`.
+Create a project in Glade → directory: `~/projects/project-two`.
 
 ---
 
@@ -188,7 +188,7 @@ caffeinate -i
 
 ## CLI Tools Over SSH
 
-Tools installed in your Roost container (via `config/packages.sh`) are available in the Mac Mini terminal. When you SSH into your laptop, you use the laptop's own tools instead.
+Tools installed in your Glade container (via `config/packages.sh`) are available in the Mac Mini terminal. When you SSH into your laptop, you use the laptop's own tools instead.
 
 If you install `gh` on both machines:
 - On Mac Mini: `gh auth login` inside the Docker container
@@ -220,7 +220,7 @@ Run through this before you go to bed:
 - [ ] `cd ~/Dev/your-project` — your files and tools should be accessible
 - [ ] Add a shell alias so you can one-word connect tomorrow
 - [ ] Set your laptop to not sleep when plugged in (if you want to SSH into it overnight)
-- [ ] On your phone, open the Roost UI and confirm you can see your projects
+- [ ] On your phone, open the Glade UI and confirm you can see your projects
 
 That's it. Laptop stays on the desk. You pick up your phone and keep working.
 

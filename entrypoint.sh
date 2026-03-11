@@ -1,22 +1,22 @@
 #!/bin/bash
-# ── Roost — entrypoint ─────────────────────────────────────────────────────────
+# ── Glade — entrypoint ─────────────────────────────────────────────────────────
 # Clones or updates the app repo, then supervises the API server.
 # The poller runs in the background and pulls new commits every 2 minutes.
 # API restarts are user-triggered via POST /api/restart (exits with code 42).
 
-ROOST_REPO_URL="${ROOST_REPO_URL:-https://github.com/mattsimonis/roost.git}"
-APP_DIR="/app/roost"
-UPDATE_PENDING_FILE="/tmp/roost-update-pending"
-IMAGE_UPDATE_FILE="/tmp/roost-image-update-pending"
+GLADE_REPO_URL="${GLADE_REPO_URL:-https://github.com/mattsimonis/glade.git}"
+APP_DIR="/app/glade"
+UPDATE_PENDING_FILE="/tmp/glade-update-pending"
+IMAGE_UPDATE_FILE="/tmp/glade-image-update-pending"
 POLL_INTERVAL=120
 export GIT_TERMINAL_PROMPT=0
 
-export DB_PATH="${ROOST_DIR}/db/history.db"
+export DB_PATH="${GLADE_DIR}/db/history.db"
 export PORT=7683
 
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [roost] $*"; }
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [glade] $*"; }
 
-mkdir -p "${ROOST_DIR}/db" "${ROOST_DIR}/logs/_main"
+mkdir -p "${GLADE_DIR}/db" "${GLADE_DIR}/logs/_main"
 
 # ── Clone or pull app repo ─────────────────────────────────────────────────────
 if git -C "$APP_DIR" pull --ff-only -q 2>/dev/null; then
@@ -27,7 +27,7 @@ else
     log "Cloning repo"
     # Can't rm the mountpoint itself — clear its contents instead
     find "$APP_DIR" -mindepth 1 -depth -delete 2>/dev/null || true
-    git clone -q "$ROOST_REPO_URL" "$APP_DIR" || { log "Clone failed — check ROOST_REPO_URL"; exit 1; }
+    git clone -q "$GLADE_REPO_URL" "$APP_DIR" || { log "Clone failed — check GLADE_REPO_URL"; exit 1; }
 fi
 
 # ── Background update poller ───────────────────────────────────────────────────

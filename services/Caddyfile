@@ -8,12 +8,12 @@ reverse_proxy yoto-home:3000
 tls /etc/caddy/certs/yoto.home.pem /etc/caddy/certs/yoto.home-key.pem
 }
 
-# Roost — plain HTTP via mDNS (roost.local on port 80, no cert needed)
-http://roost.local {
+# Glade — plain HTTP via mDNS (glade.local on port 80, no cert needed)
+http://glade.local {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
 uri strip_prefix /ttyd/{http.regexp.tport.1}
-reverse_proxy roost-ttyd:{http.regexp.tport.1} {
+reverse_proxy glade-ttyd:{http.regexp.tport.1} {
 header_up X-Forwarded-Proto {scheme}
 flush_interval -1
 transport http {
@@ -24,7 +24,7 @@ write_timeout 0
 }
 }
 handle {
-reverse_proxy roost-web:7682
+reverse_proxy glade-web:7682
 }
 header {
 -X-Frame-Options
@@ -33,12 +33,12 @@ Referrer-Policy strict-origin-when-cross-origin
 }
 }
 
-# Roost — HTTPS via Pi-hole DNS (roost.local)
-roost.local {
+# Glade — HTTPS via Pi-hole DNS (glade.local)
+glade.local {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
 uri strip_prefix /ttyd/{http.regexp.tport.1}
-reverse_proxy roost-ttyd:{http.regexp.tport.1} {
+reverse_proxy glade-ttyd:{http.regexp.tport.1} {
 header_up X-Forwarded-Proto {scheme}
 flush_interval -1
 transport http {
@@ -49,9 +49,9 @@ write_timeout 0
 }
 }
 handle {
-reverse_proxy roost-web:7682
+reverse_proxy glade-web:7682
 }
-tls /etc/caddy/certs/roost.local.pem /etc/caddy/certs/roost.local-key.pem
+tls /etc/caddy/certs/glade.local.pem /etc/caddy/certs/glade.local-key.pem
 header {
 -X-Frame-Options
 X-Content-Type-Options nosniff

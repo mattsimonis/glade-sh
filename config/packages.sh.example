@@ -1,5 +1,5 @@
 #!/bin/bash
-# ── Roost — custom packages (example recipes) ───────────────────────────────
+# ── Glade — custom packages (example recipes) ───────────────────────────────
 # Copy this to config/packages.sh and uncomment what you need.
 # Runs at Docker build time as root.  Rebuild after editing: make build
 # ─────────────────────────────────────────────────────────────────────────────

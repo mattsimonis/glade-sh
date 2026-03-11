@@ -1,13 +1,13 @@
 .PHONY: up down restart build logs shell deploy-web ps setup dev test test-cov test-e2e
 
-# Load .env if present — provides HOST, DOMAIN, DEV_DIR, ROOST_DIR
+# Load .env if present — provides HOST, DOMAIN, DEV_DIR, GLADE_DIR
 ifneq (,$(wildcard .env))
   include .env
   export
 endif
 
 HOST    ?= mac-mini
-DOMAIN  ?= roost.local
+DOMAIN  ?= glade.local
 
 # ── First-time setup ──────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ dev:
 # Copy web/index.html to the host when the web service can't mount ./web directly.
 # Override host: make deploy-web HOST=other-machine
 deploy-web:
-	scp web/index.html $(HOST):~/.roost/web/index.html
+	scp web/index.html $(HOST):~/.glade/web/index.html
 
 # ── Testing ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +74,6 @@ test:
 test-cov:
 	python3 -m pytest tests/api/ -v --cov=api --cov-report=term-missing --tb=short
 
-# Run Playwright E2E tests (requires a running Roost instance at BASE_URL)
+# Run Playwright E2E tests (requires a running Glade instance at BASE_URL)
 test-e2e:
 	cd tests/e2e && npx playwright test

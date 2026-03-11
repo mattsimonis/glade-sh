@@ -1,8 +1,8 @@
-# Contributing to Roost
+# Contributing to Glade
 
 ## What's most useful right now
 
-- **Screenshots and GIFs** — the README has a placeholder for visuals. If you run Roost and want to share a screenshot or screen recording, open a PR adding them to `assets/`.
+- **Screenshots and GIFs** — the README has a placeholder for visuals. If you run Glade and want to share a screenshot or screen recording, open a PR adding them to `assets/`.
 - **Bug reports** — use the issue template. Include your OS, Docker version, and the output of `docker compose logs`.
 - **Feature requests** — use the issue template. Describe the use case, not just the feature.
 
@@ -12,15 +12,15 @@
 
 - Docker Desktop
 - Python 3.x (for running the API outside a container, if needed)
-- A working Roost instance to test against
+- A working Glade instance to test against
 
 ### Local development
 
 The repo uses bind mounts — the containers read files directly from the repo. So edits are live without rebuilding.
 
 ```bash
-git clone https://github.com/mattsimonis/roost
-cd roost
+git clone https://github.com/mattsimonis/glade
+cd glade
 cp .env.example .env
 # edit .env with your settings
 make setup
@@ -76,11 +76,11 @@ ttyd processes are spawned. They run entirely offline in under a second.
 make test-e2e
 ```
 
-E2E tests use Playwright and require a running Roost instance. By default
+E2E tests use Playwright and require a running Glade instance. By default
 they target `http://localhost:3000` (the `make dev` server). Override with:
 
 ```bash
-BASE_URL=https://roost.local make test-e2e
+BASE_URL=https://glade.local make test-e2e
 ```
 
 ### Writing new tests

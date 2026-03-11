@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# roost/lib/logger.sh — Bash library for logging gh copilot interactions to SQLite
+# glade/lib/logger.sh — Bash library for logging gh copilot interactions to SQLite
 #
-# Usage: source this file from roost-wrap or any script that needs logging.
+# Usage: source this file from glade-wrap or any script that needs logging.
 #
 # All functions are safe — if sqlite3 is missing or any DB operation fails,
 # the function returns silently. Logging must NEVER block the user's command.
 
-ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
-ROOST_DB="${ROOST_DIR}/db/history.db"
-ROOST_SCHEMA="${ROOST_DIR}/db/schema.sql"
+GLADE_DIR="${GLADE_DIR:-$HOME/.glade}"
+GLADE_DB="${GLADE_DIR}/db/history.db"
+GLADE_SCHEMA="${GLADE_DIR}/db/schema.sql"
 
 # --------------------------------------------------------------------------
 # copilot_log_init_db — Create the database and apply schema if not present.
@@ -21,15 +21,15 @@ copilot_log_init_db() {
     command -v sqlite3 >/dev/null 2>&1 || return 1
 
     # Ensure the db directory exists
-    mkdir -p "${ROOST_DIR}/db" 2>/dev/null || return 1
+    mkdir -p "${GLADE_DIR}/db" 2>/dev/null || return 1
 
     # If schema file is missing, we cannot initialize
-    if [[ ! -f "$ROOST_SCHEMA" ]]; then
+    if [[ ! -f "$GLADE_SCHEMA" ]]; then
         return 1
     fi
 
     # Apply schema (IF NOT EXISTS makes this idempotent)
-    sqlite3 "$ROOST_DB" < "$ROOST_SCHEMA" 2>/dev/null || return 1
+    sqlite3 "$GLADE_DB" < "$GLADE_SCHEMA" 2>/dev/null || return 1
 
     return 0
 }
@@ -68,7 +68,7 @@ copilot_log_start_session() {
     cwd="${cwd//\'/\'\'}"
     device="${device//\'/\'\'}"
 
-    sqlite3 "$ROOST_DB" \
+    sqlite3 "$GLADE_DB" \
         "INSERT INTO sessions (session_id, cwd, device) VALUES ('${session_id}', '${cwd}', '${device}');" \
         2>/dev/null || return 1
 
@@ -85,7 +85,7 @@ copilot_log_end_session() {
     local session_id="${1:-}"
     [[ -z "$session_id" ]] && return 1
 
-    sqlite3 "$ROOST_DB" \
+    sqlite3 "$GLADE_DB" \
         "UPDATE sessions SET ended_at = CURRENT_TIMESTAMP WHERE session_id = '${session_id}';" \
         2>/dev/null || return 1
 }
@@ -140,7 +140,7 @@ copilot_log_interaction() {
         raw_log_val="'${raw_log_path}'"
     fi
 
-    sqlite3 "$ROOST_DB" \
+    sqlite3 "$GLADE_DB" \
         "INSERT INTO interactions (session_id, subcommand, prompt, response, cwd, exit_code, duration_ms, raw_log_path)
          VALUES ('${session_id}', '${subcommand}', '${prompt}', '${response}', '${cwd}', ${exit_code_val}, ${duration_ms_val}, ${raw_log_val});" \
         2>/dev/null || return 1

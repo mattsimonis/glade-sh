@@ -1,4 +1,4 @@
-"""Shared test utilities for Roost API tests."""
+"""Shared test utilities for Glade API tests."""
 
 
 def assert_cors(headers):

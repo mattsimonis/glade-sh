@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest something for Roost to do.
+description: Suggest something for Glade to do.
 labels: ["enhancement"]
 body:
   - type: markdown

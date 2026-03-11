@@ -17,5 +17,5 @@ preexec() {
   [[ -n "$TMUX" ]] && tmux rename-window "${${1%% *}##*/}" 2>/dev/null
 }
 
-[ -f /root/.roost/bin/roost-wrap ] && source /root/.roost/bin/roost-wrap
-[ -f /root/.roost/config/zshrc.local ] && source /root/.roost/config/zshrc.local
+[ -f /root/.glade/bin/glade-wrap ] && source /root/.glade/bin/glade-wrap
+[ -f /root/.glade/config/zshrc.local ] && source /root/.glade/config/zshrc.local

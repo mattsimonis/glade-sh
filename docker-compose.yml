@@ -1,5 +1,5 @@
-# Roost — Docker Compose
-name: roost
+# Glade — Docker Compose
+name: glade
 #
 # Services:
 #   ttyd — terminal server + API (project lifecycle, snippets, layout)
@@ -11,10 +11,10 @@ name: roost
 #
 # Prerequisites:
 #   - ~/.config/gh/ must contain valid gh CLI auth tokens (run `gh auth login` first)
-#   - ~/.roost/ must exist with assets/, db/ populated (run install.sh first)
+#   - ~/.glade/ must exist with assets/, db/ populated (run install.sh first)
 #   - Docker network 'shared_web' must exist: docker network create shared_web
-#   - roost.local DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
-#   - TLS cert for roost.local in your Caddy certs directory (see services/Caddyfile)
+#   - glade.local DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
+#   - TLS cert for glade.local in your Caddy certs directory (see services/Caddyfile)
 #
 # Usage:
 #   make up        # start all services
@@ -28,16 +28,16 @@ services:
     build:
       context: .
       tags:
-        - roost-ttyd
-    container_name: roost-ttyd
+        - glade-ttyd
+    container_name: glade-ttyd
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
-      - ${ROOST_DIR:-~/.roost}:/root/.roost
-      - roost-app:/app/roost              # cloned repo lives here
+      - ${GLADE_DIR:-~/.glade}:/root/.glade
+      - glade-app:/app/glade              # cloned repo lives here
     environment:
       - TERM=xterm-256color
-      - ROOST_DIR=/root/.roost
-      - ROOST_REPO_URL=${ROOST_REPO_URL:-https://github.com/mattsimonis/roost.git}
+      - GLADE_DIR=/root/.glade
+      - GLADE_REPO_URL=${GLADE_REPO_URL:-https://github.com/mattsimonis/glade.git}
       # Uncomment to disable the update-available banner entirely:
       # - DISABLE_UPDATE_CHECK=1
     restart: unless-stopped
@@ -52,12 +52,12 @@ services:
 
   web:
     image: caddy:2-alpine
-    container_name: roost-web
+    container_name: glade-web
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
       - ./services/web.Caddyfile:/etc/caddy/Caddyfile:ro
-      - roost-app:/srv                    # serves /srv/web/index.html (Caddyfile unchanged)
-      - ${ROOST_DIR:-~/.roost}/assets:/srv/assets:ro
+      - glade-app:/srv                    # serves /srv/web/index.html (Caddyfile unchanged)
+      - ${GLADE_DIR:-~/.glade}/assets:/srv/assets:ro
     restart: unless-stopped
     networks:
       - shared_web
@@ -67,4 +67,4 @@ networks:
     external: true
 
 volumes:
-  roost-app:                              # shared between ttyd (write) and web (read)
+  glade-app:                              # shared between ttyd (write) and web (read)

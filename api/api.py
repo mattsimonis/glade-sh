@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-roost API — projects, snippets, keyboard layout, image uploads
+glade API — projects, snippets, keyboard layout, image uploads
 
 Runs inside the ttyd Docker container on port 7683.
 Manages project lifecycle: tmux sessions + ttyd child processes.
@@ -54,17 +54,17 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 from socketserver import ThreadingTCPServer
 
-DB_PATH      = os.environ.get("DB_PATH", "/root/.roost/db/history.db")
+DB_PATH      = os.environ.get("DB_PATH", "/root/.glade/db/history.db")
 PORT         = int(os.environ.get("PORT", "7683"))
-ROOST_DIR    = os.environ.get("ROOST_DIR", "/root/.roost")
-UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.roost/uploads")
-LOGS_DIR     = os.environ.get("LOGS_DIR", "/root/.roost/logs")
+GLADE_DIR    = os.environ.get("GLADE_DIR", "/root/.glade")
+UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.glade/uploads")
+LOGS_DIR     = os.environ.get("LOGS_DIR", "/root/.glade/logs")
 
 DISABLE_UPDATE_CHECK = os.environ.get("DISABLE_UPDATE_CHECK", "").lower() in ("1", "true", "yes")
 
-REBUILD_TRIGGER = os.path.join(ROOST_DIR, ".rebuild-requested")
-REBUILD_LOCK    = os.path.join(ROOST_DIR, ".rebuild-running")
-REBUILD_LOG     = os.path.join(ROOST_DIR, "rebuild.log")
+REBUILD_TRIGGER = os.path.join(GLADE_DIR, ".rebuild-requested")
+REBUILD_LOCK    = os.path.join(GLADE_DIR, ".rebuild-running")
+REBUILD_LOG     = os.path.join(GLADE_DIR, "rebuild.log")
 
 PORT_POOL = list(range(7690, 7700))
 
@@ -454,8 +454,8 @@ class Handler(BaseHTTPRequestHandler):
         if p == ["api", "health"]:
             return self.send_json(200, {
                 "ok": True,
-                "update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/roost-update-pending"),
-                "image_update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/roost-image-update-pending"),
+                "update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/glade-update-pending"),
+                "image_update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/glade-image-update-pending"),
             })
         if p == ["api", "projects", "activity"]:
             return self._get_activity()
@@ -834,7 +834,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(data, indent=2).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Disposition", "attachment; filename=roost-history.json")
+        self.send_header("Content-Disposition", "attachment; filename=glade-history.json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -1074,7 +1074,7 @@ except Exception:
     pass
 ThreadingTCPServer.allow_reuse_address = True
 server = ThreadingTCPServer(("0.0.0.0", PORT), Handler)
-print(f"roost API listening on :{PORT}", flush=True)
+print(f"glade API listening on :{PORT}", flush=True)
 try:
     server.serve_forever()
 except KeyboardInterrupt:

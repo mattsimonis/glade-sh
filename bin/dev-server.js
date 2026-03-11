@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Roost local dev server — zero npm deps
+// Glade local dev server — zero npm deps
 //
 // Usage:  node bin/dev-server.js [port]   (default: 3000)
 //         make dev
@@ -86,7 +86,7 @@ const server = http.createServer((req, res) => {
 server.on('upgrade', proxyWS);
 
 server.listen(DEV_PORT, '127.0.0.1', () => {
-    console.log(`\nRoost dev server → http://localhost:${DEV_PORT}`);
+    console.log(`\nGlade dev server → http://localhost:${DEV_PORT}`);
     console.log(`Serving  : ${HTML}`);
     console.log(`Proxying : everything else → http://${CASPER_HOST} (via SSH tunnel)`);
     console.log('\nEdit web/index.html and refresh to see changes.\n');

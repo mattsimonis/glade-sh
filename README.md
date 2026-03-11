@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="assets/roost_logo.png" width="140" alt="Roost">
-  <h1>Roost</h1>
+  <img src="assets/glade_logo.png" width="140" alt="Glade">
+  <h1>Glade</h1>
   <p>A self-hosted terminal that lives on your server and runs on every device.</p>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-cba6f7.svg?style=flat-square&labelColor=313244)](LICENSE)
@@ -11,7 +11,7 @@
 
 ---
 
-Your terminal is open on your phone. The session is alive on your server. Close the browser — it keeps running. Open it on your laptop — same session, same history, same scrollback. That's Roost.
+Your terminal is open on your phone. The session is alive on your server. Close the browser — it keeps running. Open it on your laptop — same session, same history, same scrollback. That's Glade.
 
 It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywhere: on LAN through Caddy, remotely through Tailscale. No subscriptions. No cloud. Nothing leaves your machine.
 
@@ -20,15 +20,15 @@ It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywher
 ## Quick Start
 
 ```bash
-git clone https://github.com/mattsimonis/roost
-cd roost
+git clone https://github.com/mattsimonis/glade
+cd glade
 cp .env.example .env   # set HOST= to your server's hostname
 ```
 
-Add the `roost.local` block from `services/Caddyfile` to your standalone `caddy-proxy` and generate a cert:
+Add the `glade.local` block from `services/Caddyfile` to your standalone `caddy-proxy` and generate a cert:
 
 ```bash
-mkcert roost.local
+mkcert glade.local
 # move cert files into your Caddy certs directory, restart caddy-proxy
 ```
 
@@ -38,9 +38,9 @@ Then:
 make setup   # builds image (~2 min) and starts containers
 ```
 
-Open `https://roost.local`. Tap **Share → Add to Home Screen** to install the PWA.
+Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the PWA.
 
-> `roost.local` resolves automatically via mDNS — no Pi-hole or extra DNS config needed.  
+> `glade.local` resolves automatically via mDNS — no Pi-hole or extra DNS config needed.  
 > Tailscale is optional — only needed for remote access outside your home network.  
 > See [SETUP.md](SETUP.md) for the full walkthrough.
 
@@ -61,11 +61,11 @@ Open `https://roost.local`. Tap **Share → Add to Home Screen** to install the 
 
 ---
 
-## Why Roost?
+## Why Glade?
 
-Most mobile terminal apps drop your session, cost money, or only work on one platform. Roost runs *on your server* — the session lives there, and any browser is just a window into it.
+Most mobile terminal apps drop your session, cost money, or only work on one platform. Glade runs *on your server* — the session lives there, and any browser is just a window into it.
 
-|  | **Roost** | Termius | Blink Shell | JuiceSSH | Raw SSH |
+|  | **Glade** | Termius | Blink Shell | JuiceSSH | Raw SSH |
 |---|---|---|---|---|---|
 | Self-hosted | ✅ | ❌ | ❌ | ❌ | ✅ |
 | Free | ✅ MIT | Freemium | $20 | Freemium | ✅ |
@@ -95,15 +95,15 @@ Copy `.env.example` to `.env` and edit:
 
 ```bash
 HOST=mac-mini      # hostname of the machine running Docker
-DOMAIN=roost.local # domain for the web UI
+DOMAIN=glade.local # domain for the web UI
 ```
 
 Optional environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `ROOST_REPO_URL` | `https://github.com/mattsimonis/roost.git` | Override if using a fork |
-| `ROOST_DIR` | `~/.roost` | Where Roost stores its DB, logs, and uploads |
+| `GLADE_REPO_URL` | `https://github.com/mattsimonis/glade.git` | Override if using a fork |
+| `GLADE_DIR` | `~/.glade` | Where Glade stores its DB, logs, and uploads |
 | `DISABLE_UPDATE_CHECK` | _(unset)_ | Set to `1` to suppress the update-available banner |
 
 To mount personal directories inside the container, create a gitignored `docker-compose.override.yml`:

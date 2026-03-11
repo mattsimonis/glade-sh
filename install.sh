@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Roost — Installer
+# Glade — Installer
 #
-# Sets up the Roost directory structure, initializes the SQLite database,
+# Sets up the Glade directory structure, initializes the SQLite database,
 # copies files into place, and adds shell integration to .zshrc / .bashrc.
 #
 # Usage:
-#   ./install.sh                              # Install to ~/.roost
-#   ROOST_DIR=/opt/roost ./install.sh   # Custom location
+#   ./install.sh                              # Install to ~/.glade
+#   GLADE_DIR=/opt/glade ./install.sh   # Custom location
 #
 # Safe to run multiple times (idempotent).
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,14 +30,14 @@ error()   { printf "${RED}[error]${RESET}   %s\n" "$*" >&2; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Configuration ────────────────────────────────────────────────────────────
-ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
+GLADE_DIR="${GLADE_DIR:-$HOME/.glade}"
 
 WARNINGS=()
 INSTALLED=()
 
-printf "\n${BOLD}Roost Installer${RESET}\n"
+printf "\n${BOLD}Glade Installer${RESET}\n"
 printf "%-20s %s\n" "Source:" "$SCRIPT_DIR"
-printf "%-20s %s\n" "Target:" "$ROOST_DIR"
+printf "%-20s %s\n" "Target:" "$GLADE_DIR"
 printf "\n"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -46,14 +46,14 @@ printf "\n"
 info "Creating directory structure..."
 
 dirs=(
-    "$ROOST_DIR/assets/fonts"
-    "$ROOST_DIR/bin"
-    "$ROOST_DIR/lib"
-    "$ROOST_DIR/db"
-    "$ROOST_DIR/logs/_main"
-    "$ROOST_DIR/uploads"
-    "$ROOST_DIR/web"
-    "$ROOST_DIR/services"
+    "$GLADE_DIR/assets/fonts"
+    "$GLADE_DIR/bin"
+    "$GLADE_DIR/lib"
+    "$GLADE_DIR/db"
+    "$GLADE_DIR/logs/_main"
+    "$GLADE_DIR/uploads"
+    "$GLADE_DIR/web"
+    "$GLADE_DIR/services"
 )
 
 for dir in "${dirs[@]}"; do
@@ -61,7 +61,7 @@ for dir in "${dirs[@]}"; do
 done
 
 success "Directory structure ready."
-INSTALLED+=("Directory structure at $ROOST_DIR")
+INSTALLED+=("Directory structure at $GLADE_DIR")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 2: Initialize personal config files from examples
@@ -91,7 +91,7 @@ init_from_example "zshrc"
 init_from_example "packages.sh"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 3: Copy files from repo to ROOST_DIR
+# Step 3: Copy files from repo to GLADE_DIR
 # ─────────────────────────────────────────────────────────────────────────────
 info "Copying files..."
 
@@ -111,27 +111,27 @@ copy_if_exists() {
 }
 
 # bin/
-copy_if_exists "$SCRIPT_DIR/bin/roost-wrap"    "$ROOST_DIR/bin/roost-wrap"    "bin/roost-wrap"
-copy_if_exists "$SCRIPT_DIR/bin/roost-history"  "$ROOST_DIR/bin/roost-history"  "bin/roost-history"
+copy_if_exists "$SCRIPT_DIR/bin/glade-wrap"    "$GLADE_DIR/bin/glade-wrap"    "bin/glade-wrap"
+copy_if_exists "$SCRIPT_DIR/bin/glade-history"  "$GLADE_DIR/bin/glade-history"  "bin/glade-history"
 
 # lib/
-copy_if_exists "$SCRIPT_DIR/lib/logger.sh"        "$ROOST_DIR/lib/logger.sh"        "lib/logger.sh"
+copy_if_exists "$SCRIPT_DIR/lib/logger.sh"        "$GLADE_DIR/lib/logger.sh"        "lib/logger.sh"
 
 # db/
-copy_if_exists "$SCRIPT_DIR/db/schema.sql"        "$ROOST_DIR/db/schema.sql"        "db/schema.sql"
+copy_if_exists "$SCRIPT_DIR/db/schema.sql"        "$GLADE_DIR/db/schema.sql"        "db/schema.sql"
 
 # web/
-copy_if_exists "$SCRIPT_DIR/web/index.html"        "$ROOST_DIR/web/index.html"        "web/index.html"
+copy_if_exists "$SCRIPT_DIR/web/index.html"        "$GLADE_DIR/web/index.html"        "web/index.html"
 
 # services/
-copy_if_exists "$SCRIPT_DIR/services/Caddyfile"    "$ROOST_DIR/services/Caddyfile"    "services/Caddyfile"
+copy_if_exists "$SCRIPT_DIR/services/Caddyfile"    "$GLADE_DIR/services/Caddyfile"    "services/Caddyfile"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 3: Make bin/* executable
 # ─────────────────────────────────────────────────────────────────────────────
 info "Setting permissions..."
 
-for f in "$ROOST_DIR/bin/"*; do
+for f in "$GLADE_DIR/bin/"*; do
     [[ -f "$f" ]] && chmod +x "$f"
 done
 
@@ -140,8 +140,8 @@ success "Binaries are executable."
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 4: Initialize SQLite database
 # ─────────────────────────────────────────────────────────────────────────────
-DB_PATH="$ROOST_DIR/db/history.db"
-SCHEMA_PATH="$ROOST_DIR/db/schema.sql"
+DB_PATH="$GLADE_DIR/db/history.db"
+SCHEMA_PATH="$GLADE_DIR/db/schema.sql"
 
 if ! command -v sqlite3 &>/dev/null; then
     error "sqlite3 is required but not found. Please install it first."
@@ -167,7 +167,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 5: Check for Berkeley Mono Nerd Font
 # ─────────────────────────────────────────────────────────────────────────────
-FONT_DIR="$ROOST_DIR/assets/fonts"
+FONT_DIR="$GLADE_DIR/assets/fonts"
 FONT_FOUND=false
 
 for ext in woff2 woff ttf otf; do
@@ -202,7 +202,7 @@ if command -v gh &>/dev/null; then
     GH_VERSION="$(gh --version | head -1)"
     success "gh CLI found: $GH_VERSION"
 else
-    warn "gh CLI not found. Install it before using Roost."
+    warn "gh CLI not found. Install it before using Glade."
     warn "  macOS:  brew install gh"
     warn "  Linux:  https://cli.github.com/"
     WARNINGS+=("gh CLI not installed")
@@ -216,8 +216,8 @@ success "sqlite3 is available: $(sqlite3 --version | head -1)"
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 8: Shell integration (.zshrc / .bashrc)
 # ─────────────────────────────────────────────────────────────────────────────
-PATH_LINE="export PATH=\"\$HOME/.roost/bin:\$PATH\""
-SOURCE_LINE="[[ -f \"\$HOME/.roost/bin/roost-wrap\" ]] && source \"\$HOME/.roost/bin/roost-wrap\""
+PATH_LINE="export PATH=\"\$HOME/.glade/bin:\$PATH\""
+SOURCE_LINE="[[ -f \"\$HOME/.glade/bin/glade-wrap\" ]] && source \"\$HOME/.glade/bin/glade-wrap\""
 
 add_shell_integration() {
     local rcfile="$1"
@@ -230,14 +230,14 @@ add_shell_integration() {
     fi
 
     # Add PATH entry if not already present
-    if ! grep -qF '.roost/bin' "$rcfile" 2>/dev/null; then
-        printf '\n# Roost — PATH\n%s\n' "$PATH_LINE" >> "$rcfile"
+    if ! grep -qF '.glade/bin' "$rcfile" 2>/dev/null; then
+        printf '\n# Glade — PATH\n%s\n' "$PATH_LINE" >> "$rcfile"
         changed=true
     fi
 
     # Add source line if not already present
-    if ! grep -qF 'roost-wrap' "$rcfile" 2>/dev/null; then
-        printf '\n# Roost — wrapper integration\n%s\n' "$SOURCE_LINE" >> "$rcfile"
+    if ! grep -qF 'glade-wrap' "$rcfile" 2>/dev/null; then
+        printf '\n# Glade — wrapper integration\n%s\n' "$SOURCE_LINE" >> "$rcfile"
         changed=true
     fi
 
@@ -256,12 +256,12 @@ add_shell_integration "$HOME/.bashrc" ".bashrc"
 # Step 9: Rebuild watcher (macOS only — launchd WatchPaths agent)
 # ─────────────────────────────────────────────────────────────────────────────
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    SCRIPTS_DIR="$ROOST_DIR/scripts"
+    SCRIPTS_DIR="$GLADE_DIR/scripts"
     WATCHER_SCRIPT="$SCRIPTS_DIR/rebuild-watcher.sh"
-    PLIST_PATH="$HOME/Library/LaunchAgents/com.roost.rebuild-watcher.plist"
-    TRIGGER_FILE="$ROOST_DIR/.rebuild-requested"
-    LOCK_FILE="$ROOST_DIR/.rebuild-running"
-    REBUILD_LOG="$ROOST_DIR/rebuild.log"
+    PLIST_PATH="$HOME/Library/LaunchAgents/com.glade.rebuild-watcher.plist"
+    TRIGGER_FILE="$GLADE_DIR/.rebuild-requested"
+    LOCK_FILE="$GLADE_DIR/.rebuild-running"
+    REBUILD_LOG="$GLADE_DIR/rebuild.log"
 
     mkdir -p "$SCRIPTS_DIR"
 
@@ -299,7 +299,7 @@ WATCHER_EOF
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.roost.rebuild-watcher</string>
+    <string>com.glade.rebuild-watcher</string>
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
@@ -323,7 +323,7 @@ PLIST_EOF
     LAUNCH_CTL_UID=$(id -u)
     launchctl bootout "gui/$LAUNCH_CTL_UID" "$PLIST_PATH" 2>/dev/null || true
     if launchctl bootstrap "gui/$LAUNCH_CTL_UID" "$PLIST_PATH" 2>/dev/null; then
-        success "Rebuild watcher registered (com.roost.rebuild-watcher)"
+        success "Rebuild watcher registered (com.glade.rebuild-watcher)"
         INSTALLED+=("Rebuild watcher LaunchAgent")
     else
         # Fallback: legacy load
@@ -374,7 +374,7 @@ cat <<EOF
        cd $SCRIPT_DIR && make up
 
   4. From another device on your network, visit:
-       https://roost.local   (if Pi-hole DNS is configured)
+       https://glade.local   (if Pi-hole DNS is configured)
        or the Mac Mini's LAN IP
 
   5. (Optional) Authenticate gh CLI inside the container:

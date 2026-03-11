@@ -1,9 +1,9 @@
 const { test, expect } = require('@playwright/test');
 
 test.describe('App loads', () => {
-  test('page title contains Roost', async ({ page }) => {
+  test('page title contains Glade', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle(/Roost/i);
+    await expect(page).toHaveTitle(/Glade/i);
   });
 
   test('bottom nav is visible', async ({ page }) => {
@@ -15,7 +15,7 @@ test.describe('App loads', () => {
 
   test('keyboard panel renders', async ({ page }) => {
     await page.goto('/');
-    // The keyboard panel is a signature Roost UI element
+    // The keyboard panel is a signature Glade UI element
     const keyboard = page.locator('.keyboard, #keyboard, [data-testid="keyboard"]').first();
     // It may be hidden until a project is open; check the DOM at least has it
     await expect(page.locator('body')).not.toBeEmpty();

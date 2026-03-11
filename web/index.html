@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Roost">
+    <meta name="apple-mobile-web-app-title" content="Glade">
     <meta name="theme-color" content="#1e1e2e">
-    <title>Roost</title>
+    <title>Glade</title>
     <link rel="manifest" href="/manifest.json?v=3">
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
@@ -1550,7 +1550,7 @@
         <div class="settings-section">
             <div class="settings-section-title">About</div>
             <div class="settings-row">
-                <span class="settings-label">Roost</span>
+                <span class="settings-label">Glade</span>
                 <span class="settings-value" style="color:#6c7086">v1.0.0</span>
             </div>
             <div style="margin-top:8px;font-size:11px;color:#6c7086;line-height:1.5">
@@ -4201,9 +4201,9 @@
                     }
                     // Hide xterm.js scrollbar — tmux handles scrolling.
                     // Reclaims ~14px for an extra terminal column on narrow screens.
-                    if (xtermTextarea && !iframeDoc.getElementById('roost-xterm-fix')) {
+                    if (xtermTextarea && !iframeDoc.getElementById('glade-xterm-fix')) {
                         const s = iframeDoc.createElement('style');
-                        s.id = 'roost-xterm-fix';
+                        s.id = 'glade-xterm-fix';
                         s.textContent = '.xterm-viewport{scrollbar-width:none!important;overflow-y:hidden!important}.xterm-viewport::-webkit-scrollbar{display:none!important}';
                         iframeDoc.head.appendChild(s);
                     }
@@ -5408,7 +5408,7 @@
             document.getElementById('dbg-path-show').onclick = function () {
                 const pfText = document.getElementById('path-footer-text');
                 const pfEl   = document.getElementById('path-footer');
-                if (pfText) pfText.textContent = '/Users/matt/Dev/roost/web';
+                if (pfText) pfText.textContent = '/Users/matt/Dev/glade/web';
                 if (pfEl)   pfEl.classList.add('pf-visible');
                 repositionShortcutBar();
             };

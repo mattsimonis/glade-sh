@@ -1,9 +1,9 @@
 """
-conftest.py — Test fixtures for Roost API tests.
+conftest.py — Test fixtures for Glade API tests.
 
 CRITICAL BOOTSTRAP ORDER:
   1. Temp dirs created
-  2. os.environ updated (DB_PATH, ROOST_DIR, etc.)
+  2. os.environ updated (DB_PATH, GLADE_DIR, etc.)
   3. socketserver.ThreadingTCPServer replaced with a null class (prevents
      api.py's module-level serve_forever() from blocking)
   4. subprocess.run patched during import (skips the pgrep port-cleanup at
@@ -13,7 +13,7 @@ CRITICAL BOOTSTRAP ORDER:
 
 Each test gets:
   - A fresh SQLite DB (monkeypatched DB_PATH → tmp_path/test.db)
-  - Fresh LOGS / UPLOADS / ROOST dirs
+  - Fresh LOGS / UPLOADS / GLADE dirs
   - Clean _ttyd_procs / _baselines globals
   - subprocess.run and subprocess.Popen mocked out (no real tmux/ttyd)
   - _recover_shell_procs mocked (reads /proc, unavailable on macOS)
@@ -33,21 +33,21 @@ import pytest
 
 # ── 1. Temp root and environment vars (MUST precede api import) ───────────────
 
-_tmp_root = tempfile.mkdtemp(prefix="roost_test_session_")
+_tmp_root = tempfile.mkdtemp(prefix="glade_test_session_")
 _DB_PATH = os.path.join(_tmp_root, "db", "test.db")
-_ROOST_DIR = os.path.join(_tmp_root, "roost")
+_GLADE_DIR = os.path.join(_tmp_root, "glade")
 _UPLOADS_DIR = os.path.join(_tmp_root, "uploads")
 _LOGS_DIR = os.path.join(_tmp_root, "logs")
 
 os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
-os.makedirs(_ROOST_DIR, exist_ok=True)
+os.makedirs(_GLADE_DIR, exist_ok=True)
 os.makedirs(_UPLOADS_DIR, exist_ok=True)
 os.makedirs(_LOGS_DIR, exist_ok=True)
 
 os.environ.update(
     {
         "DB_PATH": _DB_PATH,
-        "ROOST_DIR": _ROOST_DIR,
+        "GLADE_DIR": _GLADE_DIR,
         "UPLOADS_DIR": _UPLOADS_DIR,
         "LOGS_DIR": _LOGS_DIR,
         "PORT": "17683",
@@ -211,22 +211,22 @@ class _Client:
 def client(tmp_path, monkeypatch):
     """Yield a _Client with fresh DB, dirs, and mocked subprocess."""
     db_path = tmp_path / "test.db"
-    roost_dir = tmp_path / "roost"
+    glade_dir = tmp_path / "glade"
     uploads = tmp_path / "uploads"
     logs = tmp_path / "logs"
 
-    roost_dir.mkdir()
+    glade_dir.mkdir()
     uploads.mkdir()
     logs.mkdir()
 
     # Patch api module-level globals
     monkeypatch.setattr(api, "DB_PATH", str(db_path))
-    monkeypatch.setattr(api, "ROOST_DIR", str(roost_dir))
+    monkeypatch.setattr(api, "GLADE_DIR", str(glade_dir))
     monkeypatch.setattr(api, "UPLOADS_DIR", str(uploads))
     monkeypatch.setattr(api, "LOGS_DIR", str(logs))
-    monkeypatch.setattr(api, "REBUILD_TRIGGER", str(roost_dir / ".rebuild-requested"))
-    monkeypatch.setattr(api, "REBUILD_LOCK", str(roost_dir / ".rebuild-running"))
-    monkeypatch.setattr(api, "REBUILD_LOG", str(roost_dir / "rebuild.log"))
+    monkeypatch.setattr(api, "REBUILD_TRIGGER", str(glade_dir / ".rebuild-requested"))
+    monkeypatch.setattr(api, "REBUILD_LOCK", str(glade_dir / ".rebuild-running"))
+    monkeypatch.setattr(api, "REBUILD_LOG", str(glade_dir / "rebuild.log"))
 
     # Reset process state
     monkeypatch.setattr(api, "_ttyd_procs", {})

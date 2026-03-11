@@ -1,4 +1,4 @@
-# Roost — Architecture Reference
+# Glade — Architecture Reference
 
 > Self-hosted, always-on terminal accessible from any device via browser.
 > Runs on a Mac Mini with Docker. Catppuccin Mocha theme. Berkeley Mono font.
@@ -22,15 +22,15 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        │         Mac Mini (Docker)            │
        │                                      │
        │  caddy-proxy (standalone container)  │
-       │    roost.local → :7682                   │
+       │    glade.local → :7682                   │
        │    /ttyd/{port} → :769x              │
        │                                      │
-       │  roost-web (:7682, Caddy)            │
+       │  glade-web (:7682, Caddy)            │
        │    /         → index.html            │
-       │    /api/*    → roost-ttyd:7683       │
+       │    /api/*    → glade-ttyd:7683       │
        │    /assets/* → fonts                 │
        │                                      │
-       │  roost-ttyd (:7681, :7683, :7690–99) │
+       │  glade-ttyd (:7681, :7683, :7690–99) │
        │    api.py    — REST API              │
        │    ttyd      — terminal WebSocket    │
        │    tmux      — session multiplexer   │
@@ -39,8 +39,8 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        └──────────────────────────────────────┘
 ```
 
-**DNS:** `roost.local` resolves via mDNS on the local network (no Pi-hole needed).
-**TLS:** mkcert cert for `roost.local`, managed by standalone `caddy-proxy`.
+**DNS:** `glade.local` resolves via mDNS on the local network (no Pi-hole needed).
+**TLS:** mkcert cert for `glade.local`, managed by standalone `caddy-proxy`.
 **Remote:** Tailscale mesh VPN for access outside the home network.
 
 ---
@@ -49,23 +49,23 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
 
 Two Docker services defined in `docker-compose.yml`:
 
-**roost-ttyd** — the application container (Debian bookworm-slim):
+**glade-ttyd** — the application container (Debian bookworm-slim):
 - Python API on port 7683
 - ttyd instances on ports 7681 (main) and 7690–7699 (per-project)
 - tmux for session management and pipe-pane recording
 - gh CLI + Copilot extension
 - Zsh + Oh My Zsh + Spaceship prompt
 
-**roost-web** — Caddy file server:
+**glade-web** — Caddy file server:
 - Serves `web/index.html` at `/`
-- Proxies `/api/*` to `roost-ttyd:7683`
+- Proxies `/api/*` to `glade-ttyd:7683`
 - Serves fonts from `/assets/*`
 - No-cache headers on HTML/manifest for instant updates
 
 **caddy-proxy** — standalone (not in this compose file):
 - Pre-existing container shared with other `*.home` services
-- Routes `roost.local` to `roost-web:7682`
-- Routes `/ttyd/{port}` to `roost-ttyd:{port}` for WebSocket proxying
+- Routes `glade.local` to `glade-web:7682`
+- Routes `/ttyd/{port}` to `glade-ttyd:{port}` for WebSocket proxying
 - Manages TLS certs
 
 ---
@@ -77,17 +77,17 @@ Two Docker services defined in `docker-compose.yml`:
 1. User taps project card in PWA
 2. PWA calls `POST /api/projects/:id/start`
 3. API creates tmux session (if not running) via `create_tmux_session()`
-4. API starts `tmux pipe-pane` to record output to `~/.roost/logs/{slug}/{timestamp}.log`
+4. API starts `tmux pipe-pane` to record output to `~/.glade/logs/{slug}/{timestamp}.log`
 5. API spawns ttyd on a free port (7690–7699) attached to the tmux session
 6. API returns `{port}` to PWA
-7. PWA loads `https://roost.local/ttyd/{port}/` in an iframe
+7. PWA loads `https://glade.local/ttyd/{port}/` in an iframe
 8. User types; input flows through iframe → WebSocket → ttyd → tmux → zsh
 
 ### Session Recording
 
 - `tmux pipe-pane -o -t {session} 'cat >> {logfile}'` starts on session creation
 - Raw terminal output (including ANSI codes) is appended to the log file
-- Log files: `~/.roost/logs/{project-slug}/{YYYY-MM-DD_HH-MM-SS}.log`
+- Log files: `~/.glade/logs/{project-slug}/{YYYY-MM-DD_HH-MM-SS}.log`
 - One file per session lifetime; stops when the tmux session closes
 - ANSI codes stripped client-side (in PWA) or server-side (in search API)
 
@@ -150,10 +150,10 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 | `config/tmux.conf` | — | Tmux config (Catppuccin Mocha status bar) |
 | `config/packages.sh` | — | Build-time hook: user-defined package installs (empty by default) |
 | `config/packages.sh.example` | — | Recipe examples: gh CLI, Node.js, pip, Rust, apt |
-| `services/Caddyfile` | 61 | Caddy-proxy config for roost.local |
-| `services/web.Caddyfile` | 42 | Inner Caddy config for roost-web container |
+| `services/Caddyfile` | 61 | Caddy-proxy config for glade.local |
+| `services/web.Caddyfile` | 42 | Inner Caddy config for glade-web container |
 
-### Runtime (outside repo, on host at `~/.roost/`)
+### Runtime (outside repo, on host at `~/.glade/`)
 
 | Path | Purpose |
 |---|---|
@@ -170,7 +170,7 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 | Port | Service |
 |------|---------|
 | 7681 | ttyd — main/default terminal shell |
-| 7682 | roost-web — Caddy serving index.html, assets, API proxy |
+| 7682 | glade-web — Caddy serving index.html, assets, API proxy |
 | 7683 | api.py — REST API |
 | 7690–7699 | Per-project ttyd instances (allocated dynamically) |
 

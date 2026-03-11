@@ -14,12 +14,12 @@ tmux `pipe-pane` streams all raw terminal output to flat files.
 
 **How:**
 ```bash
-tmux pipe-pane -o -t {session} 'cat >> ~/.roost/logs/{slug}/{timestamp}.log'
+tmux pipe-pane -o -t {session} 'cat >> ~/.glade/logs/{slug}/{timestamp}.log'
 ```
 
-**Where:** `~/.roost/logs/{project-slug}/{YYYY-MM-DD_HH-MM-SS}.log`
+**Where:** `~/.glade/logs/{project-slug}/{YYYY-MM-DD_HH-MM-SS}.log`
 
-- Main shell logs go to `~/.roost/logs/_main/`
+- Main shell logs go to `~/.glade/logs/_main/`
 - One file per session lifetime — tmux closes the pipe when the pane exits
 - Raw output including ANSI escape sequences (preserves full fidelity)
 - No daemon, no extra process — tmux handles it natively
@@ -58,7 +58,7 @@ Returns `text/plain`. If no active session, returns 404.
 
 ### `GET /api/logs/search?q=term`
 
-Runs `grep -ril` across `~/.roost/logs/`. Returns matching files with line excerpts:
+Runs `grep -ril` across `~/.glade/logs/`. Returns matching files with line excerpts:
 
 ```json
 [
@@ -129,7 +129,7 @@ function stripAnsi(str) {
 
 | File | Change |
 |---|---|
-| `entrypoint.sh` | Create `~/.roost/logs/` on startup |
+| `entrypoint.sh` | Create `~/.glade/logs/` on startup |
 | `api/api.py` | Add `pipe-pane` call when spawning tmux sessions |
 | `api/api.py` | New endpoints: `/api/logs`, `/api/logs/{project}/{file}`, `/api/logs/current/{project}`, `/api/logs/search` |
 

@@ -1,4 +1,4 @@
-# Roost — AI Assistant Guide
+# Glade — AI Assistant Guide
 
 Instructions for GitHub Copilot, Claude, and other AI systems working on this codebase.
 
@@ -6,9 +6,9 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Roost** is a self-hosted browser terminal. One Mac Mini runs Docker; any device connects via `https://roost.local`. The frontend is a single-file PWA (`web/index.html`, ~4900 lines). The backend is a stdlib Python API (`api/api.py`, ~920 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. One Mac Mini runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~4900 lines). The backend is a stdlib Python API (`api/api.py`, ~920 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
-Previously called "Copilot Sync" — now generalized. The repo directory is still `copilot-sync` but the project name is **Roost**.
+Previously called "Copilot Sync" — now generalized. The repo directory is still `copilot-sync` but the project name is **Glade**.
 
 ---
 
@@ -19,12 +19,12 @@ web/index.html              ← All UI: CSS + HTML + JS inline, no build step
 api/api.py                  ← REST API: projects, snippets, logs, uploads, settings
 entrypoint.sh               ← Container boot: mkdir, start API
 Dockerfile                  ← Debian bookworm-slim + ttyd + zsh + packages.sh hook
-docker-compose.yml          ← Two services: roost-ttyd + roost-web
+docker-compose.yml          ← Two services: glade-ttyd + glade-web
 Makefile                    ← Daily ops: up, down, restart, build, logs, shell
-services/Caddyfile          ← caddy-proxy config (roost.local routes)
-services/web.Caddyfile      ← Inner Caddy for roost-web (file server + API proxy)
+services/Caddyfile          ← caddy-proxy config (glade.local routes)
+services/web.Caddyfile      ← Inner Caddy for glade-web (file server + API proxy)
 config/zshrc                ← Personal Zsh config (gitignored; edit in place, no rebuild)
-config/zshrc.example        ← Starter template (committed; plain prompt, tmux hooks, roost-wrap)
+config/zshrc.example        ← Starter template (committed; plain prompt, tmux hooks, glade-wrap)
 config/tmux.conf            ← Tmux config (Catppuccin Mocha status bar)
 config/packages.sh          ← Personal build-time packages (gitignored)
 config/packages.sh.example  ← Recipe examples: gh CLI, Oh My Zsh, Node.js, pip, Rust (committed)
@@ -32,7 +32,7 @@ db/schema.sql               ← SQLite schema (projects, snippets, settings)
 install.sh                  ← Host-side installer (copies files, initialises DB, copies *.example → actual)
 ```
 
-### Runtime data (not in repo, lives at `~/.roost/` on host)
+### Runtime data (not in repo, lives at `~/.glade/` on host)
 
 ```
 db/history.db           ← SQLite: projects, snippets, settings
@@ -114,7 +114,7 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 
 1. `ensure_project_running()` calls `create_tmux_session(sname, dir, slug)`
 2. `create_tmux_session()` calls `start_pipe_pane(sname, slug)`
-3. `start_pipe_pane()` runs: `tmux pipe-pane -o -t {session} 'cat >> ~/.roost/logs/{slug}/{ts}.log'`
+3. `start_pipe_pane()` runs: `tmux pipe-pane -o -t {session} 'cat >> ~/.glade/logs/{slug}/{ts}.log'`
 4. Recording stops when the tmux pane exits
 
 ---
@@ -127,7 +127,7 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 | `ensure_tables()` | Creates projects/snippets/settings/interactions tables |
 | `strip_ansi(text)` | Remove ANSI escape codes from terminal output |
 | `slugify(name)` | "My Project" → "my-project" (for log directory names) |
-| `session_name(project_id)` | "roost-{id}" (tmux session name) |
+| `session_name(project_id)` | "glade-{id}" (tmux session name) |
 | `create_tmux_session()` | Create tmux session + start pipe-pane recording |
 | `start_pipe_pane()` | Start `tmux pipe-pane` for a session |
 | `ensure_project_running()` | Create tmux + spawn ttyd on a free port |
@@ -172,8 +172,8 @@ This was refined twice to handle bracketed paste mode (`\x1b[?2004h`) and OSC se
 
 ```bash
 # Container health
-docker logs roost-ttyd --tail 50
-docker exec roost-ttyd curl http://localhost:7683/api/health
+docker logs glade-ttyd --tail 50
+docker exec glade-ttyd curl http://localhost:7683/api/health
 
 # API endpoints
 curl http://localhost:7683/api/projects
@@ -181,8 +181,8 @@ curl http://localhost:7683/api/logs | python3 -m json.tool
 curl http://localhost:7683/api/logs/search?q=docker
 
 # Session logs on disk
-ls -la ~/.roost/logs/
-cat ~/.roost/logs/my-project/2026-03-10_03-43-00.log
+ls -la ~/.glade/logs/
+cat ~/.glade/logs/my-project/2026-03-10_03-43-00.log
 
 # Live API requests
 docker compose logs -f ttyd | grep "GET\|POST\|PUT\|DELETE"
@@ -199,7 +199,7 @@ make shell
 
 2. **`make restart` vs `make build`** — `restart` picks up api.py changes (no rebuild). `build` is only for Dockerfile/config changes.
 
-3. **Project slug → log directory** — Project "My App" becomes `my-app/` in `~/.roost/logs/`. The `slugify()` function handles this.
+3. **Project slug → log directory** — Project "My App" becomes `my-app/` in `~/.glade/logs/`. The `slugify()` function handles this.
 
 4. **Port pool is finite** — Only 10 project ports (7690–7699). `get_free_port()` finds the first unused one.
 
@@ -213,7 +213,7 @@ make shell
 
 9. **iOS viewport math** — The PWA panel height is `31vh`, tuned for iOS Safari's viewport with keyboard open. Changing this requires testing on an actual iPhone.
 
-10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes roost.local traffic). `services/web.Caddyfile` is for the roost-web container (serves files, proxies API).
+10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes glade.local traffic). `services/web.Caddyfile` is for the glade-web container (serves files, proxies API).
 
 11. **`config/zshrc` and `config/packages.sh` are gitignored** — They are personal copies, never committed. `config/zshrc.example` and `config/packages.sh.example` are the committed templates. `install.sh` copies `*.example` → actual on first run if the actual doesn't exist.
 

@@ -17,7 +17,7 @@ def test_health_returns_ok(client):
 
 
 def test_health_update_pending_when_flag_exists(client):
-    flag = "/tmp/roost-update-pending"
+    flag = "/tmp/glade-update-pending"
     open(flag, "w").close()
     try:
         status, data, _ = client.get("/api/health")
@@ -29,7 +29,7 @@ def test_health_update_pending_when_flag_exists(client):
 
 
 def test_health_image_update_pending_when_flag_exists(client):
-    flag = "/tmp/roost-image-update-pending"
+    flag = "/tmp/glade-image-update-pending"
     open(flag, "w").close()
     try:
         status, data, _ = client.get("/api/health")

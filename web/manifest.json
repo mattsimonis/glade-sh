@@ -1,6 +1,6 @@
 {
-  "name": "Roost",
-  "short_name": "Roost",
+  "name": "Glade",
+  "short_name": "Glade",
   "description": "Self-hosted terminal — identical on every device",
   "start_url": "/",
   "display": "standalone",
