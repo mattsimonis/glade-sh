@@ -60,6 +60,8 @@ ROOST_DIR    = os.environ.get("ROOST_DIR", "/root/.roost")
 UPLOADS_DIR  = os.environ.get("UPLOADS_DIR", "/root/.roost/uploads")
 LOGS_DIR     = os.environ.get("LOGS_DIR", "/root/.roost/logs")
 
+DISABLE_UPDATE_CHECK = os.environ.get("DISABLE_UPDATE_CHECK", "").lower() in ("1", "true", "yes")
+
 REBUILD_TRIGGER = os.path.join(ROOST_DIR, ".rebuild-requested")
 REBUILD_LOCK    = os.path.join(ROOST_DIR, ".rebuild-running")
 REBUILD_LOG     = os.path.join(ROOST_DIR, "rebuild.log")
@@ -452,8 +454,8 @@ class Handler(BaseHTTPRequestHandler):
         if p == ["api", "health"]:
             return self.send_json(200, {
                 "ok": True,
-                "update_pending": os.path.exists("/tmp/roost-update-pending"),
-                "image_update_pending": os.path.exists("/tmp/roost-image-update-pending"),
+                "update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/roost-update-pending"),
+                "image_update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/roost-image-update-pending"),
             })
         if p == ["api", "projects", "activity"]:
             return self._get_activity()

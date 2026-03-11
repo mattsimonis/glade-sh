@@ -38,6 +38,8 @@ services:
       - TERM=xterm-256color
       - ROOST_DIR=/root/.roost
       - ROOST_REPO_URL=${ROOST_REPO_URL:-https://github.com/mattsimonis/roost.git}
+      # Uncomment to disable the update-available banner entirely:
+      # - DISABLE_UPDATE_CHECK=1
     restart: unless-stopped
     networks:
       - shared_web
