@@ -130,9 +130,22 @@
         }
         .shell-tab:hover .shell-close, .shell-tab.active .shell-close { opacity: 0.7; }
         .shell-close:active { opacity: 1; background: #45475a; }
-        /* On touch devices: hide tiny ×, long-press closes instead */
+        /* On touch devices: hide tiny ×, long-press enters close mode instead */
         @media (pointer: coarse) {
             .shell-close { display: none; }
+        }
+        /* Close mode: × visible and red-tinted */
+        #shell-tabs-bar.close-mode .shell-close {
+            display: inline !important;
+            opacity: 1 !important;
+            color: #f38ba8;
+            background: rgba(243,139,168,0.15);
+        }
+        @keyframes tab-shake {
+            0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)}
+        }
+        #shell-tabs-bar.close-mode .shell-tab {
+            animation: tab-shake 120ms ease-in-out;
         }
         #shell-add-btn {
             flex-shrink: 0; width: 36px; height: 26px;
@@ -143,7 +156,9 @@
         }
         #shell-add-btn:active { background: #313244; color: #cdd6f4; }
         @media (pointer: coarse) {
-            #shell-add-btn { width: 40px; height: 28px; font-size: 19px; }
+            #shell-add-btn { width: 40px; height: 32px; font-size: 19px; }
+            .shell-tab { height: 32px; padding: 0 12px; }
+            #shell-tabs-bar { height: 36px; }
         }
 
         /* ── Project grid overlay ─────────────────────────────── */
@@ -1873,7 +1888,7 @@
                     { type: 'char', label: '*', value: '*' },
                     { type: 'char', label: '$', value: '$' },
                     { type: 'char', label: '%', value: '%' },
-                    { type: 'char', label: '^', value: '^' },
+                    { type: 'char', label: '|', value: '|' },
                     { type: 'char', label: '<', value: '<' },
                     { type: 'char', label: '>', value: '>' },
                     { type: 'char', label: '(', value: '(' },
@@ -1886,7 +1901,7 @@
                     { type: 'char', label: ']', value: ']' },
                     { type: 'char', label: '~', value: '~' },
                     { type: 'char', label: '-', value: '-' },
-                    { type: 'char', label: '_', value: '_' },
+                    { type: 'char', label: '`', value: '`' },
                     { type: 'char', label: '@', value: '@' },
                 ],
                 [
@@ -3828,6 +3843,21 @@
             ]);
         }
 
+        function enterCloseMode() {
+            var bar = document.getElementById('shell-tabs-bar');
+            if (bar) { bar.classList.add('close-mode'); haptic(15); }
+        }
+        function exitCloseMode() {
+            var bar = document.getElementById('shell-tabs-bar');
+            if (bar) bar.classList.remove('close-mode');
+        }
+        // Tap anywhere outside the tab bar to leave close mode
+        document.addEventListener('touchstart', function(e) {
+            var bar = document.getElementById('shell-tabs-bar');
+            if (!bar || !bar.classList.contains('close-mode')) return;
+            if (!bar.contains(e.target)) exitCloseMode();
+        }, { passive: true });
+
         function renderShellTabs(shells) {
             const bar = document.getElementById('shell-tabs-bar');
             if (!bar) return;
@@ -3847,14 +3877,37 @@
                     cls.setAttribute('aria-label', 'Close shell');
                     function doClose(e) { e.preventDefault(); e.stopPropagation(); closeShell(sh.index); }
                     cls.addEventListener('click', doClose);
+                    // On touch: prevent long-press timer from starting on ×, and close on tap
+                    cls.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: true });
+                    cls.addEventListener('touchend', function(e) { e.preventDefault(); e.stopPropagation(); closeShell(sh.index); }, { passive: false });
                     btn.appendChild(cls);
                     btn.addEventListener('contextmenu', function(e) {
                         e.preventDefault();
                         showShellCtx(sh.index, e.clientX, e.clientY);
                     });
                 }
+                // Long-press (300ms) enters or exits close mode
+                var lpFired = false, lpTimer = null;
+                btn.addEventListener('touchstart', function() {
+                    lpFired = false;
+                    lpTimer = setTimeout(function() {
+                        lpTimer = null; lpFired = true;
+                        if (bar.classList.contains('close-mode')) exitCloseMode();
+                        else enterCloseMode();
+                    }, 300);
+                }, { passive: true });
+                function cancelLp() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+                btn.addEventListener('touchend', cancelLp, { passive: true });
+                btn.addEventListener('touchmove', cancelLp, { passive: true });
+
                 function doSwitch(e) {
                     if (e) { e.preventDefault(); e.stopPropagation(); }
+                    if (lpFired) { lpFired = false; return; }
+                    if (bar.classList.contains('close-mode')) {
+                        exitCloseMode();
+                        if (!btn.classList.contains('active')) switchShell(sh.index);
+                        return;
+                    }
                     if (btn.classList.contains('active') && shells.length > 1) {
                         // Tap the active tab again → show close menu
                         const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
@@ -4962,13 +5015,39 @@
             { id:'explain-last', label:'Explain last command',desc:'Explain what just ran',        cmd:'gh copilot explain "$(fc -ln -1 2>/dev/null || history 1)"', partial:false },
         ];
         const CP_ACTIONS = [
-            { id:'ctrl-c',    label:'Cancel (^C)',           desc:'Send interrupt',                 fn:function(){ sendKey('c',{ctrl:true}); } },
+            { id:'ctrl-c',    label:'Cancel (^C)',           desc:'Send interrupt',                 fn:function(){ sendKey('c',{ctrl:true}); },    badge:'^C' },
             { id:'ctrl-d',    label:'EOF (^D)',              desc:'Send end-of-file / logout',       fn:function(){ sendKey('d',{ctrl:true}); } },
-            { id:'clear',     label:'Clear screen',          desc:'Send clear command',              fn:function(){ sendKey('l',{ctrl:true}); } },
+            { id:'clear',     label:'Clear screen',          desc:'Send clear command',              fn:function(){ sendKey('l',{ctrl:true}); },    badge:'^L' },
             { id:'copy',      label:'Copy selection',        desc:'Copy terminal text',              fn:handleCopy },
             { id:'paste',     label:'Paste clipboard',       desc:'Paste to terminal',               fn:handlePaste },
             { id:'focus',     label:'Focus mode',            desc:'Full-screen terminal',            fn:toggleFocusMode },
             { id:'reconnect', label:'Reconnect terminal',    desc:'Reload terminal iframe',          fn:function(){ forceReconnect(); } },
+            { id:'ctrl-z',    label:'Suspend (^Z)',          desc:'Send SIGTSTP / suspend job',      fn:function(){ sendKey('z',{ctrl:true}); } },
+            { id:'ctrl-a',    label:'Line start (^A)',       desc:'Jump to beginning of line',       fn:function(){ sendKey('a',{ctrl:true}); } },
+            { id:'ctrl-e',    label:'Line end (^E)',          desc:'Jump to end of line',             fn:function(){ sendKey('e',{ctrl:true}); } },
+            { id:'ctrl-w',    label:'Delete word (^W)',       desc:'Delete word before cursor',       fn:function(){ sendKey('w',{ctrl:true}); } },
+            { id:'ctrl-r',    label:'History search (^R)',   desc:'Reverse history search',          fn:function(){ sendKey('r',{ctrl:true}); } },
+            { id:'new-shell', label:'New shell tab',         desc:'Open another shell in this project', fn:function(){ if(currentProjectId) addShell(); } },
+            { id:'close-shell',label:'Close current tab',    desc:'Close the active shell tab',      fn:function(){
+                if(currentShellIdx !== null) {
+                    var idx = currentShellIdx;
+                    showConfirm('Close this tab?', null, [{ label:'Close Tab', style:'danger', onConfirm:function(){ closeShell(idx); } }]);
+                }
+            }},
+            { id:'next-shell',  label:'Next shell tab',      desc:'Switch to next shell',            fn:function(){
+                if (!currentShells || !currentShells.length) return;
+                var cur = currentShells.findIndex(function(s){ return s.index === currentShellIdx; });
+                var next = currentShells[(cur + 1) % currentShells.length];
+                if (next) switchShell(next.index);
+            }},
+            { id:'prev-shell',  label:'Previous shell tab', desc:'Switch to previous shell',        fn:function(){
+                if (!currentShells || !currentShells.length) return;
+                var cur = currentShells.findIndex(function(s){ return s.index === currentShellIdx; });
+                var prev = currentShells[(cur - 1 + currentShells.length) % currentShells.length];
+                if (prev) switchShell(prev.index);
+            }},
+            { id:'open-history', label:'Open history',      desc:'Browse session logs',             fn:function(){ navPanelAction('history'); } },
+            { id:'open-snippets',label:'Open snippets',     desc:'Browse saved commands',           fn:function(){ navPanelAction('snippets'); } },
         ];
 
         let cpListScrolled = false, cpListTouchY = 0;
@@ -5077,7 +5156,7 @@
                 matchedActions.forEach(function(a){
                     const item = makeItem('action',
                         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-                        a.label, a.desc, null,
+                        a.label, a.desc, a.badge || null,
                         function(){ closePalette(); setTimeout(function(){ a.fn(); haptic(8); }, 80); }
                     );
                     sec.appendChild(item);
