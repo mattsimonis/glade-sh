@@ -217,20 +217,29 @@ def test_auth_disconnect_gh_not_installed_returns_503(client, monkeypatch):
     assert_cors(headers)
 
 
-def test_auth_disconnect_runs_gh_logout(client, monkeypatch):
+def test_auth_disconnect_removes_hosts_file(client, monkeypatch, tmp_path):
+    """Disconnect removes ~/.config/gh/hosts.yml rather than calling gh auth logout."""
     monkeypatch.setattr(api.shutil, "which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else None)
-    called_with = []
-
-    def _run(cmd, **kw):
-        called_with.append(cmd)
-        return _run_ok()
-
-    monkeypatch.setattr(api.subprocess, "run", _run)
+    # Create a fake hosts file
+    hosts = tmp_path / "hosts.yml"
+    hosts.write_text("github.com:\n  oauth_token: fake\n")
+    monkeypatch.setattr(api.os.path, "exists", lambda p: str(p) == str(hosts) or os.path.exists(p))
+    removed = []
+    real_remove = api.os.remove
+    def _remove(p):
+        if str(p) == str(hosts):
+            removed.append(p)
+        else:
+            real_remove(p)
+    monkeypatch.setattr(api.os, "remove", _remove)
+    # Point the hosts path to our temp file
+    monkeypatch.setattr(api.os.path, "expanduser",
+                        lambda p: str(hosts) if "hosts.yml" in p else p)
     status, data, headers = client.delete("/api/github/auth")
     assert status == 200
     assert data["ok"] is True
     assert_cors(headers)
-    assert any("logout" in c for c in called_with)
+    assert len(removed) == 1  # hosts file was removed
 
 
 # ══════════════════════════════════════════════════════════════════════════════

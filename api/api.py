@@ -1029,6 +1029,8 @@ class Handler(BaseHTTPRequestHandler):
             cmd = ""
         idle = cmd.lower() in self._IDLE_SHELLS or cmd == ""
         return self.send_json(200, {"idle": idle, "command": cmd})
+
+    def _export_interactions(self):
         try:
             with open_db() as conn:
                 rows = conn.execute(

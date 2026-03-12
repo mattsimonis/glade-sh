@@ -295,6 +295,32 @@
         }
         #swipe-indicator.left{left:16px} #swipe-indicator.right{right:16px} #swipe-indicator.visible{opacity:1}
 
+        /* ── Find in scrollback ───────────────────────────────── */
+        #find-bar {
+            position:absolute; top:6px; left:50%; transform:translateX(-50%);
+            z-index:40; display:flex; align-items:center; gap:6px;
+            background:rgba(24,24,37,0.95); backdrop-filter:blur(12px);
+            border:1px solid #45475a; border-radius:10px; padding:5px 8px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.5);
+            transition:opacity 180ms, transform 180ms;
+            opacity:0; pointer-events:none; transform:translateX(-50%) translateY(-8px);
+            max-width:calc(100vw - 32px);
+        }
+        #find-bar.fb-open { opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
+        #find-input {
+            background:transparent; border:none; outline:none; color:#cdd6f4;
+            font-family:var(--font-mono); font-size:13px; width:180px; min-width:80px;
+        }
+        #find-input::placeholder { color:#6c7086; }
+        #find-count { font-size:11px; color:#6c7086; white-space:nowrap; min-width:32px; text-align:right; }
+        .fb-btn {
+            background:none; border:none; cursor:pointer; color:#89b4fa;
+            font-size:14px; padding:2px 5px; border-radius:5px; line-height:1;
+            display:flex; align-items:center;
+        }
+        .fb-btn:active { background:#313244; }
+        .fb-btn:disabled { color:#45475a; cursor:default; }
+
         /* ── Selection handles ────────────────────────────────── */
         #sel-layer {
             position:absolute; inset:0; z-index:26; pointer-events:none;
@@ -1286,6 +1312,13 @@
                 <span class="reconnect-hint" id="reconnect-hint">Waiting for terminal connection</span>
             </div>
             <div id="swipe-indicator"></div>
+            <div id="find-bar">
+                <button class="fb-btn" id="fb-close" title="Close find" aria-label="Close find">✕</button>
+                <input id="find-input" type="search" placeholder="Search terminal…" autocomplete="off" spellcheck="false">
+                <span id="find-count"></span>
+                <button class="fb-btn" id="fb-prev" title="Previous match" aria-label="Previous match" disabled>▲</button>
+                <button class="fb-btn" id="fb-next" title="Next match" aria-label="Next match" disabled>▼</button>
+            </div>
             <div id="gesture-overlay"></div>
             <div id="sel-layer">
                 <div id="sel-handle-start" class="sel-handle"></div>
@@ -1684,10 +1717,16 @@
 
         <!-- Uploaded Images section -->
         <div class="settings-section">
-            <div class="settings-section-title">Uploaded Images</div>
+            <div class="settings-section-title">Uploads</div>
             <div id="settings-uploads-list" style="margin-top:8px;">
                 <span style="color:#6c7086;font-size:12px;">No uploads yet</span>
             </div>
+        </div>
+
+        <!-- Terminal Theme section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Terminal Theme</div>
+            <div id="settings-theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"></div>
         </div>
 
         <!-- About section -->
@@ -3055,14 +3094,21 @@
                     if (!el) return;
                     if (!arr.length) { el.innerHTML = '<span style="color:#6c7086;font-size:12px">No uploads yet</span>'; return; }
                     el.innerHTML = arr.slice(0, 5).map(function(u) {
+                        var isImg = u.mime && u.mime.startsWith('image/');
+                        var icon = isImg ? '🖼️' : '📄';
+                        var sizeStr = u.size >= 1024 * 1024
+                            ? (u.size / (1024 * 1024)).toFixed(1) + 'MB'
+                            : Math.round(u.size / 1024) + 'KB';
                         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #313244">' +
-                            '<span style="font-size:11px;font-family:var(--font-mono);color:#89b4fa">' + u.filename + '</span>' +
-                            '<span style="font-size:10px;color:#6c7086">' + Math.round(u.size / 1024) + 'KB</span>' +
+                            '<span style="font-size:11px;font-family:var(--font-mono);color:#89b4fa">' + icon + ' ' + u.filename + '</span>' +
+                            '<span style="font-size:10px;color:#6c7086">' + sizeStr + '</span>' +
                             '</div>';
                     }).join('');
                 }).catch(function(){});
                 // GitHub status
                 refreshGithubSettingsState();
+                // Theme picker
+                renderThemePicker();
             }
             function closeSettings() { overlay.classList.remove('open'); }
 
@@ -3181,21 +3227,90 @@
                 if (text) { await navigator.clipboard.writeText(text); flashButton(copyBtn, 'flash-green'); toast('Copied', 'success'); }
             } catch (err) { console.warn('Copy failed:', err); }
         }
+        // ── Paste guard helpers ──────────────────────────────────────────────────
+        // Patterns that suggest the text is a credential / secret.
+        const SECRET_PATTERNS = [
+            /ghp_[A-Za-z0-9]{36}/,          // GitHub personal access token
+            /github_pat_[A-Za-z0-9_]{82}/,  // GitHub fine-grained PAT
+            /gho_[A-Za-z0-9]{36}/,           // GitHub OAuth
+            /ghs_[A-Za-z0-9]{36}/,           // GitHub app installation
+            /sk-[A-Za-z0-9]{32,}/,           // OpenAI / generic sk- key
+            /xoxb-[0-9A-Za-z-]+/,            // Slack bot token
+            /AKIA[0-9A-Z]{16}/,              // AWS access key
+            /-----BEGIN [A-Z ]+ KEY-----/,   // PEM private key
+            /[0-9a-f]{64}/,                  // 64-char hex (sha256 / JWT secret)
+            /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/,  // JWT
+        ];
+        function looksLikeSecret(text) {
+            return SECRET_PATTERNS.some(function(re) { return re.test(text); });
+        }
+
+        function doPaste(text) {
+            findTerminal();
+            let sent = false;
+            try {
+                const allWs = findWebSockets(iframe.contentWindow);
+                for (const ws of allWs) {
+                    if (ws.readyState === WebSocket.OPEN) { ws.send('0' + text); sent = true; break; }
+                }
+            } catch (e) {}
+            if (!sent) { for (const ch of text) sendKey(ch); }
+            flashButton(pasteBtn, 'flash-blue'); haptic(10);
+            toast('Pasted', 'success');
+        }
+
+        function doBracketedPaste(text) {
+            // Bracketed paste mode: terminal won't expand history / aliases on paste
+            findTerminal();
+            const wrapped = '\x1b[200~' + text + '\x1b[201~';
+            let sent = false;
+            try {
+                const allWs = findWebSockets(iframe.contentWindow);
+                for (const ws of allWs) {
+                    if (ws.readyState === WebSocket.OPEN) { ws.send('0' + wrapped); sent = true; break; }
+                }
+            } catch (e) {}
+            if (!sent) doPaste(text); // fallback
+            flashButton(pasteBtn, 'flash-blue'); haptic(10);
+            toast('Pasted (concealed)', 'success');
+        }
+
         async function handlePaste() {
             try {
                 const text = await navigator.clipboard.readText();
                 if (!text) return;
-                findTerminal();
-                let sent = false;
-                try {
-                    const allWs = findWebSockets(iframe.contentWindow);
-                    for (const ws of allWs) {
-                        if (ws.readyState === WebSocket.OPEN) { ws.send('0' + text); sent = true; break; }
-                    }
-                } catch (e) {}
-                if (!sent) { for (const ch of text) sendKey(ch); }
-                flashButton(pasteBtn, 'flash-blue'); haptic(10);
-                toast('Pasted', 'success');
+
+                const isSecret  = looksLikeSecret(text);
+                const lineCount = (text.match(/\n/g) || []).length;
+                const multiline = lineCount >= 1;
+
+                // Secret detected — offer concealed paste
+                if (isSecret) {
+                    showConfirm(
+                        'Secret detected',
+                        'This looks like a credential. Paste it as plain text, or use concealed mode (bracketed paste — shell won\'t echo it to history).',
+                        [
+                            { label: 'Concealed paste', style: 'primary', onConfirm: function() { doBracketedPaste(text); } },
+                            { label: 'Paste anyway',    style: 'danger',  onConfirm: function() { doPaste(text); } },
+                        ]
+                    );
+                    return;
+                }
+
+                // Multiline — confirm before sending
+                if (multiline) {
+                    var lineWord = lineCount === 1 ? '2 lines' : (lineCount + 1) + ' lines';
+                    showConfirm(
+                        'Paste ' + lineWord + '?',
+                        'This will send multiple lines. Each newline executes immediately in most shells.',
+                        [
+                            { label: 'Paste ' + lineWord, style: 'primary', onConfirm: function() { doPaste(text); } },
+                        ]
+                    );
+                    return;
+                }
+
+                doPaste(text);
             } catch (err) { console.warn('Paste failed:', err); }
         }
 
@@ -3250,7 +3365,7 @@
             if (terminalInstance && typeof terminalInstance.input === 'function') { terminalInstance.input(text, false); }
         }
 
-        // ── Image paste ─────────────────────────────────────────────────────────
+        // ── File / image paste ───────────────────────────────────────────────────
         async function pasteImageFromClipboard() {
             try {
                 if (!navigator.clipboard || !navigator.clipboard.read) throw new Error('no clipboard API');
@@ -3259,24 +3374,31 @@
                     const imgType = item.types.find(function(t) { return t.startsWith('image/'); });
                     if (imgType) {
                         const blob = await item.getType(imgType);
-                        await uploadImageBlob(blob, imgType);
+                        await uploadFileBlob(blob, imgType, null);
                         return;
                     }
                 }
             } catch (e) {}
-            // Fallback: file picker
+            // Fallback: file picker — accepts any file type
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = 'image/*';
+            input.accept = '*';
             input.onchange = async function() {
                 if (!this.files[0]) return;
-                await uploadImageBlob(this.files[0], this.files[0].type);
+                const file = this.files[0];
+                await uploadFileBlob(file, file.type || 'application/octet-stream', file.name);
             };
             input.click();
         }
 
         async function uploadImageBlob(blob, mimeType) {
-            showImageOverlay(URL.createObjectURL(blob), 'Uploading\u2026', null);
+            return uploadFileBlob(blob, mimeType, null);
+        }
+
+        async function uploadFileBlob(blob, mimeType, origFilename) {
+            const isImage = mimeType && mimeType.startsWith('image/');
+            const previewSrc = isImage ? URL.createObjectURL(blob) : null;
+            showFileOverlay(previewSrc, origFilename || 'Uploading\u2026', null, mimeType);
             try {
                 const reader = new FileReader();
                 const b64 = await new Promise(function(res, rej) {
@@ -3284,14 +3406,16 @@
                     reader.onerror = rej;
                     reader.readAsDataURL(blob);
                 });
+                const body = { data: b64, type: mimeType };
+                if (origFilename) body.filename = origFilename;
                 const resp = await fetch('/api/upload-image', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({data: b64, type: mimeType}),
+                    body: JSON.stringify(body),
                 });
                 if (!resp.ok) throw new Error('upload failed');
                 const result = await resp.json();
-                showImageOverlay(URL.createObjectURL(blob), result.path, result.path);
+                showFileOverlay(previewSrc, result.path, result.path, mimeType);
             } catch (e) {
                 const statusEl = document.getElementById('img-overlay-status');
                 if (statusEl) statusEl.textContent = 'Upload failed. Try again.';
@@ -3299,15 +3423,46 @@
         }
 
         function showImageOverlay(imgSrc, pathText, injectPath) {
+            return showFileOverlay(imgSrc, pathText, injectPath, imgSrc ? 'image/png' : null);
+        }
+
+        function showFileOverlay(previewSrc, pathText, injectPath, mimeType) {
             const overlay   = document.getElementById('img-overlay');
             const preview   = document.getElementById('img-overlay-preview');
             const pathEl    = document.getElementById('img-overlay-path');
             const statusEl  = document.getElementById('img-overlay-status');
             if (!overlay) return;
-            preview.src       = imgSrc;
-            pathEl.textContent  = pathText;
-            statusEl.textContent = injectPath ? 'Image saved on server' : '';
-            overlay.style.display = 'flex';
+            const isImage = mimeType && mimeType.startsWith('image/');
+            if (isImage && previewSrc) {
+                preview.src           = previewSrc;
+                preview.style.display = 'block';
+            } else {
+                preview.src           = '';
+                preview.style.display = 'none';
+            }
+            // Show a non-image placeholder card when it's a regular file
+            let fileIcon = overlay.querySelector('#img-overlay-file-icon');
+            if (!fileIcon) {
+                fileIcon = document.createElement('div');
+                fileIcon.id = 'img-overlay-file-icon';
+                fileIcon.style.cssText = 'font-size:48px;text-align:center;padding:16px 0;';
+                preview.parentNode.insertBefore(fileIcon, preview);
+            }
+            if (!isImage && pathText && pathText !== 'Uploading\u2026') {
+                var ext = (pathText.split('.').pop() || '').toLowerCase();
+                var icon = ext === 'txt' || ext === 'md' || ext === 'log' ? '📄'
+                         : ext === 'pdf' ? '📕'
+                         : ext === 'zip' || ext === 'tar' || ext === 'gz' ? '🗜️'
+                         : ext === 'sh' || ext === 'py' || ext === 'js' ? '📜'
+                         : '📁';
+                fileIcon.textContent  = icon;
+                fileIcon.style.display = 'block';
+            } else {
+                fileIcon.style.display = 'none';
+            }
+            pathEl.textContent       = pathText;
+            statusEl.textContent     = injectPath ? (isImage ? 'Image saved on server' : 'File saved on server') : '';
+            overlay.style.display    = 'flex';
             requestAnimationFrame(function() { overlay.classList.add('io-visible'); });
 
             document.getElementById('img-overlay-close').onclick = function() {
@@ -4618,6 +4773,10 @@
                     // More reliable than terminal.parser.registerOscHandler (avoids xterm.js version issues).
                     if (!window._osc7Wired) wireOsc7();
                     if (terminalInstance && window._setupSelHandles) window._setupSelHandles();
+                    // Register URL link provider so tapping a URL opens an action sheet.
+                    if (terminalInstance && !terminalInstance._gladeLinkProviderRegistered) {
+                        try { registerTermLinkProvider(terminalInstance); } catch(e) {}
+                    }
                 }
                 return !!xtermTextarea;
             } catch (e) { return false; }
@@ -4677,7 +4836,61 @@
             } catch (e) {}
             return null;
         }
-        function sendKey(key, opts) {
+
+        // ── URL link provider ───────────────────────────────────────────────────
+        const URL_RE = /https?:\/\/[^\s\])"'>]{4,}/g;
+
+        function registerTermLinkProvider(term) {
+            if (!term || typeof term.registerLinkProvider !== 'function') return;
+            term._gladeLinkProviderRegistered = true;
+            term.registerLinkProvider({
+                provideLinks: function(y, callback) {
+                    try {
+                        const buf  = term.buffer.active;
+                        const line = buf.getLine(y - 1);
+                        if (!line) { callback([]); return; }
+                        const text   = line.translateToString(true);
+                        const links  = [];
+                        let match;
+                        URL_RE.lastIndex = 0;
+                        while ((match = URL_RE.exec(text)) !== null) {
+                            (function(url, startCol) {
+                                links.push({
+                                    text:  url,
+                                    range: {
+                                        start: { x: startCol + 1, y: y },
+                                        end:   { x: startCol + url.length, y: y },
+                                    },
+                                    activate: function() { showUrlActionSheet(url); },
+                                    hover:    function(e, u) {
+                                        try { e.target.style.cursor = 'pointer'; } catch(_){}
+                                    },
+                                    leave:    function(e) {
+                                        try { e.target.style.cursor = ''; } catch(_) {}
+                                    },
+                                });
+                            })(match[0], match.index);
+                        }
+                        callback(links);
+                    } catch(e) { callback([]); }
+                },
+            });
+        }
+
+        function showUrlActionSheet(url) {
+            showConfirm(
+                'URL',
+                url,
+                [
+                    { label: 'Open in Safari', style: 'primary', onConfirm: function() { window.open(url, '_blank'); } },
+                    { label: 'Copy URL',        style: '',        onConfirm: function() {
+                        navigator.clipboard.writeText(url).catch(function(){});
+                        toast('URL copied', 'success');
+                    }},
+                    { label: 'Insert into terminal', style: '', onConfirm: function() { sendTextToTerminal(url); } },
+                ]
+            );
+        }
             opts = opts || {};
             const ctrl = opts.ctrl || false, alt = opts.alt || false;
             findTerminal();
@@ -4949,6 +5162,273 @@
             iframe.style.zoom = String(termFontScale);
         }
 
+        // ── Terminal themes ─────────────────────────────────────────────────────
+        const TERM_THEMES = {
+            'mocha': {
+                label: 'Mocha', swatch: '#1e1e2e',
+                theme: { background:'#1e1e2e', foreground:'#cdd6f4', cursor:'#f5e0dc',
+                    black:'#45475a', red:'#f38ba8', green:'#a6e3a1', yellow:'#f9e2af',
+                    blue:'#89b4fa', magenta:'#f5c2e7', cyan:'#94e2d5', white:'#bac2de',
+                    brightBlack:'#585b70', brightRed:'#f38ba8', brightGreen:'#a6e3a1',
+                    brightYellow:'#f9e2af', brightBlue:'#89b4fa', brightMagenta:'#f5c2e7',
+                    brightCyan:'#94e2d5', brightWhite:'#a6adc8' },
+            },
+            'frappe': {
+                label: 'Frappé', swatch: '#303446',
+                theme: { background:'#303446', foreground:'#c6d0f5', cursor:'#f2d5cf',
+                    black:'#51576d', red:'#e78284', green:'#a6d189', yellow:'#e5c890',
+                    blue:'#8caaee', magenta:'#f4b8e4', cyan:'#81c8be', white:'#b5bfe2',
+                    brightBlack:'#626880', brightRed:'#e78284', brightGreen:'#a6d189',
+                    brightYellow:'#e5c890', brightBlue:'#8caaee', brightMagenta:'#f4b8e4',
+                    brightCyan:'#81c8be', brightWhite:'#a5adce' },
+            },
+            'macchiato': {
+                label: 'Macchiato', swatch: '#24273a',
+                theme: { background:'#24273a', foreground:'#cad3f5', cursor:'#f4dbd6',
+                    black:'#494d64', red:'#ed8796', green:'#a6da95', yellow:'#eed49f',
+                    blue:'#8aadf4', magenta:'#f5bde6', cyan:'#8bd5ca', white:'#b8c0e0',
+                    brightBlack:'#5b6078', brightRed:'#ed8796', brightGreen:'#a6da95',
+                    brightYellow:'#eed49f', brightBlue:'#8aadf4', brightMagenta:'#f5bde6',
+                    brightCyan:'#8bd5ca', brightWhite:'#a5adcb' },
+            },
+            'latte': {
+                label: 'Latte', swatch: '#eff1f5',
+                theme: { background:'#eff1f5', foreground:'#4c4f69', cursor:'#dc8a78',
+                    black:'#5c5f77', red:'#d20f39', green:'#40a02b', yellow:'#df8e1d',
+                    blue:'#1e66f5', magenta:'#ea76cb', cyan:'#179299', white:'#acb0be',
+                    brightBlack:'#6c6f85', brightRed:'#d20f39', brightGreen:'#40a02b',
+                    brightYellow:'#df8e1d', brightBlue:'#1e66f5', brightMagenta:'#ea76cb',
+                    brightCyan:'#179299', brightWhite:'#bcc0cc' },
+            },
+            'solarized-dark': {
+                label: 'Solarized Dark', swatch: '#002b36',
+                theme: { background:'#002b36', foreground:'#839496', cursor:'#839496',
+                    black:'#073642', red:'#dc322f', green:'#859900', yellow:'#b58900',
+                    blue:'#268bd2', magenta:'#d33682', cyan:'#2aa198', white:'#eee8d5',
+                    brightBlack:'#002b36', brightRed:'#cb4b16', brightGreen:'#586e75',
+                    brightYellow:'#657b83', brightBlue:'#839496', brightMagenta:'#6c71c4',
+                    brightCyan:'#93a1a1', brightWhite:'#fdf6e3' },
+            },
+            'one-dark': {
+                label: 'One Dark', swatch: '#282c34',
+                theme: { background:'#282c34', foreground:'#abb2bf', cursor:'#528bff',
+                    black:'#3f4451', red:'#e06c75', green:'#98c379', yellow:'#e5c07b',
+                    blue:'#61afef', magenta:'#c678dd', cyan:'#56b6c2', white:'#abb2bf',
+                    brightBlack:'#4f5666', brightRed:'#be5046', brightGreen:'#98c379',
+                    brightYellow:'#d19a66', brightBlue:'#61afef', brightMagenta:'#c678dd',
+                    brightCyan:'#56b6c2', brightWhite:'#ffffff' },
+            },
+        };
+
+        let currentTermTheme = localStorage.getItem('termTheme') || 'mocha';
+
+        function applyTermTheme(themeId) {
+            const def = TERM_THEMES[themeId];
+            if (!def) return;
+            currentTermTheme = themeId;
+            localStorage.setItem('termTheme', themeId);
+            try {
+                const w = iframe.contentWindow;
+                if (w && w.term && typeof w.term.options === 'object') {
+                    w.term.options.theme = def.theme;
+                }
+            } catch(e) {}
+            // Update swatch active state
+            document.querySelectorAll('.theme-swatch').forEach(function(el) {
+                el.classList.toggle('active', el.dataset.themeId === themeId);
+            });
+        }
+
+        function renderThemePicker() {
+            const grid = document.getElementById('settings-theme-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            Object.keys(TERM_THEMES).forEach(function(id) {
+                const def = TERM_THEMES[id];
+                const btn = document.createElement('button');
+                btn.className  = 'theme-swatch' + (id === currentTermTheme ? ' active' : '');
+                btn.dataset.themeId = id;
+                btn.title      = def.label;
+                btn.style.cssText = [
+                    'background:' + def.theme.background,
+                    'color:' + def.theme.foreground,
+                    'border:2px solid ' + (id === currentTermTheme ? def.theme.blue : 'transparent'),
+                    'border-radius:8px',
+                    'padding:10px 6px 6px',
+                    'font-size:10px',
+                    'cursor:pointer',
+                    'text-align:center',
+                    'line-height:1.3',
+                    'overflow:hidden',
+                    'white-space:nowrap',
+                    'text-overflow:ellipsis',
+                ].join(';');
+                // Mini color bar
+                var bar = ['red','green','blue','yellow'].map(function(c) {
+                    return '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + def.theme[c] + ';margin:0 1px"></span>';
+                }).join('');
+                btn.innerHTML = '<div style="margin-bottom:4px">' + bar + '</div>' + def.label;
+                btn.addEventListener('click', function() { applyTermTheme(id); });
+                grid.appendChild(btn);
+            });
+        }
+
+        // ── Find in scrollback ──────────────────────────────────────────────────
+        (function() {
+            const findBar   = document.getElementById('find-bar');
+            const findInput = document.getElementById('find-input');
+            const findCount = document.getElementById('find-count');
+            const fbClose   = document.getElementById('fb-close');
+            const fbPrev    = document.getElementById('fb-prev');
+            const fbNext    = document.getElementById('fb-next');
+            if (!findBar) return;
+
+            let findMatches  = [];  // [{line, col, len}]
+            let findCurrent  = -1;
+            let findQuery    = '';
+            let findDebounce = null;
+
+            function openFind() {
+                findBar.classList.add('fb-open');
+                setTimeout(function(){ try{ findInput.focus(); }catch(e){} }, 100);
+                if (findInput.value) runFind(findInput.value);
+            }
+            function closeFind() {
+                findBar.classList.remove('fb-open');
+                findMatches = []; findCurrent = -1;
+                updateFindUI();
+                try{ findInput.blur(); }catch(e){}
+            }
+            window.openFind = openFind;
+
+            function readBufferLines() {
+                try {
+                    if (!terminalInstance) findTerminal();
+                    if (!terminalInstance) return [];
+                    const buf   = terminalInstance.buffer.active;
+                    const lines = [];
+                    for (let i = 0; i < buf.length; i++) {
+                        const l = buf.getLine(i);
+                        lines.push(l ? l.translateToString(true) : '');
+                    }
+                    return lines;
+                } catch(e) { return []; }
+            }
+
+            function runFind(q) {
+                findQuery = q;
+                findMatches = [];
+                if (!q) { updateFindUI(); return; }
+                const lower = q.toLowerCase();
+                const lines = readBufferLines();
+                lines.forEach(function(text, lineIdx) {
+                    const t = text.toLowerCase();
+                    let pos = 0;
+                    while ((pos = t.indexOf(lower, pos)) !== -1) {
+                        findMatches.push({ line: lineIdx, col: pos, len: q.length });
+                        pos += q.length;
+                    }
+                });
+                findCurrent = findMatches.length ? 0 : -1;
+                jumpToCurrent();
+                updateFindUI();
+            }
+
+            function jumpToCurrent() {
+                if (findCurrent < 0 || !findMatches.length) return;
+                const m = findMatches[findCurrent];
+                try {
+                    terminalInstance.scrollToLine(m.line);
+                    terminalInstance.select(m.col, m.line, m.len);
+                } catch(e) {}
+            }
+
+            function updateFindUI() {
+                const n = findMatches.length;
+                if (!findQuery) {
+                    findCount.textContent = '';
+                } else if (n === 0) {
+                    findCount.textContent = 'No matches';
+                    findCount.style.color = '#f38ba8';
+                } else {
+                    findCount.textContent = (findCurrent + 1) + '/' + n;
+                    findCount.style.color = '#6c7086';
+                }
+                fbPrev.disabled = n < 2;
+                fbNext.disabled = n < 2;
+            }
+
+            findInput.addEventListener('input', function() {
+                clearTimeout(findDebounce);
+                findDebounce = setTimeout(function() { runFind(findInput.value.trim()); }, 180);
+            });
+            findInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+                if (e.key === 'Enter')  { e.preventDefault(); (e.shiftKey ? goPrev : goNext)(); }
+            });
+            function goNext() {
+                if (!findMatches.length) return;
+                findCurrent = (findCurrent + 1) % findMatches.length;
+                jumpToCurrent(); updateFindUI();
+            }
+            function goPrev() {
+                if (!findMatches.length) return;
+                findCurrent = (findCurrent - 1 + findMatches.length) % findMatches.length;
+                jumpToCurrent(); updateFindUI();
+            }
+            fbNext.addEventListener('click', goNext);
+            fbPrev.addEventListener('click', goPrev);
+            fbClose.addEventListener('click', closeFind);
+        })();
+
+        // ── Notify when shell goes idle ─────────────────────────────────────────
+        var _notifyPollTimer = null;
+
+        function requestNotifyWhenDone() {
+            if (!currentProjectId) { toast('No active project', 'error'); return; }
+            // Request notification permission first
+            if (!('Notification' in window)) {
+                toast('Notifications not supported', 'error'); return;
+            }
+            if (Notification.permission === 'denied') {
+                toast('Notifications blocked — check browser settings', 'error'); return;
+            }
+            function startPolling() {
+                clearTimeout(_notifyPollTimer);
+                toast('Will notify when shell is idle', 'success', 3000);
+                var attempts = 0;
+                function poll() {
+                    if (!currentProjectId) return;
+                    fetch('/api/projects/' + currentProjectId + '/shell-idle')
+                        .then(function(r) { return r.json(); })
+                        .then(function(d) {
+                            // First poll may already be idle — wait for one busy then idle cycle
+                            attempts++;
+                            if (d.idle && attempts > 2) {
+                                var n = new Notification('Glade — shell idle', {
+                                    body: 'Your command has finished.',
+                                    icon: '/icons/icon-192.png',
+                                    tag:  'glade-idle',
+                                });
+                                n.onclick = function() { window.focus(); };
+                            } else {
+                                _notifyPollTimer = setTimeout(poll, 4000);
+                            }
+                        })
+                        .catch(function() { _notifyPollTimer = setTimeout(poll, 8000); });
+                }
+                poll();
+            }
+            if (Notification.permission === 'granted') {
+                startPolling();
+            } else {
+                Notification.requestPermission().then(function(p) {
+                    if (p === 'granted') startPolling();
+                    else toast('Permission denied', 'error');
+                });
+            }
+        }
+
         // ── One-time trackpad hint ──────────────────────────────────────────────
         function showTrackpadHint() {
             if (trackpadHintShown) return;
@@ -5066,10 +5546,29 @@
                 lastTapTime = now;
             } else if (dt < 800) {
                 if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 0.8) {
-                    const dir = dx > 0 ? 'up' : 'down';
-                    sendKey(dx > 0 ? 'ArrowUp' : 'ArrowDown', {});
-                    flashSwipeIndicator(dir);
-                    haptic(8);
+                    // Large fast horizontal swipe → switch shell tab
+                    if (Math.abs(dx) > 90 && dt < 500 && currentShells && currentShells.length > 1) {
+                        const cur = currentShells.findIndex(function(s){ return s.index === currentShellIdx; });
+                        const n   = currentShells.length;
+                        // left swipe = next tab, right swipe = prev tab (iOS convention)
+                        const next = dx < 0
+                            ? currentShells[(cur + 1) % n]
+                            : currentShells[(cur - 1 + n) % n];
+                        if (next) { switchShell(next.index); haptic(12); }
+                        const arrowDir = dx < 0 ? 'right' : 'left';
+                        swipeIndicator.textContent = dx < 0 ? '▶' : '◀';
+                        swipeIndicator.className = arrowDir + ' visible';
+                        clearTimeout(swipeIndicatorTimer);
+                        swipeIndicatorTimer = setTimeout(function () {
+                            swipeIndicator.className = swipeIndicator.className.replace(' visible', '');
+                        }, 500);
+                    } else {
+                        // Small swipe → history navigation
+                        const dir = dx > 0 ? 'up' : 'down';
+                        sendKey(dx > 0 ? 'ArrowUp' : 'ArrowDown', {});
+                        flashSwipeIndicator(dir);
+                        haptic(8);
+                    }
                 }
             }
         }, { passive: false });
@@ -5364,6 +5863,7 @@
             if (state === 'connected') {
                 showTrackpadHint();
                 if (termFontScale !== 1.0) applyTermFontScale(termFontScale);
+                if (currentTermTheme && currentTermTheme !== 'mocha') applyTermTheme(currentTermTheme);
                 // Don't fade the indicator while the debug panel is open
                 var dbgPanelOpen = document.getElementById('debug-panel').classList.contains('open');
                 if (!dbgPanelOpen)
@@ -5537,6 +6037,8 @@
             }},
             { id:'open-history', label:'Open history',      desc:'Browse session logs',             fn:function(){ navPanelAction('history'); } },
             { id:'open-snippets',label:'Open snippets',     desc:'Browse saved commands',           fn:function(){ navPanelAction('snippets'); } },
+            { id:'find',         label:'Find in scrollback', desc:'Search terminal output',          fn:function(){ if(typeof openFind==='function') openFind(); }, badge:'⌘F' },
+            { id:'notify-done',  label:'Notify when done',  desc:'Ping me when shell goes idle',    fn:function(){ requestNotifyWhenDone(); } },
         ];
 
         let cpListScrolled = false, cpListTouchY = 0;
@@ -5922,6 +6424,9 @@
         // Escape           — close topmost open modal (all devices)
         // Ctrl+Shift+] / [ — next / prev shell tab (desktop; Ctrl+Tab is browser-owned)
         // Cmd+K            — open command palette (desktop)
+        // Cmd+T            — new shell tab
+        // Cmd+W            — close current shell tab (with confirm)
+        // Cmd+1-9          — switch to nth shell tab
         // Ctrl+`           — toggle bottom panel (desktop)
         document.addEventListener('keydown', function (e) {
             // Escape: close topmost open modal ──────────────────────────────────
@@ -5974,6 +6479,40 @@
             if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyK') {
                 e.preventDefault(); e.stopImmediatePropagation();
                 openPalette();
+                return;
+            }
+
+            // Cmd+F — find in scrollback ─────────────────────────────────────────
+            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyF') {
+                e.preventDefault(); e.stopImmediatePropagation();
+                if (typeof openFind === 'function') openFind();
+                return;
+            }
+
+            // Cmd+T — new shell tab ──────────────────────────────────────────────
+            if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyT') {
+                e.preventDefault(); e.stopImmediatePropagation();
+                if (currentProjectId) addShell();
+                return;
+            }
+
+            // Cmd+W — close current shell tab ────────────────────────────────────
+            if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyW') {
+                e.preventDefault(); e.stopImmediatePropagation();
+                if (currentShellIdx !== null) {
+                    var idx = currentShellIdx;
+                    showConfirm('Close this tab?', null, [{ label:'Close Tab', style:'danger', onConfirm:function(){ closeShell(idx); } }]);
+                }
+                return;
+            }
+
+            // Cmd+1-9 — switch to nth shell tab ─────────────────────────────────
+            if (e.metaKey && !e.ctrlKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+                var n = parseInt(e.code.slice(5), 10) - 1;
+                if (currentShells && currentShells[n]) {
+                    e.preventDefault(); e.stopImmediatePropagation();
+                    switchShell(currentShells[n].index);
+                }
                 return;
             }
 
