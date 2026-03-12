@@ -253,86 +253,132 @@ add_shell_integration "$HOME/.zshrc"  ".zshrc"
 add_shell_integration "$HOME/.bashrc" ".bashrc"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 9: Rebuild watcher (macOS only — launchd WatchPaths agent)
+# Step 9: Rebuild watcher + auto-update (macOS only — launchd agents)
 # ─────────────────────────────────────────────────────────────────────────────
 if [[ "$(uname -s)" == "Darwin" ]]; then
     SCRIPTS_DIR="$GLADE_DIR/scripts"
     WATCHER_SCRIPT="$SCRIPTS_DIR/rebuild-watcher.sh"
-    PLIST_PATH="$HOME/Library/LaunchAgents/com.glade.rebuild-watcher.plist"
+    UPDATER_SCRIPT="$SCRIPTS_DIR/auto-update.sh"
+    WATCHER_PLIST="$HOME/Library/LaunchAgents/com.glade.rebuild-watcher.plist"
+    UPDATER_PLIST="$HOME/Library/LaunchAgents/com.glade.auto-update.plist"
     TRIGGER_FILE="$GLADE_DIR/.rebuild-requested"
     LOCK_FILE="$GLADE_DIR/.rebuild-running"
     REBUILD_LOG="$GLADE_DIR/rebuild.log"
+    LAUNCH_CTL_UID=$(id -u)
 
-    mkdir -p "$SCRIPTS_DIR"
+    mkdir -p "$SCRIPTS_DIR" "$HOME/Library/LaunchAgents"
 
-    # Write the watcher script (repo path baked in at install time)
+    # ── Remove stale agents from any prior install, regardless of project name ─
+    # Scan all LaunchAgents plists for any that reference our GLADE_DIR or
+    # the rebuild trigger path — covers renames without hardcoding old labels.
+    while IFS= read -r -d '' plist; do
+        [[ "$plist" == "$WATCHER_PLIST" || "$plist" == "$UPDATER_PLIST" ]] && continue
+        if grep -qF "$GLADE_DIR" "$plist" 2>/dev/null || \
+           grep -q "rebuild-watcher\|auto-update" "$plist" 2>/dev/null; then
+            label=$(defaults read "$plist" Label 2>/dev/null || true)
+            launchctl bootout "gui/$LAUNCH_CTL_UID" "$plist" 2>/dev/null || \
+                launchctl unload "$plist" 2>/dev/null || true
+            rm -f "$plist"
+            [[ -n "$label" ]] && info "Removed stale agent: $label" || info "Removed stale agent: $plist"
+        fi
+    done < <(find "$HOME/Library/LaunchAgents" -name "*.plist" -print0 2>/dev/null)
+
+    # ── Rebuild watcher: fires when .rebuild-requested appears ───────────────
+    # Paths resolved at install time; script does not depend on $PWD.
     cat > "$WATCHER_SCRIPT" << WATCHER_EOF
 #!/bin/bash
-# LaunchAgents run with a minimal PATH — add common locations for Docker/Homebrew
 export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
-
 TRIGGER="$TRIGGER_FILE"
 LOCK="$LOCK_FILE"
 LOG="$REBUILD_LOG"
 REPO_DIR="$SCRIPT_DIR"
-
-if [[ -f "\$TRIGGER" ]]; then
-    rm -f "\$TRIGGER"
-    touch "\$LOCK"
-    echo "=== Rebuild started \$(date) ===" >> "\$LOG"
-    # Use git -C and docker compose -f to avoid cd + make (LaunchAgent can't getcwd on /Volumes)
-    git -C "\$REPO_DIR" pull 2>&1 | tee -a "\$LOG" && \
-        docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" build ttyd 2>&1 | tee -a "\$LOG" && \
-        docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" up -d 2>&1 | tee -a "\$LOG"
-    STATUS=\$?
-    echo "=== Rebuild finished \$(date) exit=\$STATUS ===" >> "\$LOG"
-    rm -f "\$LOCK"
-fi
+[[ -f "\$TRIGGER" ]] || exit 0
+rm -f "\$TRIGGER"
+touch "\$LOCK"
+echo "=== Rebuild started \$(date) ===" >> "\$LOG"
+git -C "\$REPO_DIR" pull 2>&1 | tee -a "\$LOG" && \
+    docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" build ttyd 2>&1 | tee -a "\$LOG" && \
+    docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" up -d 2>&1 | tee -a "\$LOG"
+STATUS=\$?
+rm -f "\$LOCK"
+echo "=== Rebuild finished \$(date) exit=\$STATUS ===" >> "\$LOG"
 WATCHER_EOF
     chmod +x "$WATCHER_SCRIPT"
 
-    # Write launchd plist with WatchPaths so it fires when the trigger file appears
-    mkdir -p "$HOME/Library/LaunchAgents"
-    cat > "$PLIST_PATH" << PLIST_EOF
+    cat > "$WATCHER_PLIST" << PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key>
-    <string>com.glade.rebuild-watcher</string>
+    <key>Label</key>         <string>com.glade.rebuild-watcher</string>
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
         <string>$WATCHER_SCRIPT</string>
     </array>
     <key>WatchPaths</key>
-    <array>
-        <string>$TRIGGER_FILE</string>
-    </array>
-    <key>StandardOutPath</key>
-    <string>$SCRIPTS_DIR/watcher.log</string>
-    <key>StandardErrorPath</key>
-    <string>$SCRIPTS_DIR/watcher.log</string>
-    <key>RunAtLoad</key>
-    <false/>
+    <array><string>$TRIGGER_FILE</string></array>
+    <key>StandardOutPath</key>  <string>$SCRIPTS_DIR/watcher.log</string>
+    <key>StandardErrorPath</key><string>$SCRIPTS_DIR/watcher.log</string>
+    <key>RunAtLoad</key>        <false/>
 </dict>
 </plist>
 PLIST_EOF
 
-    # Load (or reload) the agent
-    LAUNCH_CTL_UID=$(id -u)
-    launchctl bootout "gui/$LAUNCH_CTL_UID" "$PLIST_PATH" 2>/dev/null || true
-    if launchctl bootstrap "gui/$LAUNCH_CTL_UID" "$PLIST_PATH" 2>/dev/null; then
-        success "Rebuild watcher registered (com.glade.rebuild-watcher)"
-        INSTALLED+=("Rebuild watcher LaunchAgent")
-    else
-        # Fallback: legacy load
-        launchctl load -w "$PLIST_PATH" 2>/dev/null || true
-        success "Rebuild watcher registered (legacy load)"
-        INSTALLED+=("Rebuild watcher LaunchAgent")
-    fi
+    # ── Auto-update: polls git every 30 min, triggers rebuild when behind ────
+    cat > "$UPDATER_SCRIPT" << UPDATER_EOF
+#!/bin/bash
+export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
+REPO_DIR="$SCRIPT_DIR"
+TRIGGER="$TRIGGER_FILE"
+LOCK="$LOCK_FILE"
+LOG="$REBUILD_LOG"
+# Skip if a rebuild is already running
+[[ -f "\$LOCK" || -f "\$TRIGGER" ]] && exit 0
+git -C "\$REPO_DIR" fetch origin --quiet 2>/dev/null || exit 0
+BEHIND=\$(git -C "\$REPO_DIR" rev-list HEAD..origin/HEAD --count 2>/dev/null || echo 0)
+if [[ "\$BEHIND" -gt 0 ]]; then
+    echo "=== Auto-update: \$BEHIND new commit(s) detected at \$(date) ===" >> "\$LOG"
+    touch "\$TRIGGER"
+fi
+UPDATER_EOF
+    chmod +x "$UPDATER_SCRIPT"
+
+    cat > "$UPDATER_PLIST" << UPLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>          <string>com.glade.auto-update</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>$UPDATER_SCRIPT</string>
+    </array>
+    <key>StartInterval</key>  <integer>1800</integer>
+    <key>RunAtLoad</key>      <true/>
+    <key>StandardOutPath</key>  <string>$SCRIPTS_DIR/auto-update.log</string>
+    <key>StandardErrorPath</key><string>$SCRIPTS_DIR/auto-update.log</string>
+</dict>
+</plist>
+UPLIST_EOF
+
+    # ── Load (or reload) both agents ─────────────────────────────────────────
+    _load_agent() {
+        local plist="$1" label="$2"
+        launchctl bootout "gui/$LAUNCH_CTL_UID" "$plist" 2>/dev/null || true
+        if launchctl bootstrap "gui/$LAUNCH_CTL_UID" "$plist" 2>/dev/null; then
+            success "Agent registered: $label"
+        else
+            launchctl load -w "$plist" 2>/dev/null || true
+            success "Agent registered (legacy): $label"
+        fi
+        INSTALLED+=("$label")
+    }
+    _load_agent "$WATCHER_PLIST" "com.glade.rebuild-watcher"
+    _load_agent "$UPDATER_PLIST" "com.glade.auto-update"
 else
-    info "Skipping rebuild watcher (macOS only)."
+    info "Skipping rebuild watcher / auto-update (macOS only)."
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
