@@ -1247,6 +1247,8 @@
         }
         .ap-source-btn.active { border-color:#89b4fa; color:#89b4fa; background:rgba(137,180,250,0.08); }
         .ap-source-btn:disabled { opacity:0.4; cursor:not-allowed; }
+        .ap-source-btn.gh-not-connected { border-color:#45475a; color:#585b70; }
+        .ap-source-btn.gh-not-connected .ap-src-gh-icon { opacity:0.6; }
 
         /* ── Repo search ─────────────────────────────────────── */
         #ap-repo-field { display:none; }
@@ -1575,7 +1577,7 @@
         <!-- Source toggle: Local | GitHub -->
         <div class="ap-source-toggle">
             <button class="ap-source-btn active" id="ap-src-local">Local Directory</button>
-            <button class="ap-source-btn" id="ap-src-github">GitHub Repo</button>
+            <button class="ap-source-btn" id="ap-src-github"><span class="ap-src-gh-icon" id="ap-src-gh-icon"></span>GitHub Repo</button>
         </div>
         <div class="sheet-field">
             <label class="sheet-label" for="ap-name-input">Name</label>
@@ -1806,11 +1808,12 @@
 
             <div class="dbg-section">
                 <div class="dbg-section-label">Haptic</div>
-                <div class="dbg-row">
+                <div class="dbg-row" id="dbg-haptic-row">
                     <button class="dbg-btn" id="dbg-haptic-light">Light</button>
                     <button class="dbg-btn" id="dbg-haptic-medium">Medium</button>
                     <button class="dbg-btn" id="dbg-haptic-error">Error pattern</button>
                 </div>
+                <div id="dbg-haptic-note" style="display:none;font-size:11px;color:#f38ba8;margin-top:6px">navigator.vibrate not supported on this browser (iOS Safari)</div>
             </div>
 
             <div class="dbg-section">
@@ -4528,9 +4531,19 @@
                     ghDisconnectedEl.style.display = 'none';
                     if (ghAvatarEl && s.avatar_url) ghAvatarEl.src = s.avatar_url;
                     if (ghUsernameEl) ghUsernameEl.textContent = s.username || '';
+                    if (apSrcGithub) {
+                        apSrcGithub.classList.remove('gh-not-connected');
+                        var icon = document.getElementById('ap-src-gh-icon');
+                        if (icon) { icon.textContent = ''; icon.style.marginRight = ''; }
+                    }
                 } else {
                     ghConnectedEl.style.display = 'none';
                     ghDisconnectedEl.style.display = '';
+                    if (apSrcGithub) {
+                        apSrcGithub.classList.add('gh-not-connected');
+                        var icon = document.getElementById('ap-src-gh-icon');
+                        if (icon) { icon.textContent = '🔒'; icon.style.marginRight = '5px'; }
+                    }
                 }
             }).catch(function(){});
         }
@@ -6415,6 +6428,10 @@
             document.getElementById('dbg-haptic-light').onclick  = function () { haptic(10); };
             document.getElementById('dbg-haptic-medium').onclick = function () { haptic(40); };
             document.getElementById('dbg-haptic-error').onclick  = function () { haptic([50,30,50]); };
+            if (!navigator.vibrate) {
+                document.getElementById('dbg-haptic-row').querySelectorAll('button').forEach(function(b){ b.disabled = true; });
+                document.getElementById('dbg-haptic-note').style.display = '';
+            }
 
             // State refresh
             document.getElementById('dbg-refresh-state').onclick = refreshState;
