@@ -39,7 +39,7 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        └──────────────────────────────────────┘
 ```
 
-**DNS:** `glade.local` resolves via mDNS on the local network (no Pi-hole needed).
+**DNS:** `glade.local` requires a local DNS entry (Pi-hole A record or `/etc/hosts`). mDNS only resolves the host's own hostname, not custom domains.
 **TLS:** mkcert cert for `glade.local`, managed by standalone `caddy-proxy`.
 **Remote:** Tailscale mesh VPN for access outside the home network.
 
@@ -55,7 +55,7 @@ Two Docker services defined in `docker-compose.yml`:
 - tmux for session management and pipe-pane recording
 - gh CLI (official Debian apt repo, architecture-aware: amd64/arm64/armhf)
 - Zsh + Oh My Zsh + Spaceship prompt
-- `~/.config/gh` bind-mounted from host for persistent GitHub auth
+- `gh-config` named Docker volume for persistent, host-isolated GitHub auth
 
 **glade-web** — Caddy file server:
 - Serves `web/index.html` at `/`
@@ -109,7 +109,7 @@ Two Docker services defined in `docker-compose.yml`:
 |---|---|---|
 | Session recording | `tmux pipe-pane` to flat files | Zero overhead, always on, no daemon |
 | Log storage | Flat files, not SQLite | Faster writes, simpler grep, cheaper |
-| Frontend | Single-file PWA (~4900 lines) | No build step, instant deploy via git pull |
+| Frontend | Single-file PWA (~6600 lines) | No build step, instant deploy via git pull |
 | API framework | Python stdlib `BaseHTTPRequestHandler` | Zero dependencies, runs on any Python |
 | CSS approach | Inline styles, no framework | Catppuccin Mocha palette applied directly |
 | Auth | Tailscale (network-level) | No passwords, no tokens, no sessions |
@@ -139,8 +139,8 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 
 | File | Lines | Purpose |
 |---|---|---|
-| `web/index.html` | ~5960 | Single-file PWA: CSS, HTML, JavaScript inline |
-| `api/api.py` | ~1250 | REST API: projects, snippets, logs, uploads, GitHub auth |
+| `web/index.html` | ~6620 | Single-file PWA: CSS, HTML, JavaScript inline |
+| `api/api.py` | ~1300 | REST API: projects, snippets, logs, uploads, GitHub auth |
 | `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
 | `docker-compose.yml` | ~65 | Two services: ttyd + web |

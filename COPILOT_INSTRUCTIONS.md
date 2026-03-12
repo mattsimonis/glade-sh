@@ -6,9 +6,9 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~5960 lines). The backend is a stdlib Python API (`api/api.py`, ~1250 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~6620 lines). The backend is a stdlib Python API (`api/api.py`, ~1300 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
-GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a bind-mounted `~/.config/gh`, and projects can be created directly from GitHub repos.
+GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a named Docker volume (`gh-config`), and projects can be created directly from GitHub repos.
 
 ---
 
@@ -79,14 +79,17 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 - `GET /api/logs/search?q=term` — grep across all logs
 
 ### Uploads
-- `POST /api/upload-image` — upload base64 image → `{path, url, filename}`
-- `GET /api/uploads` — list recent (last 10)
+- `POST /api/upload-image` — upload any file (base64, any MIME type) → `{path, url, filename, mime}`
+- `GET /api/uploads` — list recent (last 10, includes `mime` field)
 - `GET /api/uploads/:filename` — serve file
+
+### Shell State
+- `GET /api/projects/:id/shell-idle` — `{idle: bool, command: str}` — checks `pane_current_command` in tmux; idle when shell is at prompt (bash/zsh/sh/fish)
 
 ### GitHub Auth
 - `GET /api/github/auth/status` — `{connected, username, avatar_url}` (runs `gh auth status`)
 - `POST /api/github/auth/start` — begin device flow → `{user_code, verification_uri}`; parses `gh auth login -w` stdout for the one-time code
-- `DELETE /api/github/auth` — disconnect (`gh auth logout -h github.com`)
+- `DELETE /api/github/auth` — disconnect (deletes `~/.config/gh/hosts.yml` directly)
 
 ### GitHub Repos
 - `GET /api/github/repos?q=` — list/search user repos → `[{nameWithOwner, name, description, isPrivate}]`
@@ -143,7 +146,7 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 | `_gh_available(self)` | Returns bool — is `gh` on PATH? |
 | `_gh_auth_status(self)` | Run `gh auth status` → `{connected, username, avatar_url}` |
 | `_gh_auth_start(self)` | Shell out `gh auth login -w`, parse device code + URL from output |
-| `_gh_auth_disconnect(self)` | Run `gh auth logout -h github.com` |
+| `_gh_auth_disconnect(self)` | Delete `~/.config/gh/hosts.yml` to clear auth state |
 | `_gh_repos(self, q)` | Run `gh repo list --json` and filter by query |
 | `qs(self)` | Parse query string from request path → dict |
 
@@ -165,8 +168,12 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 | `startGhAuth(pendingSwitch)` | Begin GitHub device flow; shows modal with one-time code |
 | `pollGhAuthStatus()` | Polls `/api/github/auth/status` every 3 s until connected |
 | `renderGhConnected(status)` | Update Settings GitHub section (avatar, username, or "Not connected") |
-| `setProjectSource(src)` | Toggle Local ↔ GitHub in project creation sheet |
+| `setProjectSource(src)` | Toggle Local ↔ GitHub in project creation sheet; shows 🔒 on button when not connected |
 | `searchGhRepos(q)` | Debounced repo search; renders autocomplete dropdown |
+| `refreshGithubSettingsState()` | Fetches auth status; updates Settings UI and GitHub Repo button icon |
+| `applyTermTheme(name)` | Apply one of 6 xterm.js themes to the terminal (Catppuccin Mocha/Frappé/Macchiato/Latte, Solarized Dark, One Dark); persisted in localStorage |
+| `openFind()` | Open floating find-in-scrollback bar (Cmd+F); scans xterm.js buffer via `getLine()` |
+| `looksLikeSecret(str)` | Detect credentials (GitHub PAT, OpenAI key, AWS AKIA, JWT, Slack, PEM) in pasted text |
 
 ---
 
@@ -237,10 +244,18 @@ make shell
 
 12. **Personal directory mounts belong in `docker-compose.override.yml`** — This file is gitignored. Do not add volume mounts for personal directories (e.g. `~/Dev`) to `docker-compose.yml`.
 
-13. **GitHub auth persists via bind mount** — `~/.config/gh` on the host is mounted into the container. Auth survives container restarts. If the volume isn't mounted, `gh auth status` returns "not connected" even after logging in. `docker exec` shells don't inherit the same env as the container process, which can cause confusion when testing GitHub commands manually.
+13. **GitHub auth is isolated to a named Docker volume** — `gh-config` volume mounts to `/root/.config/gh` inside the container. Completely separate from the host's `~/.config/gh`. `_gh_auth_disconnect()` deletes `~/.config/gh/hosts.yml` directly — NOT `gh auth logout`, which is interactive when multiple accounts exist and hangs the request.
 
 14. **GitHub projects clone to `~/.glade/projects/{slug}`** — Not `~/projects` or the bind-mounted dev dir. The `~/.glade/` volume is already mounted, so these repos persist across restarts without any extra config.
 
 15. **`gh auth login -w` outputs to stderr** — The device flow one-time code and URL come from stderr (or mixed stdout/stderr). The `_gh_auth_start()` method reads both streams with a 20 s deadline. If the code line doesn't appear, it falls back to the default verification URL (`https://github.com/login/device`).
 
 16. **`make build` stamps the build date** — `BUILD_DATE=$(shell date +%Y%m%d%H%M%S)` is passed as a Docker `--build-arg` and baked into `GLADE_BUILD_DATE` env var in the image. The `/api/health` response includes `build_date`. Since the app auto-updates via git pull (not rebuild), this only changes when `make build` is run explicitly.
+
+17. **`navigator.vibrate` is Android-only** — The Vibration API is not supported on iOS Safari (including PWA mode). The `haptic()` function silently no-ops on iOS. The debug panel shows a note when `navigator.vibrate` is undefined.
+
+18. **Terminal themes persist in localStorage** — `applyTermTheme(name)` stores the chosen theme in `localStorage`. On reconnect, it reads back and reapplies. Six themes: Catppuccin Mocha (default), Frappé, Macchiato, Latte, Solarized Dark, One Dark.
+
+19. **Paste guard on multiline input** — pasting text with newlines shows a confirm dialog with line count before sending. Smart paste also detects secrets (PAT, OpenAI key, AWS AKIA, JWT, PEM, Slack token) and offers bracketed paste (concealed mode) via `looksLikeSecret()`.
+
+20. **Shell-idle polling uses `pane_current_command`** — `GET /api/projects/:id/shell-idle` queries tmux `#{pane_current_command}`. Returns `{idle: true}` when the command is one of the known shell names (bash, zsh, sh, fish, -bash, -zsh). Used by the "Notify when done" feature.
