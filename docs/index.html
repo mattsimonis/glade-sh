@@ -52,8 +52,16 @@
       border: 3px solid #313244;
     }
 
+    @font-face {
+      font-family: 'Commit Mono';
+      src: url('fonts/CommitMonoV143-VF.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
     body {
-      font-family: 'Berkeley Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, 'Cascadia Code', monospace;
+      font-family: 'Commit Mono', 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
       background: var(--crust);
       color: var(--text);
       line-height: 1.6;

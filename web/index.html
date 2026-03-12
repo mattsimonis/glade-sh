@@ -29,13 +29,15 @@
 
     <style>
         @font-face {
-            font-family: 'Berkeley Mono';
-            src: url('/assets/fonts/BerkeleyMonoNerdFont-Regular.ttf') format('truetype'),
-                 url('/assets/fonts/BerkeleyMonoNerdFont.woff2') format('woff2');
+            font-family: 'Commit Mono';
+            src: url('/assets/fonts/CommitMonoV143-VF.woff2') format('woff2');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
             font-display: swap;
         }
         :root {
-            --font-mono: 'Berkeley Mono','JetBrains Mono','Fira Code',ui-monospace,'Menlo',monospace;
+            --font-mono: 'Commit Mono','JetBrains Mono','Fira Code',ui-monospace,'Menlo',monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
             /* Catppuccin Mocha (dark — default) */
             --base:     #1e1e2e;
@@ -2015,7 +2017,7 @@
                 <span class="settings-value" id="settings-build-date" style="color:#6c7086">—</span>
             </div>
             <div style="margin-top:8px;font-size:11px;color:#6c7086;line-height:1.5">
-                Catppuccin Mocha · Berkeley Mono · ttyd 1.7.7
+                Catppuccin Mocha · Commit Mono · ttyd 1.7.7
             </div>
             <button class="settings-btn-full" id="settings-debug-btn" style="margin-top:14px;background:rgba(203,166,247,0.1);color:#cba6f7;border:1px solid rgba(203,166,247,0.2)">🛠 Debug Panel</button>
         </div>
@@ -6461,7 +6463,7 @@
                 if (iDoc && iDoc.head) {
                     const s = iDoc.createElement('style');
                     s.textContent = [
-                        'body,div,span,p{font-family:\"Berkeley Mono\",ui-monospace,\"Menlo\",monospace!important}',
+                        'body,div,span,p{font-family:\"Commit Mono\",ui-monospace,\"Menlo\",monospace!important}',
                         '.xterm-context-menu{font-size:12px!important;min-width:100px!important;max-width:160px!important}',
                         '.xterm-context-menu .context-menu-item{padding:5px 10px!important;font-size:12px!important}',
                         // ttyd OverlayAddon sets font-size:xx-large inline; target by attribute
