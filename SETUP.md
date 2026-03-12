@@ -1,6 +1,6 @@
 # Glade — Setup Guide
 
-> **DNS is automatic.** `glade.local` resolves via mDNS on macOS, iOS, and Linux — no Pi-hole needed.  
+> **DNS requires a local DNS entry.** `glade.local` does not resolve via mDNS automatically — mDNS only resolves the machine's own hostname (e.g. `casper.local`). Add an A record in Pi-hole, or an `/etc/hosts` entry on each client, pointing `glade.local` to your Mac Mini's LAN IP.  
 > **Tailscale is optional** — required only for remote access outside your home network. Start without it.
 
 ---
@@ -219,11 +219,11 @@ Once connected, `https://glade.local` works from anywhere your Tailscale devices
 
 ---
 
-## Optional: Pi-hole DNS
+## Pi-hole DNS (Required for `glade.local`)
 
-`glade.local` resolves automatically via mDNS on macOS, iOS, and modern Linux. **You do not need Pi-hole.**
+`glade.local` is not your machine's hostname, so it won't resolve via mDNS automatically. You need a local DNS entry. Pi-hole is the cleanest way to do this in a homelab.
 
-If you already run Pi-hole and want an explicit DNS entry (e.g. for devices that don't support mDNS), add a record:
+Add a record:
 
 1. Open Pi-hole admin → **Local DNS** → **DNS Records**
 2. Add:
@@ -265,7 +265,7 @@ If you tap "GitHub Repo" without being connected, the auth flow starts automatic
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://glade.local` | Try `ping glade.local` — mDNS should resolve it automatically. If not, check `caddy-proxy` is running: `docker ps`. Try the Mac Mini's LAN IP directly. |
+| Can't reach `https://glade.local` | Check that Pi-hole (or `/etc/hosts`) has an A record for `glade.local` pointing to your Mac Mini's LAN IP. Also check `caddy-proxy` is running: `docker ps`. Try the IP directly to isolate DNS from routing. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
 | Docker first build is slow | Normal — building the image. Watch with `docker compose logs -f ttyd` |

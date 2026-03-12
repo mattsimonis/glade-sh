@@ -40,7 +40,7 @@ make setup   # builds image (~2 min) and starts containers
 
 Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the PWA.
 
-> `glade.local` resolves automatically via mDNS — no Pi-hole or extra DNS config needed.  
+> `glade.local` requires a DNS entry — add an A record in Pi-hole or `/etc/hosts` on each client pointing to your Mac Mini's LAN IP.  
 > Tailscale is optional — only needed for remote access outside your home network.  
 > See [SETUP.md](SETUP.md) for the full walkthrough.
 
