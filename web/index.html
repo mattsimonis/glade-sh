@@ -4752,7 +4752,6 @@
                 }
                 await refreshShells();
                 if (result && result.port) {
-                    window._freshShell = true;
                     loadShellUrl('/ttyd/' + result.port + '/');
                 }
             } catch (e) { console.warn('addShell failed', e); }
@@ -6630,25 +6629,21 @@
         });
         iframe.addEventListener('load', function () {
             if (iframe.src === 'about:blank' || !iframe.src || iframe.src === location.origin + '/') return; // skip blank navigations
-            const isFreshShell = !!window._freshShell;
-            window._freshShell = false;
             setTimeout(function () { consecutiveFailures = 0; setConnectionState('connected'); findTerminal();
                 // Nudge FitAddon after ttyd is fully initialized — ResizeObserver fires too
                 // early (before xterm is ready) on first load, especially on mobile.
                 try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
-                // On iOS the initial pty resize (80×24 → actual screen size) causes tmux to
-                // redraw AND zsh to fire SIGWINCH — both print the prompt, giving a double.
-                // Sending Ctrl+L after the resize clears the artifact. Only done for fresh
-                // shells (no output worth preserving). Reconnects accept the brief artifact.
-                if (isFreshShell) {
-                    setTimeout(function () {
-                        try {
-                            const sockets = findWebSockets(iframe.contentWindow);
-                            const ws = sockets.find(function (s) { return s.readyState === WebSocket.OPEN; });
-                            if (ws) ws.send('0\x0c');
-                        } catch (e) {}
-                    }, 300);
-                }
+                // Every attach triggers a pty resize (80×24 → actual size), which causes tmux
+                // to redraw AND zsh SIGWINCH to fire — both print the prompt, leaving a stray
+                // extra line. Ctrl+L clears the artifact and leaves a single clean prompt.
+                // scrollback=0 means any pre-existing visible output is gone on resize anyway.
+                setTimeout(function () {
+                    try {
+                        const sockets = findWebSockets(iframe.contentWindow);
+                        const ws = sockets.find(function (s) { return s.readyState === WebSocket.OPEN; });
+                        if (ws) ws.send('0\x0c');
+                    } catch (e) {}
+                }, 300);
             }, 500);
             // Retry wireOsc7 — WebSocket may not be open immediately after iframe load
             let osc7Attempts = 0;
