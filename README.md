@@ -20,7 +20,7 @@ It runs on any always-on host inside Docker — a Mac Mini, Raspberry Pi, Linux 
 ## Quick Start
 
 ```bash
-git clone https://github.com/mattsimonis/glade
+git clone https://github.com/mattsimonis/glade-sh
 cd glade
 cp .env.example .env   # set HOST= to your server's hostname
 ```
@@ -93,7 +93,7 @@ Optional environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `GLADE_REPO_URL` | `https://github.com/mattsimonis/glade.git` | Override if using a fork |
+| `GLADE_REPO_URL` | `https://github.com/mattsimonis/glade-sh.git` | Override if using a fork |
 | `GLADE_DIR` | `~/.glade` | Where Glade stores its DB, logs, and uploads |
 | `DISABLE_UPDATE_CHECK` | _(unset)_ | Set to `1` to suppress the update-available banner |
 

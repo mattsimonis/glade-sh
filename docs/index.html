@@ -374,7 +374,7 @@
         <div class="step-b">
           <h3>Clone and configure</h3>
           <p>Copy the environment template and set your hostname.</p>
-          <code class="step-cmd">git clone https://github.com/mattsimonis/glade &amp;&amp; cp .env.example .env</code>
+          <code class="step-cmd">git clone https://github.com/mattsimonis/glade-sh &amp;&amp; cp .env.example .env</code>
         </div>
       </div>
       <div class="step">
@@ -394,7 +394,7 @@
       </div>
     </div>
     <p style="margin-top:2rem; font-size:0.82rem; color:var(--subtext0)">
-      Full walkthrough → <a href="https://github.com/mattsimonis/glade/blob/main/SETUP.md">SETUP.md</a>
+      Full walkthrough → <a href="https://github.com/mattsimonis/glade-sh/blob/main/SETUP.md">SETUP.md</a>
     </p>
   </div>
 </section>
@@ -414,7 +414,7 @@
 <script>
   function copyInstall(e) {
     e.stopPropagation();
-    navigator.clipboard.writeText('git clone https://github.com/mattsimonis/glade && make setup')
+    navigator.clipboard.writeText('git clone https://github.com/mattsimonis/glade-sh && make setup')
       .then(function() {
         var btn = document.querySelector('#install-cmd .copy-btn');
         btn.textContent = '✓ copied';

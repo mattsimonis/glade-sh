@@ -19,7 +19,7 @@
 The repo uses bind mounts — the containers read files directly from the repo. So edits are live without rebuilding.
 
 ```bash
-git clone https://github.com/mattsimonis/glade
+git clone https://github.com/mattsimonis/glade-sh
 cd glade
 cp .env.example .env
 # edit .env with your settings

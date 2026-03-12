@@ -41,7 +41,7 @@ winget install Git.Git Docker.DockerDesktop
 
 SSH into the host from your laptop (or run directly if you have a display):
 ```bash
-git clone https://github.com/mattsimonis/glade ~/Dev/glade
+git clone https://github.com/mattsimonis/glade-sh ~/Dev/glade
 cd ~/Dev/glade
 ```
 
