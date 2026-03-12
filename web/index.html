@@ -4178,9 +4178,6 @@
                     }}
                 ]);
             }
-            function closeSnippetCtx() {
-                closeConfirm();
-            }
 
             filtered.forEach(function(snip) {
                 const tile = document.createElement('div');
@@ -4391,8 +4388,6 @@
             }, 0);
         }
 
-        function closeLogCtx() { closeConfirm(); }
-
         function showLogCtx(log, x, y) {
             showConfirm(
                 'Delete session log?',
@@ -4591,13 +4586,12 @@
             // Start project & get port
             try {
                 const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
-                const ifrm = document.getElementById('terminal-iframe');
                 // Use the active shell's port (if available) so we land on the right window
                 const active = (data.shells || []).find(function(s) { return s.active; });
                 const port = (active && active.port) || data.port;
                 if (active) currentShellIdx = active.index;
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
-                ifrm.src = '/ttyd/' + port + '/';
+                iframe.src = '/ttyd/' + port + '/';
                 startShellPoll(pid);
                 markProjectViewed(pid);
                 if (isSidebarLayout() && typeof renderProjectGrid === 'function') renderProjectGrid();
@@ -4630,8 +4624,6 @@
             currentShells = shells;
             renderShellTabs(shells);
         }
-
-        function closeShellCtx() { closeConfirm(); }
 
         function showShellCtx(idx, x, y) {
             confirmCloseShell(idx);
