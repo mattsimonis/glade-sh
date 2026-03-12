@@ -338,7 +338,7 @@
         /* ── Add project sheet ────────────────────────────────── */
         #add-project-backdrop {
             position: fixed; inset: 0; z-index: 210; background: color-mix(in srgb, var(--crust) 70%, transparent);
-            opacity: 0; transition: opacity 220ms; pointer-events: none;
+            opacity: 0; transition: opacity 260ms ease; pointer-events: none;
         }
         #add-project-backdrop.visible { opacity: 1; pointer-events: auto; }
         #add-project-sheet {
@@ -746,14 +746,14 @@
         #key-editor-backdrop, #snippet-editor-backdrop, #preset-editor-backdrop {
             position:fixed; inset:0; background:color-mix(in srgb, var(--crust) 60%, transparent);
             backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
-            z-index:200; display:none; opacity:0; transition:opacity 250ms;
+            z-index:200; display:none; opacity:0; transition:opacity 260ms ease;
         }
         #key-editor-backdrop.visible, #snippet-editor-backdrop.visible, #preset-editor-backdrop.visible { opacity:1; }
         #key-editor-sheet, #snippet-editor-sheet, #preset-editor-sheet {
             position:fixed; bottom:0; left:0; right:0; background:var(--mantle);
             border-top:1px solid var(--surface0); border-radius:20px 20px 0 0;
             padding:0 20px calc(20px + env(safe-area-inset-bottom)); z-index:201;
-            transform:translateY(100%); transition:transform 340ms cubic-bezier(0.34,1.12,0.64,1);
+            transform:translateY(100%); transition:transform 320ms cubic-bezier(0.34,1.12,0.64,1);
         }
         #key-editor-sheet.open, #snippet-editor-sheet.open, #preset-editor-sheet.open { transform:translateY(0); }
         .sheet-handle { width:36px; height:4px; background:var(--surface1); border-radius:2px; margin:12px auto 16px; cursor:grab; touch-action:none; position:relative; }
@@ -880,7 +880,7 @@
         #cmd-palette-backdrop {
             position:fixed; inset:0; background:color-mix(in srgb, var(--crust) 72%, transparent);
             backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-            z-index:500; display:none; opacity:0; transition:opacity 180ms ease;
+            z-index:500; display:none; opacity:0; transition:opacity 260ms ease;
         }
         #cmd-palette-backdrop.visible { opacity:1; }
         #cmd-palette-sheet {
@@ -951,7 +951,7 @@
         #snippet-fill-backdrop {
             position:fixed; inset:0; background:color-mix(in srgb, var(--crust) 60%, transparent);
             backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
-            z-index:300; display:none; opacity:0; transition:opacity 250ms;
+            z-index:300; display:none; opacity:0; transition:opacity 260ms ease;
         }
         #snippet-fill-backdrop.visible { opacity:1; }
         #snippet-fill-sheet {
@@ -959,9 +959,17 @@
             border-top:1px solid var(--surface0); border-radius:20px 20px 0 0;
             padding:0 20px calc(20px + env(safe-area-inset-bottom));
             z-index:301; max-height:80vh; overflow-y:auto;
-            transform:translateY(100%); transition:transform 340ms cubic-bezier(0.34,1.12,0.64,1);
+            transform:translateY(100%); transition:transform 320ms cubic-bezier(0.34,1.12,0.64,1);
         }
         #snippet-fill-sheet.open { transform:translateY(0); }
+        /* ── Sheet exit animation (added by JS before removing .open) ──────── */
+        .sheet-closing {
+            transition: transform 260ms cubic-bezier(0.32,0.72,0,1) !important;
+        }
+        #debug-panel.is-closing { transition: opacity 260ms ease !important; }
+        #debug-panel.is-closing #debug-sheet {
+            transition: transform 260ms cubic-bezier(0.32,0.72,0,1) !important;
+        }
         .sf-preview {
             padding:10px 12px; background:var(--surface0); border-radius:8px;
             font-size:11px; color:var(--subtext1); font-family:var(--font-mono);
@@ -1088,13 +1096,13 @@
             position:fixed; inset:0; z-index:200; display:flex; align-items:flex-end; justify-content:center;
             background:color-mix(in srgb, var(--crust) 70%, transparent); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
             padding:0 0 20px 0;
-            opacity:0; pointer-events:none; transition:opacity 200ms;
+            opacity:0; pointer-events:none; transition:opacity 260ms ease;
         }
         #img-overlay.io-visible { opacity:1; pointer-events:auto; }
         #img-overlay-card {
             background:var(--base); border:1px solid var(--surface0); border-radius:16px;
             padding:16px; width:min(320px, 90vw); position:relative;
-            transform:translateY(20px); transition:transform 240ms cubic-bezier(0.34,1.12,0.64,1);
+            transform:translateY(20px); transition:transform 260ms cubic-bezier(0.34,1.12,0.64,1);
             box-shadow:0 8px 40px rgba(0,0,0,0.5);
         }
         #img-overlay.io-visible #img-overlay-card { transform:translateY(0); }
@@ -1125,13 +1133,13 @@
         #debug-panel {
             position:fixed; inset:0; z-index:400; display:flex; flex-direction:column; justify-content:flex-end;
             background:color-mix(in srgb, var(--crust) 60%, transparent); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-            opacity:0; pointer-events:none; transition:opacity 200ms ease;
+            opacity:0; pointer-events:none; transition:opacity 260ms ease;
         }
         #debug-panel.open { opacity:1; pointer-events:auto; }
         #debug-sheet {
             background:var(--mantle); border-radius:20px 20px 0 0; border-top:1px solid var(--surface0);
             max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y;
-            transform:translateY(100%); transition:transform 360ms cubic-bezier(0.34,1.12,0.64,1);
+            transform:translateY(100%); transition:transform 320ms cubic-bezier(0.34,1.12,0.64,1);
             padding-bottom:calc(16px + env(safe-area-inset-bottom));
         }
         #debug-panel.open #debug-sheet { transform:translateY(0); }
@@ -1358,14 +1366,14 @@
         /* ── GitHub connect modal ────────────────────────────── */
         #github-modal-backdrop {
             position:fixed; inset:0; z-index:310; background:color-mix(in srgb, var(--crust) 75%, transparent);
-            opacity:0; transition:opacity 200ms; pointer-events:none;
+            opacity:0; transition:opacity 260ms ease; pointer-events:none;
         }
         #github-modal-backdrop.visible { opacity:1; pointer-events:auto; }
         #github-modal {
             position:fixed; top:50%; left:50%; transform:translate(-50%,-60%);
             z-index:320; background:var(--base); border:1px solid var(--surface0); border-radius:16px;
             padding:24px; width:min(340px, calc(100vw - 40px));
-            opacity:0; pointer-events:none; transition:opacity 200ms, transform 200ms;
+            opacity:0; pointer-events:none; transition:opacity 260ms ease, transform 260ms cubic-bezier(0.34,1.12,0.64,1);
         }
         #github-modal.visible { opacity:1; pointer-events:auto; transform:translate(-50%,-50%); }
         .gh-modal-title { font-size:15px; font-weight:600; color:var(--text); margin-bottom:4px; font-family:var(--font-mono); }
@@ -3328,6 +3336,29 @@
             }
         })();
 
+        // ── Sheet close helper ───────────────────────────────────────────────────
+        // Applies exit curve (non-spring) to the sheet, fades backdrop, then cleans
+        // up. Both finish at 260ms — backdrop fades in sync with sheet sliding out.
+        function sheetClose(backdrop, sheet, opts) {
+            opts = opts || {};
+            sheet.classList.add('sheet-closing');
+            backdrop.classList.remove('visible');
+            sheet.classList.remove('open');
+            var done = false;
+            function cleanup() {
+                if (done) return; done = true;
+                sheet.classList.remove('sheet-closing');
+                if (!opts.keepBackdrop) backdrop.style.display = 'none';
+                if (opts.after) opts.after();
+            }
+            sheet.addEventListener('transitionend', function onDone(e) {
+                if (e.target !== sheet || e.propertyName !== 'transform') return;
+                sheet.removeEventListener('transitionend', onDone);
+                cleanup();
+            });
+            setTimeout(cleanup, 300);
+        }
+
         // ── Settings overlay ─────────────────────────────────────────────────────
         (function () {
             const overlay = document.getElementById('settings-overlay');
@@ -3798,7 +3829,7 @@
 
             document.getElementById('img-overlay-close').onclick = function() {
                 overlay.classList.remove('io-visible');
-                setTimeout(function() { overlay.style.display = 'none'; }, 200);
+                setTimeout(function() { overlay.style.display = 'none'; }, 280);
             };
             document.getElementById('img-overlay-copy-path').onclick = function() {
                 if (!injectPath) return;
@@ -3811,7 +3842,7 @@
                 if (!injectPath) return;
                 sendTextToTerminal(injectPath);
                 overlay.classList.remove('io-visible');
-                setTimeout(function() { overlay.style.display = 'none'; }, 200);
+                setTimeout(function() { overlay.style.display = 'none'; }, 280);
             };
         }
 
@@ -3890,8 +3921,7 @@
             });
         }
         function closeKeyEditor() {
-            keyEditorBackdrop.classList.remove('visible'); keyEditorSheet.classList.remove('open');
-            setTimeout(function () { keyEditorBackdrop.style.display = 'none'; }, 300);
+            sheetClose(keyEditorBackdrop, keyEditorSheet);
         }
         function updateValueHint() {
             const type = keyTypeSelect.value;
@@ -3958,8 +3988,7 @@
             });
         }
         function closeSnippetEditor() {
-            snippetBackdrop.classList.remove('visible'); snippetSheet.classList.remove('open');
-            setTimeout(function () { snippetBackdrop.style.display = 'none'; }, 300);
+            sheetClose(snippetBackdrop, snippetSheet);
         }
         snippetBackdrop.addEventListener('click', closeSnippetEditor);
         attachSwipeToDismiss(snippetSheet.querySelector('.sheet-handle'), snippetSheet, closeSnippetEditor, snippetBackdrop);
@@ -4136,8 +4165,7 @@
             });
         }
         function closePresetEditor() {
-            presetBackdrop.classList.remove('visible'); presetSheet.classList.remove('open');
-            setTimeout(function () { presetBackdrop.style.display = 'none'; }, 300);
+            sheetClose(presetBackdrop, presetSheet);
         }
         presetBackdrop.addEventListener('click', closePresetEditor);
         attachSwipeToDismiss(presetSheet.querySelector('.sheet-handle'), presetSheet, closePresetEditor, presetBackdrop);
@@ -4948,10 +4976,10 @@
         }
 
         function closeAddProjectSheet() {
-            apBackdrop.classList.remove('visible');
-            apSheet.classList.remove('open');
-            apCreateBtn.disabled = false;
-            apCreateBtn.textContent = 'Create';
+            sheetClose(apBackdrop, apSheet, { keepBackdrop: true, after: function() {
+                apCreateBtn.disabled = false;
+                apCreateBtn.textContent = 'Create';
+            }});
         }
 
         apBackdrop.addEventListener('click', closeAddProjectSheet);
@@ -6593,9 +6621,7 @@
             haptic(5);
         }
         function closePalette() {
-            cpBackdrop.classList.remove('visible');
-            cpSheet.classList.remove('open');
-            setTimeout(function(){ cpBackdrop.style.display='none'; try{ cpInput.blur(); }catch(e){} }, 300);
+            sheetClose(cpBackdrop, cpSheet, { after: function() { try { cpInput.blur(); } catch(e) {} } });
         }
 
         function fuzzyMatch(query, text) {
@@ -6778,9 +6804,9 @@
         }
 
         function closeFillSheet() {
-            sfBackdrop.classList.remove('visible');
-            sfSheet.classList.remove('open');
-            setTimeout(function(){ sfBackdrop.style.display='none'; try{ document.activeElement && document.activeElement.blur(); }catch(e){} }, 300);
+            sheetClose(sfBackdrop, sfSheet, { after: function() {
+                try { if (document.activeElement) document.activeElement.blur(); } catch(e) {}
+            }});
         }
 
         sfCancelBtn.addEventListener('click', closeFillSheet);
@@ -6905,7 +6931,11 @@
                 panel.classList.add('open');
                 refreshState();
             }
-            function closeDebug() { panel.classList.remove('open'); }
+            function closeDebug() {
+                panel.classList.add('is-closing');
+                panel.classList.remove('open');
+                setTimeout(function() { panel.classList.remove('is-closing'); }, 300);
+            }
             attachSwipeToDismiss(document.getElementById('debug-sheet-handle'), document.getElementById('debug-sheet'), closeDebug);
 
             // ── Desktop panel toggle ──────────────────────────────────────────────
