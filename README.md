@@ -55,7 +55,8 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 - **Session logging** — every session recorded automatically via `tmux pipe-pane`; browse and search from History tab
 - **Command snippets** — saved commands that inject directly into the terminal with one tap
 - **Command palette** — keyboard-accessible actions: `^C`, `^Z`, `^A`, new shell, history, snippets, and more
-- **Auto-reconnect** — recovers from network drops and app backgrounding automatically
+- **GitHub integration** — connect your GitHub account in Settings; create projects directly from any repo without manual cloning; auth persists across container restarts
+- **Auto-reconnect** — recovers from network drops and app backgrounding automatically; shows a clear overlay if the host can't be reached
 - **In-app rebuild** — queue a `git pull && docker compose build` from the UI; no SSH needed
 - **Catppuccin Mocha** — consistent theme across terminal, UI, and toolbar
 

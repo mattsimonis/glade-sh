@@ -233,6 +233,34 @@ If you already run Pi-hole and want an explicit DNS entry (e.g. for devices that
 
 ---
 
+## Optional: GitHub Integration
+
+Glade includes a `gh` CLI and can connect to your GitHub account. This is entirely optional — local projects work without it.
+
+**What it enables:**
+- Create projects directly from a GitHub repo (clone happens automatically)
+- Use `gh` commands, `gh copilot`, and authenticated git operations inside the terminal
+
+**One-time setup:** The only requirement is that `docker-compose.yml` mounts your `~/.config/gh` directory, which it does by default. This means GitHub auth persists across container restarts.
+
+**To connect:**
+1. Open the Glade UI → tap the ⚙️ icon → **Settings**
+2. Scroll to the **GitHub** section
+3. Tap **Connect** — a device code appears
+4. Open [github.com/login/device](https://github.com/login/device), enter the code
+5. Done — your username and avatar appear in Settings
+
+**To create a project from a GitHub repo:**
+1. Tap **New Project**
+2. Toggle the source to **GitHub Repo**
+3. Search for a repo by name
+4. Select it — the name pre-fills
+5. Tap Create — Glade clones the repo to `~/.glade/projects/{slug}` and creates the project
+
+If you tap "GitHub Repo" without being connected, the auth flow starts automatically.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |

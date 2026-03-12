@@ -6,9 +6,9 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Glade** is a self-hosted browser terminal. One Mac Mini runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~4900 lines). The backend is a stdlib Python API (`api/api.py`, ~920 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. One Mac Mini runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~5960 lines). The backend is a stdlib Python API (`api/api.py`, ~1250 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
-Previously called "Copilot Sync" — now generalized. The repo directory is still `copilot-sync` but the project name is **Glade**.
+GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a bind-mounted `~/.config/gh`, and projects can be created directly from GitHub repos.
 
 ---
 
@@ -83,8 +83,16 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 - `GET /api/uploads` — list recent (last 10)
 - `GET /api/uploads/:filename` — serve file
 
+### GitHub Auth
+- `GET /api/github/auth/status` — `{connected, username, avatar_url}` (runs `gh auth status`)
+- `POST /api/github/auth/start` — begin device flow → `{user_code, verification_uri}`; parses `gh auth login -w` stdout for the one-time code
+- `DELETE /api/github/auth` — disconnect (`gh auth logout -h github.com`)
+
+### GitHub Repos
+- `GET /api/github/repos?q=` — list/search user repos → `[{nameWithOwner, name, description, isPrivate}]`
+
 ### Other
-- `GET /api/health` — `{"ok": true}`
+- `GET /api/health` — `{"ok": true, "build_date": "YYYYMMDDHHmmss"}`
 - `GET /api/export` — export all interactions as JSON
 
 ---
@@ -132,7 +140,12 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 | `start_pipe_pane()` | Start `tmux pipe-pane` for a session |
 | `ensure_project_running()` | Create tmux + spawn ttyd on a free port |
 | `stop_project_proc()` | Kill ttyd process for a project |
-| `get_free_port()` | Find available port in 7690–7699 range |
+| `_gh_available(self)` | Returns bool — is `gh` on PATH? |
+| `_gh_auth_status(self)` | Run `gh auth status` → `{connected, username, avatar_url}` |
+| `_gh_auth_start(self)` | Shell out `gh auth login -w`, parse device code + URL from output |
+| `_gh_auth_disconnect(self)` | Run `gh auth logout -h github.com` |
+| `_gh_repos(self, q)` | Run `gh repo list --json` and filter by query |
+| `qs(self)` | Parse query string from request path → dict |
 
 ---
 
@@ -149,6 +162,11 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 | `startProject(id)` / `stopProject(id)` | Project lifecycle from UI |
 | `loadShellUrl(url)` | Clear iframe `onbeforeunload`, then navigate to url |
 | `attachSwipeToDismiss(handleEl, sheetEl, closeFn, backdropEl)` | Wire swipe-down-to-dismiss on a bottom sheet |
+| `startGhAuth(pendingSwitch)` | Begin GitHub device flow; shows modal with one-time code |
+| `pollGhAuthStatus()` | Polls `/api/github/auth/status` every 3 s until connected |
+| `renderGhConnected(status)` | Update Settings GitHub section (avatar, username, or "Not connected") |
+| `setProjectSource(src)` | Toggle Local ↔ GitHub in project creation sheet |
+| `searchGhRepos(q)` | Debounced repo search; renders autocomplete dropdown |
 
 ---
 
@@ -218,3 +236,11 @@ make shell
 11. **`config/zshrc` and `config/packages.sh` are gitignored** — They are personal copies, never committed. `config/zshrc.example` and `config/packages.sh.example` are the committed templates. `install.sh` copies `*.example` → actual on first run if the actual doesn't exist.
 
 12. **Personal directory mounts belong in `docker-compose.override.yml`** — This file is gitignored. Do not add volume mounts for personal directories (e.g. `~/Dev`) to `docker-compose.yml`.
+
+13. **GitHub auth persists via bind mount** — `~/.config/gh` on the host is mounted into the container. Auth survives container restarts. If the volume isn't mounted, `gh auth status` returns "not connected" even after logging in. `docker exec` shells don't inherit the same env as the container process, which can cause confusion when testing GitHub commands manually.
+
+14. **GitHub projects clone to `~/.glade/projects/{slug}`** — Not `~/projects` or the bind-mounted dev dir. The `~/.glade/` volume is already mounted, so these repos persist across restarts without any extra config.
+
+15. **`gh auth login -w` outputs to stderr** — The device flow one-time code and URL come from stderr (or mixed stdout/stderr). The `_gh_auth_start()` method reads both streams with a 20 s deadline. If the code line doesn't appear, it falls back to the default verification URL (`https://github.com/login/device`).
+
+16. **`make build` stamps the build date** — `BUILD_DATE=$(shell date +%Y%m%d%H%M%S)` is passed as a Docker `--build-arg` and baked into `GLADE_BUILD_DATE` env var in the image. The `/api/health` response includes `build_date`. Since the app auto-updates via git pull (not rebuild), this only changes when `make build` is run explicitly.

@@ -15,9 +15,12 @@ You have two good options depending on how you work:
 | Option | What it means | Best for |
 |--------|--------------|---------|
 | **SSH from hub into laptop** | Mac Mini terminal SSHes to your laptop. Files, git, tools all stay on laptop. | Working on an active local project |
-| **Clone project to Mac Mini** | Sync/clone project to Mac Mini. Work from there. | Long-running work, staying on the hub |
+| **GitHub repo project** | Create a project from a GitHub repo directly in Glade. Repo lives in `~/.glade/projects/` on the hub. | No local mount; want the hub to be the source of truth |
+| **Clone project to Mac Mini** | Manually clone/sync to Mac Mini. Work from there. | Repos not on GitHub, or custom sync workflows |
 
 Most people start with Option 1. It requires nothing except Tailscale and SSH.
+
+Option 2 is the cleanest for GitHub-based work — connect GitHub in Settings and create the project from the repo search.
 
 ---
 
@@ -77,7 +80,20 @@ One word. You're in your project.
 
 ---
 
-## Option 2: Clone / Sync Project to Mac Mini
+## Option 2: GitHub Repo Project (Recommended for GitHub-based work)
+
+If your project is on GitHub, Glade can handle the clone for you:
+
+1. Open Settings → **GitHub** → Connect (one-time, auth persists)
+2. Tap **New Project** → toggle to **GitHub Repo**
+3. Search for your repo, select it, tap Create
+4. Glade clones it to `~/.glade/projects/{slug}` on the Mac Mini and opens a terminal in it
+
+From there, `git pull` and `git push` work normally inside the terminal. The repo lives on the Mac Mini, survives container restarts, and is accessible from any device.
+
+---
+
+## Option 3: Clone / Sync Project to Mac Mini (Manual)
 
 If you want the project to live on the Mac Mini itself (no SSH hop):
 
@@ -188,13 +204,12 @@ caffeinate -i
 
 ## CLI Tools Over SSH
 
-Tools installed in your Glade container (via `config/packages.sh`) are available in the Mac Mini terminal. When you SSH into your laptop, you use the laptop's own tools instead.
+Tools installed in your Glade container are available in the Mac Mini terminal. When you SSH into your laptop, you use the laptop's own tools instead.
 
-If you install `gh` on both machines:
-- On Mac Mini: `gh auth login` inside the Docker container
-- On laptop: `gh auth login` on the laptop itself
+`gh` CLI ships in the Glade container. Connect it via **Settings → GitHub** in the Glade UI — no manual `gh auth login` needed. Auth persists across container restarts via a bind mount.
 
-Any tool works the same pattern — install where you need it.
+- On Mac Mini (in Glade): connect via Settings → GitHub
+- On laptop: `gh auth login` on the laptop itself if needed for local work
 
 ---
 

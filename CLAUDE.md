@@ -53,8 +53,9 @@ Two Docker services defined in `docker-compose.yml`:
 - Python API on port 7683
 - ttyd instances on ports 7681 (main) and 7690–7699 (per-project)
 - tmux for session management and pipe-pane recording
-- gh CLI + Copilot extension
+- gh CLI (official Debian apt repo, architecture-aware: amd64/arm64/armhf)
 - Zsh + Oh My Zsh + Spaceship prompt
+- `~/.config/gh` bind-mounted from host for persistent GitHub auth
 
 **glade-web** — Caddy file server:
 - Serves `web/index.html` at `/`
@@ -138,8 +139,8 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 
 | File | Lines | Purpose |
 |---|---|---|
-| `web/index.html` | ~4900 | Single-file PWA: CSS, HTML, JavaScript inline |
-| `api/api.py` | ~920 | REST API: projects, snippets, logs, uploads |
+| `web/index.html` | ~5960 | Single-file PWA: CSS, HTML, JavaScript inline |
+| `api/api.py` | ~1250 | REST API: projects, snippets, logs, uploads, GitHub auth |
 | `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
 | `docker-compose.yml` | ~65 | Two services: ttyd + web |
@@ -160,6 +161,7 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 | `db/history.db` | SQLite: projects, snippets, settings, keyboard layouts |
 | `logs/{project-slug}/` | Session log files (one per tmux session) |
 | `logs/_main/` | Main shell logs (reserved, currently unused) |
+| `projects/{slug}/` | GitHub-cloned repos (created on project creation from GitHub source) |
 | `uploads/` | Pasted images (temporary storage) |
 | `assets/fonts/` | Berkeley Mono Nerd Font (user-provided, not in repo) |
 
