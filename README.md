@@ -66,16 +66,6 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 
 Most mobile terminal apps drop your session, cost money, or only work on one platform. Glade runs *on your server* — the session lives there, and any browser is just a window into it.
 
-|  | **Glade** | Termius | Blink Shell | JuiceSSH | Raw SSH |
-|---|---|---|---|---|---|
-| Self-hosted | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Free | ✅ MIT | Freemium | $20 | Freemium | ✅ |
-| Any device | ✅ browser | ✅ | iOS only | Android only | With client |
-| Persistent sessions | ✅ tmux | ❌ | ❌ | ❌ | With tmux |
-| Custom mobile keyboard | ✅ | ❌ | Limited | ❌ | ❌ |
-| Session recording | ✅ | ❌ | ❌ | ❌ | ❌ |
-| No cloud | ✅ | ❌ | ❌ | ❌ | ✅ |
-
 ---
 
 ## Prerequisites
