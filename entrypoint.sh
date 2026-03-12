@@ -25,9 +25,14 @@ elif git -C "$APP_DIR" rev-parse HEAD >/dev/null 2>&1; then
     log "git pull failed — continuing with existing code"
 else
     log "Cloning repo"
-    # Can't rm the mountpoint itself — clear its contents instead
     find "$APP_DIR" -mindepth 1 -depth -delete 2>/dev/null || true
-    git clone -q "$GLADE_REPO_URL" "$APP_DIR" || { log "Clone failed — check GLADE_REPO_URL"; exit 1; }
+    # Retry up to 5 times — handles transient network issues at boot
+    for attempt in 1 2 3 4 5; do
+        git clone -q "$GLADE_REPO_URL" "$APP_DIR" && break
+        log "Clone failed (attempt $attempt/5) — retrying in ${attempt}s"
+        sleep "$attempt"
+        [ "$attempt" -eq 5 ] && { log "Clone failed after 5 attempts — check GLADE_REPO_URL"; exit 1; }
+    done
 fi
 
 # ── Background update poller ───────────────────────────────────────────────────
