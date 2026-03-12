@@ -4874,6 +4874,20 @@
             document.getElementById('project-grid-overlay').classList.remove('open');
         }
 
+        function afterDeleteProject(deletedId) {
+            if (currentProjectId === deletedId) {
+                if (projects.length > 0) {
+                    switchProject(projects[0].id);
+                } else {
+                    currentProjectId = null;
+                    localStorage.removeItem('lastProjectId');
+                    iframe.src = 'about:blank';
+                    setConnectionState('connected');
+                    openProjectGrid();
+                }
+            }
+        }
+
         function renderProjectGrid() {
             const grid = document.getElementById('project-grid-cards');
             if (!grid) return;
@@ -4947,7 +4961,7 @@
                                     apiJson('/api/projects/' + p.id, { method: 'DELETE' })
                                         .then(function() {
                                             projects = projects.filter(function(x) { return x.id !== p.id; });
-                                            if (currentProjectId === p.id && projects.length > 0) switchProject(projects[0].id);
+                                            afterDeleteProject(p.id);
                                             renderProjectGrid();
                                             renderProjectTabs();
                                             toast('Project deleted', 'success');
@@ -4976,7 +4990,7 @@
                             apiJson('/api/projects/' + p.id, { method: 'DELETE' })
                                 .then(function() {
                                     projects = projects.filter(function(x) { return x.id !== p.id; });
-                                    if (currentProjectId === p.id && projects.length > 0) switchProject(projects[0].id);
+                                    afterDeleteProject(p.id);
                                     renderProjectGrid();
                                     renderProjectTabs();
                                     toast('Project deleted', 'success');
