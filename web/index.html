@@ -206,17 +206,6 @@
         }
         .proj-card-add:active { border-color: #585b70; color: #585b70; }
         .proj-card-add svg { width: 20px; height: 20px; }
-        .proj-card-del {
-            position: absolute; top: 8px; right: 8px; width: 26px; height: 26px;
-            border-radius: 50%; border: none; background: transparent; color: #45475a;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; -webkit-tap-highlight-color: transparent;
-            transition: background 120ms, color 120ms; z-index: 2;
-        }
-        .proj-card-del:active { background: rgba(243,139,168,0.15); color: #f38ba8; }
-        .proj-card.confirming-delete { border-color: rgba(243,139,168,0.5); }
-        .proj-card.confirming-delete .proj-card-del { background: rgba(243,139,168,0.15); color: #f38ba8; }
-        .proj-card.confirming-delete .proj-card-name { color: #f38ba8; }
 
         /* ── Add project sheet ────────────────────────────────── */
         #add-project-backdrop {
@@ -465,9 +454,17 @@
         }
 
         /* ── History / Session Log ────────────────────────────── */
-        #pv-history { align-items:stretch; justify-content:flex-start; gap:0; padding:0; position:relative; }
-        #history-list-view, #history-log-view { width:100%; height:100%; display:flex; flex-direction:column; }
-        #history-log-view { display:none; }
+        #pv-history { align-items:stretch; justify-content:flex-start; gap:0; padding:0; position:relative; overflow:hidden; }
+        #history-list-view, #history-log-view {
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            display:flex; flex-direction:column;
+            transition:transform 280ms cubic-bezier(0.32,0.72,0,1);
+            will-change:transform;
+        }
+        #history-list-view { transform:translateX(0); }
+        #history-log-view  { transform:translateX(100%); }
+        #history-list-view.slide-out { transform:translateX(-30%); }
+        #history-log-view.active     { transform:translateX(0); }
         .history-empty-icon  { color:#313244; }
         .history-empty-title { font-size:13px; color:#a6adc8; }
         .history-empty-sub   { font-size:11px; color:#6c7086; text-align:center; line-height:1.6; }
@@ -3513,7 +3510,7 @@
                         lpTimer = null; longPressed = true;
                         tile.classList.add('lp-active');
                         showSnippetCtx(snip, startX, startY);
-                    }, 450);
+                    }, 500);
                 }, { passive: true });
                 tile.addEventListener('touchmove', function(e) {
                     if (!e.touches.length) return;
@@ -3752,8 +3749,8 @@
             var emptyState = document.getElementById('history-empty-state');
             if (!list) return;
             if (_logTailTimer) { clearInterval(_logTailTimer); _logTailTimer = null; }
-            listView.style.display = 'flex';
-            logView.style.display = 'none';
+            listView.classList.remove('slide-out');
+            logView.classList.remove('active');
             list.innerHTML = '<div style="padding:8px 10px;font-size:11px;color:#585b70;">Loading\u2026</div>';
             emptyState.style.display = 'none';
             var logs = [];
@@ -3823,8 +3820,8 @@
             var content = document.getElementById('log-content');
             var searchInput = document.getElementById('log-search');
             if (_logTailTimer) { clearInterval(_logTailTimer); _logTailTimer = null; }
-            listView.style.display = 'none';
-            logView.style.display = 'flex';
+            listView.classList.add('slide-out');
+            logView.classList.add('active');
             title.textContent = displayName;
             liveInd.innerHTML = isActive ? '<span class="log-live-dot"></span>' : '';
             content.textContent = 'Loading\u2026';
@@ -3864,6 +3861,10 @@
 
         document.getElementById('log-back-btn').addEventListener('click', function () {
             if (_logTailTimer) { clearInterval(_logTailTimer); _logTailTimer = null; }
+            var listView = document.getElementById('history-list-view');
+            var logView  = document.getElementById('history-log-view');
+            logView.classList.remove('active');
+            listView.classList.remove('slide-out');
             renderHistory();
         });
 
@@ -4185,42 +4186,56 @@
                     card.appendChild(ghBadge);
                 }
 
-                // Delete button — tap once to arm, tap again to confirm
-                const delBtn = document.createElement('button');
-                delBtn.className = 'proj-card-del';
-                delBtn.innerHTML = IC.trash;
-                delBtn.setAttribute('aria-label', 'Delete project');
-                let confirmTimer = null;
-                delBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    if (card.classList.contains('confirming-delete')) {
-                        // Confirmed — delete
-                        clearTimeout(confirmTimer);
-                        apiJson('/api/projects/' + p.id, { method: 'DELETE' })
-                            .then(function() {
-                                projects = projects.filter(function(x) { return x.id !== p.id; });
-                                if (currentProjectId === p.id && projects.length > 0) switchProject(projects[0].id);
-                                renderProjectGrid();
-                                renderProjectTabs();
-                                toast('Project deleted', 'success');
-                            })
-                            .catch(function() { toast('Delete failed', 'error'); });
-                    } else {
-                        // Arm — show red confirm state, auto-cancel after 2.5s
-                        card.classList.add('confirming-delete');
-                        delBtn.setAttribute('aria-label', 'Tap again to confirm delete');
-                        haptic(20);
-                        confirmTimer = setTimeout(function() {
-                            card.classList.remove('confirming-delete');
-                            delBtn.setAttribute('aria-label', 'Delete project');
-                        }, 2500);
-                    }
-                });
-                card.appendChild(delBtn);
+                // Long-press card (500ms) → confirm delete — consistent with shell tab pattern
+                var lpFired = false, lpTimer = null;
+                card.addEventListener('touchstart', function() {
+                    lpFired = false;
+                    lpTimer = setTimeout(function() {
+                        lpTimer = null; lpFired = true;
+                        haptic(15);
+                        showConfirm(
+                            'Delete \u201c' + p.name + '\u201d?',
+                            p.directory || '',
+                            [{ label: 'Delete', style: 'danger', onConfirm: function() {
+                                apiJson('/api/projects/' + p.id, { method: 'DELETE' })
+                                    .then(function() {
+                                        projects = projects.filter(function(x) { return x.id !== p.id; });
+                                        if (currentProjectId === p.id && projects.length > 0) switchProject(projects[0].id);
+                                        renderProjectGrid();
+                                        renderProjectTabs();
+                                        toast('Project deleted', 'success');
+                                    })
+                                    .catch(function() { toast('Delete failed', 'error'); });
+                            }}]
+                        );
+                    }, 500);
+                }, { passive: true });
+                function cancelCardLp() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+                card.addEventListener('touchend', cancelCardLp, { passive: true });
+                card.addEventListener('touchmove', cancelCardLp, { passive: true });
 
                 card.addEventListener('click', function() {
+                    if (lpFired) { lpFired = false; return; }
                     closeProjectGrid();
                     switchProject(p.id);
+                });
+                card.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    showConfirm(
+                        'Delete \u201c' + p.name + '\u201d?',
+                        p.directory || '',
+                        [{ label: 'Delete', style: 'danger', onConfirm: function() {
+                            apiJson('/api/projects/' + p.id, { method: 'DELETE' })
+                                .then(function() {
+                                    projects = projects.filter(function(x) { return x.id !== p.id; });
+                                    if (currentProjectId === p.id && projects.length > 0) switchProject(projects[0].id);
+                                    renderProjectGrid();
+                                    renderProjectTabs();
+                                    toast('Project deleted', 'success');
+                                })
+                                .catch(function() { toast('Delete failed', 'error'); });
+                        }}]
+                    );
                 });
                 grid.appendChild(card);
             });
@@ -5733,7 +5748,7 @@
 
             // Trigger: long-press status indicator (600ms), long-press settings nav btn, or Ctrl+Shift+D
             let dbgLongTimer = null;
-            function startLongPress() { dbgLongTimer = setTimeout(openDebug, 600); }
+            function startLongPress() { dbgLongTimer = setTimeout(openDebug, 500); }
             function cancelLongPress() { clearTimeout(dbgLongTimer); }
 
             statusIndicator.addEventListener('touchstart', startLongPress, { passive: true });
