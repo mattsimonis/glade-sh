@@ -10,7 +10,6 @@ name: glade-sh
 # Run `make build` only when Dockerfile/entrypoint.sh/config/ changes.
 #
 # Prerequisites:
-#   - ~/.config/gh/ must contain valid gh CLI auth tokens (run `gh auth login` first)
 #   - ~/.glade/ must exist with assets/, db/ populated (run install.sh first)
 #   - Docker network 'shared_web' must exist: docker network create shared_web
 #   - glade.local DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
@@ -33,8 +32,8 @@ services:
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
       - ${GLADE_DIR:-~/.glade}:/root/.glade
-      - ${HOME:-~}/.config/gh:/root/.config/gh
       - glade-app:/app/glade              # cloned repo lives here
+      - gh-config:/root/.config/gh        # gh auth state (isolated to container)
     environment:
       - TERM=xterm-256color
       - GLADE_DIR=/root/.glade
@@ -69,3 +68,4 @@ networks:
 
 volumes:
   glade-app:                              # shared between ttyd (write) and web (read)
+  gh-config:                              # gh auth state, persists across restarts
