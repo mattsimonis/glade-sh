@@ -8,7 +8,10 @@ reverse_proxy yoto-home:3000
 tls /etc/caddy/certs/yoto.home.pem /etc/caddy/certs/yoto.home-key.pem
 }
 
-# Glade — plain HTTP via mDNS (glade.local on port 80, no cert needed)
+# Glade — plain HTTP fallback
+# Handles http:// requests if a client skips TLS. Requires a DNS entry for
+# the domain (Pi-hole A record or /etc/hosts). Replace glade.local below
+# with whatever you set DOMAIN= to in your .env file.
 http://glade.local {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
@@ -33,7 +36,10 @@ Referrer-Policy strict-origin-when-cross-origin
 }
 }
 
-# Glade — HTTPS via Pi-hole DNS (glade.local)
+# Glade — HTTPS
+# Replace glade.local with whatever you set DOMAIN= to in your .env file.
+# Requires a DNS entry (Pi-hole A record or /etc/hosts) pointing the domain
+# to this machine's LAN IP, and a matching mkcert TLS cert.
 glade.local {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
