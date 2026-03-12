@@ -518,6 +518,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._gh_auth_status()
         if p == ["api", "github", "repos"]:
             return self._gh_repos()
+        if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "shell-idle":
+            return self._shell_idle(p[2])
         self.send_json(404, {"error": "not found"})
 
     def do_POST(self):
@@ -793,10 +795,12 @@ class Handler(BaseHTTPRequestHandler):
     def _gh_auth_disconnect(self):
         if not self._gh_available():
             return self.send_json(503, {"error": "gh CLI not installed"})
-        subprocess.run(
-            ["gh", "auth", "logout", "-h", "github.com"],
-            input="y\n", capture_output=True, text=True, timeout=10
-        )
+        hosts_file = os.path.expanduser("~/.config/gh/hosts.yml")
+        try:
+            if os.path.exists(hosts_file):
+                os.remove(hosts_file)
+        except Exception as e:
+            return self.send_json(500, {"error": str(e)})
         self.send_json(200, {"ok": True})
 
     def _gh_repos(self):
@@ -932,14 +936,30 @@ class Handler(BaseHTTPRequestHandler):
             return
         b64  = data.get("data", "")
         if len(b64) > 20 * 1024 * 1024:  # ~15 MB decoded
-            return self.send_json(400, {"error": "image too large"})
-        mime = data.get("type", "image/png")
-        ext_map = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
-        ext  = ext_map.get(mime, "png")
+            return self.send_json(400, {"error": "file too large"})
+        mime = data.get("type", "application/octet-stream")
+        # Prefer caller-provided filename; fall back to MIME-based naming
+        orig_name = data.get("filename", "")
+        if orig_name and "/" not in orig_name and "\\" not in orig_name and ".." not in orig_name:
+            # Use a safe version of the original name
+            safe = "".join(c if c.isalnum() or c in "._-" else "_" for c in orig_name)
+            ext = safe.rsplit(".", 1)[-1] if "." in safe else ""
+            prefix = "file"
+        else:
+            img_ext_map = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
+            if mime in img_ext_map:
+                ext = img_ext_map[mime]
+                prefix = "img"
+            else:
+                # Guess extension from MIME
+                import mimetypes as _mt
+                guessed = _mt.guess_extension(mime) or ""
+                ext = guessed.lstrip(".") or "bin"
+                prefix = "file"
         os.makedirs(UPLOADS_DIR, exist_ok=True)
         ts       = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         short_id = str(uuid.uuid4()).replace("-", "")[:8]
-        filename = f"img-{ts}-{short_id}.{ext}"
+        filename = f"{prefix}-{ts}-{short_id}.{ext}" if ext else f"{prefix}-{ts}-{short_id}"
         path     = os.path.join(UPLOADS_DIR, filename)
         try:
             with open(path, "wb") as f:
@@ -950,6 +970,7 @@ class Handler(BaseHTTPRequestHandler):
             "path":     path,
             "url":      f"/api/uploads/{filename}",
             "filename": filename,
+            "mime":     mime,
         })
 
     def _serve_upload(self, filename):
@@ -979,16 +1000,35 @@ class Handler(BaseHTTPRequestHandler):
             if not os.path.isfile(fpath):
                 continue
             stat = os.stat(fpath)
+            mime, _ = mimetypes.guess_type(name)
             entries.append({
                 "filename":   name,
                 "url":        f"/api/uploads/{name}",
                 "created_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
                 "size":       stat.st_size,
+                "mime":       mime or "application/octet-stream",
             })
         entries.sort(key=lambda e: e["created_at"], reverse=True)
         self.send_json(200, entries[:10])
 
-    def _export_interactions(self):
+    _IDLE_SHELLS = {"bash", "zsh", "fish", "sh", "dash", "ksh", "tcsh", "csh", "-bash", "-zsh"}
+
+    def _shell_idle(self, pid):
+        with open_db() as conn:
+            row = conn.execute("SELECT name FROM projects WHERE id=?", (pid,)).fetchone()
+        if not row:
+            return self.send_json(404, {"error": "project not found"})
+        sname = slugify(row["name"])
+        try:
+            r = subprocess.run(
+                ["tmux", "display-message", "-pt", f"{sname}:0.0", "#{pane_current_command}"],
+                capture_output=True, text=True, timeout=3,
+            )
+            cmd = r.stdout.strip()
+        except Exception:
+            cmd = ""
+        idle = cmd.lower() in self._IDLE_SHELLS or cmd == ""
+        return self.send_json(200, {"idle": idle, "command": cmd})
         try:
             with open_db() as conn:
                 rows = conn.execute(
