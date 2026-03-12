@@ -1,7 +1,7 @@
 # Glade — Architecture Reference
 
 > Self-hosted, always-on terminal accessible from any device via browser.
-> Runs on a Mac Mini with Docker. Catppuccin Mocha theme. Berkeley Mono font.
+> Runs on any always-on host with Docker. Catppuccin Mocha theme. Berkeley Mono font.
 
 For AI-specific guidance (endpoints, gotchas, common tasks), see `COPILOT_INSTRUCTIONS.md`.
 For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
@@ -19,7 +19,7 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
                   │  LAN / Tailscale
                   ▼
        ┌──────────────────────────────────────┐
-       │         Mac Mini (Docker)            │
+       │       Server / Host (Docker)        │
        │                                      │
        │  caddy-proxy (standalone container)  │
        │    glade.local → :7682                   │

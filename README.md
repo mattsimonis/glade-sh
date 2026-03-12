@@ -13,7 +13,7 @@
 
 Your terminal is open on your phone. The session is alive on your server. Close the browser — it keeps running. Open it on your laptop — same session, same history, same scrollback. That's Glade.
 
-It runs on a Mac Mini or any always-on host inside Docker. Reach it from anywhere: on LAN through Caddy, remotely through Tailscale. No subscriptions. No cloud. Nothing leaves your machine.
+It runs on any always-on host inside Docker — a Mac Mini, Raspberry Pi, Linux server, or Windows machine. Reach it from anywhere: on LAN through Caddy, remotely through Tailscale. No subscriptions. No cloud. Nothing leaves your machine.
 
 ---
 
@@ -40,7 +40,7 @@ make setup   # builds image (~2 min) and starts containers
 
 Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the PWA.
 
-> `glade.local` requires a DNS entry — add an A record in Pi-hole or `/etc/hosts` on each client pointing to your Mac Mini's LAN IP.  
+> `glade.local` requires a DNS entry — add an A record in Pi-hole or `/etc/hosts` on each client pointing to your host's LAN IP.  
 > Tailscale is optional — only needed for remote access outside your home network.  
 > See [SETUP.md](SETUP.md) for the full walkthrough.
 
@@ -72,7 +72,7 @@ Most mobile terminal apps drop your session, cost money, or only work on one pla
 
 | Requirement | Notes |
 |---|---|
-| Always-on host (Mac Mini, Linux server) | Docker runs here |
+| Always-on host (Mac Mini, Raspberry Pi, Linux server, Windows PC) | Docker runs here |
 | Docker Desktop | Container runtime |
 | Standalone `caddy-proxy` container | Handles TLS for `*.local` domains |
 | Tailscale *(optional)* | Remote access outside the home network |

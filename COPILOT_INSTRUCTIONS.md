@@ -6,7 +6,7 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Glade** is a self-hosted browser terminal. One Mac Mini runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~5960 lines). The backend is a stdlib Python API (`api/api.py`, ~1250 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~5960 lines). The backend is a stdlib Python API (`api/api.py`, ~1250 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
 GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a bind-mounted `~/.config/gh`, and projects can be created directly from GitHub repos.
 
@@ -114,7 +114,7 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 
 ### Deploy path
 
-- `web/index.html` changes: `git pull` on Mac Mini, refresh browser
+- `web/index.html` changes: `git pull` on host, refresh browser
 - `api/api.py` changes: `git pull && make restart`
 - `Dockerfile`/`config/` changes: `git pull && make build`
 

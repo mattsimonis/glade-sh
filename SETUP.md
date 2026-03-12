@@ -1,44 +1,49 @@
 # Glade — Setup Guide
 
-> **DNS requires a local DNS entry.** `glade.local` does not resolve via mDNS automatically — mDNS only resolves the machine's own hostname (e.g. `casper.local`). Add an A record in Pi-hole, or an `/etc/hosts` entry on each client, pointing `glade.local` to your Mac Mini's LAN IP.  
+> **DNS requires a local DNS entry.** `glade.local` does not resolve via mDNS automatically — mDNS only resolves the machine's own hostname. Add an A record in Pi-hole, or an `/etc/hosts` entry on each client, pointing your chosen domain to your host's LAN IP.  
 > **Tailscale is optional** — required only for remote access outside your home network. Start without it.
 
 ---
 
 ## Prerequisites
 
-- Mac Mini is on and connected to your network
-- You have admin access to the Mac Mini (SSH or local keyboard)
-- Docker Desktop installed
+- An always-on host connected to your network (Mac Mini, Raspberry Pi, Linux server, or Windows PC)
+- Admin access to the host (SSH or local keyboard)
+- Docker installed on the host
 
 ---
 
-## Step 1: Install Dependencies on Mac Mini
+## Step 1: Install Docker
 
+**macOS:**
 ```bash
-# Homebrew (if not installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Core tools
-brew install sqlite3 git
+# Install Docker Desktop from https://www.docker.com/products/docker-desktop/
+# Then: brew install git   (if not already installed)
 ```
+
+**Linux / Raspberry Pi (Debian/Ubuntu):**
+```bash
+sudo apt update && sudo apt install -y git curl
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # log out and back in after this
+```
+> ARM is fully supported — the image builds for armhf, arm64, and amd64.
+
+**Windows:**
+```powershell
+winget install Git.Git Docker.DockerDesktop
+```
+> Docker Desktop requires WSL2. Run `wsl --install` and reboot before installing Docker.
 
 ---
 
-## Step 2: Clone the Project to Mac Mini
+## Step 2: Clone the Project
 
-SSH into the Mac Mini from your laptop:
-```bash
-ssh mac-mini
-```
-
-Then clone the repo:
+SSH into the host from your laptop (or run directly if you have a display):
 ```bash
 git clone https://github.com/mattsimonis/glade ~/Dev/glade
 cd ~/Dev/glade
 ```
-
-> Already have the project folder on your laptop? Copy it over SMB into a convenient path (e.g. `/Volumes/Photos/Dev/glade`) and `cd` into that directory instead.
 
 ---
 
@@ -50,11 +55,11 @@ cp .env.example .env
 
 Edit `.env`:
 ```bash
-HOST=mac-mini      # hostname of the machine running Docker
-DOMAIN=glade.local # domain you'll use to access the UI
+HOST=your-hostname  # hostname of the machine running Docker
+DOMAIN=glade.local  # domain you'll use to access the UI
 ```
 
-To mount personal directories (e.g. your code) inside the container, create a gitignored `docker-compose.override.yml`:
+To mount personal directories inside the container, create a gitignored `docker-compose.override.yml`:
 
 ```yaml
 services:
@@ -65,27 +70,7 @@ services:
 
 ---
 
-## Step 4: Run the Installer
-
-```bash
-./install.sh
-```
-
-This will:
-- Create `~/.glade/` with all subdirectories
-- Copy scripts, schema, and config files into place
-- Initialize the SQLite database
-- Add shell integration to your `.zshrc` and `.bashrc`
-- Print warnings for anything missing
-
-Restart your shell:
-```bash
-source ~/.zshrc
-```
-
----
-
-## Step 5: Add Your Font (Optional)
+## Step 4: Add Your Font (Optional)
 
 Copy the Regular Nerd Font variant into place:
 
@@ -93,29 +78,34 @@ Copy the Regular Nerd Font variant into place:
 cp BerkeleyMonoNerdFont-Regular.ttf ~/.glade/assets/fonts/
 ```
 
-The filename must start with `BerkeleyMonoNerdFont-Regular` — that's what the `@font-face` declaration expects. If yours is named differently, rename it.
+The filename must start with `BerkeleyMonoNerdFont-Regular`. If yours is named differently, rename it.
 
 If you skip this, the UI falls back to JetBrains Mono → Fira Code → system monospace.
 
 ---
 
-## Step 6: Set Up TLS — mkcert cert
+## Step 5: Set Up TLS — mkcert cert
 
-On the machine where `caddy-proxy` is managed:
+Install mkcert on the machine where `caddy-proxy` is managed:
 
+| Platform | Command |
+|---|---|
+| macOS | `brew install mkcert && mkcert -install` |
+| Linux / Raspberry Pi | `sudo apt install mkcert` or download from [github.com/FiloSottile/mkcert/releases](https://github.com/FiloSottile/mkcert/releases) |
+| Windows | `winget install FiloSottile.mkcert` then `mkcert -install` |
+
+Then generate the cert:
 ```bash
 mkcert glade.local
 mv glade.local.pem       /path/to/caddy/certs/glade.local.pem
 mv glade.local-key.pem   /path/to/caddy/certs/glade.local-key.pem
 ```
 
-If `mkcert` isn't installed: `brew install mkcert && mkcert -install`
-
 ---
 
-## Step 7: Add glade.local to Your Standalone Caddy
+## Step 6: Add glade.local to Your Standalone Caddy
 
-Copy the contents of `services/Caddyfile` (the `glade.local` block) into your Caddy project's `Caddyfile`, then restart:
+Copy the `glade.local` block from `services/Caddyfile` into your Caddy project's `Caddyfile`, then restart:
 
 ```bash
 docker restart caddy-proxy
@@ -123,7 +113,7 @@ docker restart caddy-proxy
 
 ---
 
-## Step 8: Start Services
+## Step 7: Start Services
 
 ```bash
 cd ~/Dev/glade
@@ -141,95 +131,90 @@ make build
 
 ---
 
-## Step 9: Verify from the Mac Mini Itself
+## Step 8: Verify
 
-```bash
-# Open a browser on the Mac Mini and go to https://glade.local
-# You should see the Glade web UI with project cards and a terminal
-```
-
-Also verify the API:
 ```bash
 curl -s http://localhost:7683/api/health | python3 -m json.tool
 ```
 
+Then open `https://glade.local` in a browser on the host to confirm the UI loads.
+
 ---
 
-## Step 10: Connect from Your Laptop
+## Step 9: Connect from Your Laptop
 
 1. Make sure you're on the same network
-2. Open a browser
-3. Go to: `https://glade.local`
-4. First visit: run `mkcert -install` on the laptop to trust the local CA (avoids cert warning)
-5. You should see the terminal UI with Catppuccin Mocha theme
-6. Create a project and run a command — it executes on the Mac Mini
+2. Go to `https://glade.local` in a browser
+3. First visit: run `mkcert -install` on the laptop to trust the local CA (avoids cert warning)
+4. Create a project and run a command — it executes on the host
 
 ---
 
-## Step 11: Connect from Your Phone
+## Step 10: Connect from Your Phone
 
 1. Make sure you're on the same network
-2. Open Safari (iOS) or Chrome (Android)
-3. Go to: `https://glade.local`
-4. The terminal loads with the mobile keyboard toolbar at the bottom
-5. Use the extra keys (Esc, Tab, Ctrl, arrows) to navigate interactive menus
-6. Copy/Paste buttons are in the toolbar
+2. Open Safari (iOS) or Chrome (Android) → `https://glade.local`
+3. The terminal loads with the mobile keyboard toolbar at the bottom
 
-**Tip:** On iOS, tap "Share → Add to Home Screen" to make it feel like a native app (full screen, no browser chrome).
+**Tip:** On iOS, tap "Share → Add to Home Screen" for full-screen mode with no browser chrome.
 
-On iOS: to avoid cert warnings, import the mkcert root CA profile → Settings → General → VPN & Device Management → trust it.
+To avoid cert warnings on iOS: import the mkcert root CA profile → Settings → General → VPN & Device Management → trust it.
 
 ---
 
-## Step 12: Make It Survive Reboots
+## Step 11: Make It Survive Reboots
 
-The `docker-compose.yml` already has `restart: unless-stopped`, so Docker handles this as long as Docker Desktop is set to start at login:
+`docker-compose.yml` uses `restart: unless-stopped`, so containers restart automatically as long as Docker starts at boot.
 
-**Docker Desktop → Settings → General → "Start Docker Desktop when you sign in"**
+**Docker Desktop (macOS / Windows):** Settings → General → "Start Docker Desktop when you sign in"
 
-`caddy-proxy` handles itself the same way.
+**Linux / Raspberry Pi (Docker Engine):**
+```bash
+sudo systemctl enable docker
+```
+Docker Engine starts at boot by default after `get.docker.com` install.
 
 ---
 
 ## Optional: Tailscale (Remote Access)
 
-Skip this entirely if you only need LAN access. Add it later when you want to reach Glade from outside the home network.
+Skip this if you only need LAN access.
 
-**Mac Mini:**
-```bash
-brew install tailscale
-```
-Then open System Settings → Tailscale → Sign in.
+**Host:**
 
-**Laptop:** Download from [tailscale.com/download](https://tailscale.com/download). Sign in with the same account.
+| Platform | Command |
+|---|---|
+| macOS | `brew install tailscale` then open System Settings → Tailscale → Sign in |
+| Linux / Raspberry Pi | `curl -fsSL https://tailscale.com/install.sh \| sh` then `sudo tailscale up` |
+| Windows | Download from [tailscale.com/download](https://tailscale.com/download) |
 
-**Phone:**
-- iOS: App Store → "Tailscale" → Install → Sign in
-- Android: Google Play → "Tailscale" → Install → Sign in
+**Laptop / Phone:** Download Tailscale from [tailscale.com/download](https://tailscale.com/download) and sign in with the same account.
 
-**Verify:** On the Mac Mini:
+Verify on the host:
 ```bash
 tailscale status
 ```
-You should see all your devices listed.
 
-**Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) and enable MagicDNS so you can use `glade.local` over Tailscale instead of an IP.
-
-Once connected, `https://glade.local` works from anywhere your Tailscale devices can reach the Mac Mini.
+**Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) → enable MagicDNS so you can reach the host by hostname over Tailscale.
 
 ---
 
 ## Pi-hole DNS (Required for `glade.local`)
 
-`glade.local` is not your machine's hostname, so it won't resolve via mDNS automatically. You need a local DNS entry. Pi-hole is the cleanest way to do this in a homelab.
-
-Add a record:
+`glade.local` is not your machine's hostname, so it won't resolve automatically. Add an A record:
 
 1. Open Pi-hole admin → **Local DNS** → **DNS Records**
 2. Add:
    - **Domain:** `glade.local`
-   - **IP Address:** Mac Mini's LAN IP (find it with `ipconfig getifaddr en0`)
-3. Click **Add**
+   - **IP Address:** your host's LAN IP
+
+Find your host's LAN IP:
+
+| Platform | Command |
+|---|---|
+| macOS | `ipconfig getifaddr en0` |
+| Linux / Raspberry Pi | `hostname -I \| awk '{print $1}'` |
+| Windows | `ipconfig` → IPv4 Address under your network adapter |
 
 ---
 
@@ -241,7 +226,7 @@ Glade includes a `gh` CLI and can connect to your GitHub account. This is entire
 - Create projects directly from a GitHub repo (clone happens automatically)
 - Use `gh` commands, `gh copilot`, and authenticated git operations inside the terminal
 
-**One-time setup:** The only requirement is that `docker-compose.yml` mounts your `~/.config/gh` directory, which it does by default. This means GitHub auth persists across container restarts.
+**One-time setup:** `docker-compose.yml` mounts `~/.config/gh` from the host by default — auth persists across container restarts.
 
 **To connect:**
 1. Open the Glade UI → tap the ⚙️ icon → **Settings**
@@ -251,11 +236,9 @@ Glade includes a `gh` CLI and can connect to your GitHub account. This is entire
 5. Done — your username and avatar appear in Settings
 
 **To create a project from a GitHub repo:**
-1. Tap **New Project**
-2. Toggle the source to **GitHub Repo**
-3. Search for a repo by name
-4. Select it — the name pre-fills
-5. Tap Create — Glade clones the repo to `~/.glade/projects/{slug}` and creates the project
+1. Tap **New Project** → toggle the source to **GitHub Repo**
+2. Search for a repo, select it, tap Create
+3. Glade clones the repo to `~/.glade/projects/{slug}` and opens a terminal in it
 
 If you tap "GitHub Repo" without being connected, the auth flow starts automatically.
 
@@ -265,9 +248,10 @@ If you tap "GitHub Repo" without being connected, the auth flow starts automatic
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://glade.local` | Check that Pi-hole (or `/etc/hosts`) has an A record for `glade.local` pointing to your Mac Mini's LAN IP. Also check `caddy-proxy` is running: `docker ps`. Try the IP directly to isolate DNS from routing. |
+| Can't reach `https://glade.local` | Check that Pi-hole (or `/etc/hosts`) has an A record for `glade.local` pointing to your host's LAN IP. Check `caddy-proxy` is running: `docker ps`. Try the IP directly to isolate DNS from routing. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
-| Docker first build is slow | Normal — building the image. Watch with `docker compose logs -f ttyd` |
-| Phone keyboard covers terminal | The toolbar should push the terminal up. If not, try "Add to Home Screen" for full-screen mode |
-| History not logging | Session logs are recorded via tmux pipe-pane. Check `ls ~/.glade/logs/` for files. Create a project and run a command to start recording. |
+| Docker first build is slow | Normal — first build takes ~2 min. Watch with `docker compose logs -f ttyd` |
+| Phone keyboard covers terminal | The toolbar should push the terminal up. Try "Add to Home Screen" for full-screen mode. |
+| History not logging | Check `ls ~/.glade/logs/` for files. Create a project and run a command to start recording. |
+
