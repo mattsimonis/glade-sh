@@ -1157,6 +1157,78 @@
 
         /* ── Connection state pulse ──────────────────────────── */
         @keyframes conn-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+        /* ── GitHub connect modal ────────────────────────────── */
+        #github-modal-backdrop {
+            position:fixed; inset:0; z-index:310; background:rgba(17,17,27,0.75);
+            opacity:0; transition:opacity 200ms; pointer-events:none;
+        }
+        #github-modal-backdrop.visible { opacity:1; pointer-events:auto; }
+        #github-modal {
+            position:fixed; top:50%; left:50%; transform:translate(-50%,-60%);
+            z-index:320; background:#1e1e2e; border:1px solid #313244; border-radius:16px;
+            padding:24px; width:min(340px, calc(100vw - 40px));
+            opacity:0; pointer-events:none; transition:opacity 200ms, transform 200ms;
+        }
+        #github-modal.visible { opacity:1; pointer-events:auto; transform:translate(-50%,-50%); }
+        .gh-modal-title { font-size:15px; font-weight:600; color:#cdd6f4; margin-bottom:4px; font-family:var(--font-mono); }
+        .gh-modal-sub { font-size:12px; color:#6c7086; margin-bottom:20px; line-height:1.5; }
+        .gh-code-block {
+            background:#11111b; border:1px solid #313244; border-radius:8px;
+            padding:14px; text-align:center; margin-bottom:16px;
+        }
+        .gh-code-label { font-size:10px; color:#6c7086; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
+        .gh-code-value { font-size:22px; font-weight:700; color:#89b4fa; font-family:var(--font-mono); letter-spacing:0.1em; }
+        .gh-open-btn {
+            width:100%; padding:10px; border:none; border-radius:8px; font-size:13px;
+            cursor:pointer; background:#313244; color:#cdd6f4; margin-bottom:8px; transition:background 120ms;
+        }
+        .gh-open-btn:active { background:#45475a; }
+        .gh-cancel-btn {
+            width:100%; padding:8px; border:1px solid #313244; border-radius:8px; font-size:12px;
+            cursor:pointer; background:transparent; color:#6c7086; transition:background 120ms;
+        }
+        .gh-cancel-btn:active { background:#313244; }
+        .gh-spinner {
+            display:flex; align-items:center; gap:8px; font-size:12px; color:#6c7086;
+            margin-bottom:14px; justify-content:center;
+        }
+        @keyframes gh-spin { to { transform:rotate(360deg); } }
+        .gh-spinner-icon { width:14px; height:14px; border:2px solid #313244; border-top-color:#89b4fa; border-radius:50%; animation:gh-spin 0.7s linear infinite; flex-shrink:0; }
+
+        /* ── Source toggle (project creation) ───────────────── */
+        .ap-source-toggle { display:flex; gap:6px; margin-bottom:16px; }
+        .ap-source-btn {
+            flex:1; padding:8px; border:1px solid #313244; border-radius:8px; font-size:12px;
+            cursor:pointer; background:transparent; color:#6c7086; font-family:var(--font-mono);
+            transition:all 120ms; -webkit-tap-highlight-color:transparent;
+        }
+        .ap-source-btn.active { border-color:#89b4fa; color:#89b4fa; background:rgba(137,180,250,0.08); }
+        .ap-source-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+        /* ── Repo search ─────────────────────────────────────── */
+        #ap-repo-field { display:none; }
+        #ap-repo-field.visible { display:block; }
+        .repo-dropdown {
+            position:absolute; left:0; right:0; top:100%; z-index:10;
+            background:#181825; border:1px solid #313244; border-radius:8px;
+            max-height:220px; overflow-y:auto; margin-top:4px;
+            box-shadow:0 8px 24px rgba(0,0,0,0.4);
+        }
+        .repo-item {
+            padding:10px 12px; cursor:pointer; border-bottom:1px solid #1e1e2e; transition:background 80ms;
+        }
+        .repo-item:last-child { border-bottom:none; }
+        .repo-item:active, .repo-item.highlighted { background:#313244; }
+        .repo-item-name { font-size:13px; color:#cdd6f4; font-family:var(--font-mono); display:flex; align-items:center; gap:6px; }
+        .repo-item-desc { font-size:11px; color:#6c7086; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .repo-private-badge { font-size:9px; padding:1px 5px; border-radius:4px; background:rgba(203,166,247,0.15); color:#cba6f7; font-family:var(--font-mono); flex-shrink:0; }
+
+        /* ── GitHub badge on project card ────────────────────── */
+        .proj-card-gh-badge {
+            position:absolute; top:6px; right:32px;
+            width:14px; height:14px; opacity:0.45;
+        }
     </style>
 </head>
 <body>
@@ -1447,15 +1519,28 @@
     <div id="add-project-sheet">
         <div class="sheet-handle"></div>
         <div class="sheet-title">New Project</div>
+        <!-- Source toggle: Local | GitHub -->
+        <div class="ap-source-toggle">
+            <button class="ap-source-btn active" id="ap-src-local">Local Directory</button>
+            <button class="ap-source-btn" id="ap-src-github">GitHub Repo</button>
+        </div>
         <div class="sheet-field">
             <label class="sheet-label" for="ap-name-input">Name</label>
             <input class="sheet-input" id="ap-name-input" type="text"
                    autocomplete="off" autocorrect="off" spellcheck="false" placeholder="e.g. My App">
         </div>
-        <div class="sheet-field">
+        <!-- Local directory field -->
+        <div class="sheet-field" id="ap-dir-field">
             <label class="sheet-label" for="ap-dir-input">Directory</label>
             <input class="sheet-input" id="ap-dir-input" type="text"
                    autocomplete="off" autocorrect="off" spellcheck="false" placeholder="/mnt/dev/my-app">
+        </div>
+        <!-- GitHub repo field (shown when GitHub source selected) -->
+        <div class="sheet-field" id="ap-repo-field" style="position:relative">
+            <label class="sheet-label" for="ap-repo-input">Repository</label>
+            <input class="sheet-input" id="ap-repo-input" type="text"
+                   autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search your repos…">
+            <div class="repo-dropdown" id="ap-repo-dropdown" style="display:none"></div>
         </div>
         <div class="sheet-field">
             <label class="sheet-label">Color</label>
@@ -1467,6 +1552,23 @@
         </div>
     </div>
 
+    <!-- GitHub device-flow connect modal -->
+    <div id="github-modal-backdrop"></div>
+    <div id="github-modal" role="dialog" aria-modal="true" aria-labelledby="gh-modal-title">
+        <div class="gh-modal-title" id="gh-modal-title">Connect GitHub</div>
+        <div class="gh-modal-sub">Open the link below and enter the code to authorize Glade.</div>
+        <div class="gh-code-block">
+            <div class="gh-code-label">One-time code</div>
+            <div class="gh-code-value" id="gh-user-code">—</div>
+        </div>
+        <div class="gh-spinner">
+            <div class="gh-spinner-icon"></div>
+            <span>Waiting for authorization…</span>
+        </div>
+        <button class="gh-open-btn" id="gh-open-btn">Open github.com/login/device</button>
+        <button class="gh-cancel-btn" id="gh-cancel-btn">Cancel</button>
+    </div>
+
     <!-- Settings overlay -->
     <div id="settings-overlay">
         <div class="settings-header">
@@ -1476,6 +1578,28 @@
             </button>
         </div>
         <div class="settings-body">
+            <!-- GitHub section -->
+            <div class="settings-section" id="settings-github-section">
+                <div class="settings-section-title">GitHub</div>
+                <div id="gh-connected-state" style="display:none">
+                    <div class="settings-row">
+                        <span class="settings-label" style="display:flex;align-items:center;gap:8px">
+                            <img id="gh-avatar" src="" width="22" height="22" style="border-radius:50%" alt="">
+                            <span id="gh-username" style="font-family:var(--font-mono);font-size:13px;color:#cdd6f4"></span>
+                        </span>
+                        <span class="settings-value" style="color:#a6e3a1">Connected</span>
+                    </div>
+                    <button class="settings-btn-full" id="gh-disconnect-btn" style="background:rgba(243,139,168,0.1);color:#f38ba8;border:1px solid rgba(243,139,168,0.2)">Disconnect</button>
+                </div>
+                <div id="gh-disconnected-state">
+                    <div class="settings-row">
+                        <span class="settings-label">Not connected</span>
+                        <span class="settings-value" style="color:#6c7086">—</span>
+                    </div>
+                    <button class="settings-btn-full settings-btn-primary" id="gh-connect-btn">Connect GitHub</button>
+                </div>
+            </div>
+
             <div class="settings-section">
                 <div class="settings-section-title">Keyboard Layouts</div>
                 <div class="settings-card">
@@ -2896,6 +3020,8 @@
                             '</div>';
                     }).join('');
                 }).catch(function(){});
+                // GitHub status
+                refreshGithubSettingsState();
             }
             function closeSettings() { overlay.classList.remove('open'); }
 
@@ -4059,6 +4185,14 @@
                 lbl.textContent = p.running ? 'running' : 'idle';
                 st.appendChild(dot); st.appendChild(lbl);
                 card.appendChild(accent); card.appendChild(nm); card.appendChild(dr); card.appendChild(st);
+                if (p.github_repo) {
+                    const ghBadge = document.createElement('img');
+                    ghBadge.className = 'proj-card-gh-badge';
+                    ghBadge.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>');
+                    ghBadge.setAttribute('aria-hidden', 'true');
+                    card.style.position = 'relative';
+                    card.appendChild(ghBadge);
+                }
 
                 // Delete button — tap once to arm, tap again to confirm
                 const delBtn = document.createElement('button');
@@ -4152,30 +4286,244 @@
 
         function openAddProjectSheet() {
             apNameIn.value = ''; apDirIn.value = '/mnt';
+            if (apRepoInput) apRepoInput.value = '';
+            if (apRepoDropdown) apRepoDropdown.style.display = 'none';
+            selectedRepo = null;
+            setProjectSource('local');
             selectedProjectColor = PROJECT_COLORS[0];
             buildColorSwatches();
             apBackdrop.classList.add('visible');
             apSheet.classList.add('open');
+            apCreateBtn.disabled = false;
+            apCreateBtn.textContent = 'Create';
             setTimeout(function(){ apNameIn.focus(); }, 300);
         }
 
         function closeAddProjectSheet() {
             apBackdrop.classList.remove('visible');
             apSheet.classList.remove('open');
+            apCreateBtn.disabled = false;
+            apCreateBtn.textContent = 'Create';
         }
 
         apBackdrop.addEventListener('click', closeAddProjectSheet);
         attachSwipeToDismiss(apSheet.querySelector('.sheet-handle'), apSheet, closeAddProjectSheet, apBackdrop);
         apCancelBtn.addEventListener('click', closeAddProjectSheet);
+
+        // ── GitHub connect ───────────────────────────────────────────────
+        var ghModalBackdrop = document.getElementById('github-modal-backdrop');
+        var ghModal         = document.getElementById('github-modal');
+        var ghUserCodeEl    = document.getElementById('gh-user-code');
+        var ghOpenBtn       = document.getElementById('gh-open-btn');
+        var ghCancelBtn     = document.getElementById('gh-cancel-btn');
+        var ghConnectBtn    = document.getElementById('gh-connect-btn');
+        var ghDisconnectBtn = document.getElementById('gh-disconnect-btn');
+        var ghConnectedEl   = document.getElementById('gh-connected-state');
+        var ghDisconnectedEl= document.getElementById('gh-disconnected-state');
+        var ghAvatarEl      = document.getElementById('gh-avatar');
+        var ghUsernameEl    = document.getElementById('gh-username');
+        var ghStatusPoller  = null;
+        var ghVerificationUri = 'https://github.com/login/device';
+        var ghConnected = false;
+        var ghPendingSourceSwitch = false;
+
+        function refreshGithubSettingsState() {
+            fetch('/api/github/auth/status').then(function(r){ return r.json(); }).then(function(s) {
+                ghConnected = !!s.connected;
+                if (s.connected) {
+                    ghConnectedEl.style.display = '';
+                    ghDisconnectedEl.style.display = 'none';
+                    if (ghAvatarEl && s.avatar_url) ghAvatarEl.src = s.avatar_url;
+                    if (ghUsernameEl) ghUsernameEl.textContent = s.username || '';
+                } else {
+                    ghConnectedEl.style.display = 'none';
+                    ghDisconnectedEl.style.display = '';
+                }
+            }).catch(function(){});
+        }
+
+        function openGhModal(userCode, verUri) {
+            ghVerificationUri = verUri || 'https://github.com/login/device';
+            if (ghUserCodeEl) ghUserCodeEl.textContent = userCode || '—';
+            ghModalBackdrop.classList.add('visible');
+            ghModal.classList.add('visible');
+            // Poll for auth completion
+            ghStatusPoller = setInterval(function() {
+                fetch('/api/github/auth/status').then(function(r){ return r.json(); }).then(function(s) {
+                    if (s.connected) {
+                        closeGhModal();
+                        refreshGithubSettingsState();
+                        toast('GitHub connected', 'success');
+                        if (ghPendingSourceSwitch) {
+                            ghPendingSourceSwitch = false;
+                            setProjectSource('github');
+                        }
+                    }
+                }).catch(function(){});
+            }, 3000);
+            // Timeout after 10 minutes
+            setTimeout(function() {
+                if (ghStatusPoller) { clearInterval(ghStatusPoller); ghStatusPoller = null; }
+                if (ghModal.classList.contains('visible')) {
+                    closeGhModal();
+                    ghPendingSourceSwitch = false;
+                    toast('GitHub auth timed out', 'error');
+                }
+            }, 600000);
+        }
+
+        function closeGhModal() {
+            ghModal.classList.remove('visible');
+            ghModalBackdrop.classList.remove('visible');
+            if (ghStatusPoller) { clearInterval(ghStatusPoller); ghStatusPoller = null; }
+        }
+
+        if (ghOpenBtn) ghOpenBtn.addEventListener('click', function() {
+            window.open(ghVerificationUri, '_blank');
+        });
+        if (ghCancelBtn) ghCancelBtn.addEventListener('click', closeGhModal);
+        if (ghModalBackdrop) ghModalBackdrop.addEventListener('click', closeGhModal);
+
+        if (ghConnectBtn) ghConnectBtn.addEventListener('click', function() {
+            startGhAuth(false);
+        });
+
+        function startGhAuth(pendingSwitch) {
+            ghPendingSourceSwitch = !!pendingSwitch;
+            if (ghConnectBtn) { ghConnectBtn.disabled = true; ghConnectBtn.textContent = 'Starting…'; }
+            fetch('/api/github/auth/start', { method: 'POST' })
+                .then(function(r){ return r.json(); })
+                .then(function(d) {
+                    if (ghConnectBtn) { ghConnectBtn.disabled = false; ghConnectBtn.textContent = 'Connect GitHub'; }
+                    if (d.error) { toast('GitHub: ' + d.error, 'error'); ghPendingSourceSwitch = false; return; }
+                    openGhModal(d.user_code, d.verification_uri);
+                })
+                .catch(function() {
+                    if (ghConnectBtn) { ghConnectBtn.disabled = false; ghConnectBtn.textContent = 'Connect GitHub'; }
+                    ghPendingSourceSwitch = false;
+                    toast('Could not start GitHub auth', 'error');
+                });
+        }
+
+        if (ghDisconnectBtn) ghDisconnectBtn.addEventListener('click', function() {
+            if (!confirm('Disconnect GitHub?')) return;
+            fetch('/api/github/auth', { method: 'DELETE' })
+                .then(function(){ refreshGithubSettingsState(); toast('GitHub disconnected', 'success'); })
+                .catch(function(){ toast('Disconnect failed', 'error'); });
+        });
+
+        // ── Project source toggle & repo search ──────────────────────────
+        var apSrcLocal   = document.getElementById('ap-src-local');
+        var apSrcGithub  = document.getElementById('ap-src-github');
+        var apDirField   = document.getElementById('ap-dir-field');
+        var apRepoField  = document.getElementById('ap-repo-field');
+        var apRepoInput  = document.getElementById('ap-repo-input');
+        var apRepoDropdown = document.getElementById('ap-repo-dropdown');
+        var selectedRepo = null;  // { nameWithOwner, name }
+        var repoSearchTimer = null;
+
+        function setProjectSource(src) {
+            if (src === 'local') {
+                apSrcLocal.classList.add('active');
+                apSrcGithub.classList.remove('active');
+                apDirField.style.display = '';
+                apRepoField.classList.remove('visible');
+                selectedRepo = null;
+            } else {
+                apSrcLocal.classList.remove('active');
+                apSrcGithub.classList.add('active');
+                apDirField.style.display = 'none';
+                apRepoField.classList.add('visible');
+                setTimeout(function(){ if(apRepoInput) apRepoInput.focus(); }, 100);
+            }
+        }
+
+        if (apSrcLocal) apSrcLocal.addEventListener('click', function(){ setProjectSource('local'); });
+        if (apSrcGithub) apSrcGithub.addEventListener('click', function(){
+            if (ghConnected) {
+                setProjectSource('github');
+            } else {
+                startGhAuth(true);  // start auth; switch to github mode on completion
+            }
+        });
+
+        function renderRepoDrop(repos) {
+            if (!apRepoDropdown) return;
+            if (!repos || !repos.length) {
+                apRepoDropdown.style.display = 'none';
+                return;
+            }
+            apRepoDropdown.innerHTML = repos.slice(0, 20).map(function(r) {
+                var priv = r.isPrivate ? '<span class="repo-private-badge">private</span>' : '';
+                var desc = r.description ? '<div class="repo-item-desc">' + r.description + '</div>' : '';
+                return '<div class="repo-item" data-repo="' + r.nameWithOwner + '" data-name="' + r.name + '">' +
+                    '<div class="repo-item-name">' + r.nameWithOwner + priv + '</div>' +
+                    desc + '</div>';
+            }).join('');
+            apRepoDropdown.style.display = '';
+            apRepoDropdown.querySelectorAll('.repo-item').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    selectedRepo = { nameWithOwner: el.dataset.repo, name: el.dataset.name };
+                    apRepoInput.value = selectedRepo.nameWithOwner;
+                    apRepoDropdown.style.display = 'none';
+                    // Pre-fill project name if empty
+                    var nameIn = document.getElementById('ap-name-input');
+                    if (nameIn && !nameIn.value.trim()) nameIn.value = selectedRepo.name;
+                });
+            });
+        }
+
+        if (apRepoInput) {
+            apRepoInput.addEventListener('input', function() {
+                selectedRepo = null;
+                clearTimeout(repoSearchTimer);
+                var q = apRepoInput.value.trim();
+                if (!q) {
+                    // Load all repos on focus/clear
+                    fetch('/api/github/repos').then(function(r){ return r.json(); }).then(renderRepoDrop).catch(function(){});
+                    return;
+                }
+                repoSearchTimer = setTimeout(function() {
+                    fetch('/api/github/repos?q=' + encodeURIComponent(q))
+                        .then(function(r){ return r.json(); }).then(renderRepoDrop).catch(function(){});
+                }, 300);
+            });
+            apRepoInput.addEventListener('focus', function() {
+                if (!apRepoInput.value.trim()) {
+                    fetch('/api/github/repos').then(function(r){ return r.json(); }).then(renderRepoDrop).catch(function(){});
+                }
+            });
+            // Close dropdown on outside click
+            document.addEventListener('click', function(e) {
+                if (apRepoField && !apRepoField.contains(e.target)) {
+                    if (apRepoDropdown) apRepoDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        // Initialize GitHub state on page load
+        refreshGithubSettingsState();
+
         apCreateBtn.addEventListener('click', async function() {
             const name = apNameIn.value.trim();
-            const dir  = apDirIn.value.trim();
             if (!name) { apNameIn.focus(); return; }
+            const isGithub = apSrcGithub && apSrcGithub.classList.contains('active');
+            let body;
+            if (isGithub) {
+                const repo = selectedRepo ? selectedRepo.nameWithOwner : (apRepoInput ? apRepoInput.value.trim() : '');
+                if (!repo) { if (apRepoInput) apRepoInput.focus(); return; }
+                body = { name: name, github_repo: repo, color: selectedProjectColor };
+                apCreateBtn.disabled = true;
+                apCreateBtn.textContent = 'Cloning…';
+            } else {
+                const dir = apDirIn.value.trim();
+                body = { name: name, directory: dir || '/mnt', color: selectedProjectColor };
+            }
             try {
                 const proj = await apiJson('/api/projects', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, directory: dir || '/mnt', color: selectedProjectColor }),
+                    body: JSON.stringify(body),
                 });
                 projects.push(proj);
                 closeAddProjectSheet();
@@ -4183,7 +4531,11 @@
                 renderProjectGrid();
                 switchProject(proj.id);
                 closeProjectGrid();
-            } catch(e) { alert('Failed to create project'); }
+            } catch(e) {
+                apCreateBtn.disabled = false;
+                apCreateBtn.textContent = 'Create';
+                alert('Failed to create project: ' + (e.message || e));
+            }
         });
 
         // ── Terminal access ─────────────────────────────────────────────────────

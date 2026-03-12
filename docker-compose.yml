@@ -33,6 +33,7 @@ services:
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
       - ${GLADE_DIR:-~/.glade}:/root/.glade
+      - ${HOME:-~}/.config/gh:/root/.config/gh
       - glade-app:/app/glade              # cloned repo lives here
     environment:
       - TERM=xterm-256color

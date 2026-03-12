@@ -31,9 +31,10 @@ Routes:
   GET    /api/export                    export interactions as JSON
   GET    /api/rebuild/log               {log, running} — rebuild output log + running state
   POST   /api/rebuild                   write trigger file for host watcher → {ok}
-  GET    /api/logs/search?q=            search across all logs (grep)
-  GET    /api/logs/current/:slug        tail active session log (last 200 lines)
-  GET    /api/logs/:project/:file       raw log file content (?tail=N optional)
+  GET    /api/github/auth/status        {connected, username, avatar_url}
+  POST   /api/github/auth/start         begin device flow -> {user_code, verification_uri}
+  DELETE /api/github/auth               disconnect (gh auth logout)
+  GET    /api/github/repos?q=           list/search user repos -> [{nameWithOwner,name,description,isPrivate}]
 """
 
 import base64
@@ -47,7 +48,9 @@ import sqlite3
 import subprocess
 import sys
 import threading
+import time
 import uuid
+import shutil
 from contextlib import contextmanager
 from urllib.parse import unquote
 from datetime import datetime, timezone
@@ -65,8 +68,12 @@ DISABLE_UPDATE_CHECK = os.environ.get("DISABLE_UPDATE_CHECK", "").lower() in ("1
 REBUILD_TRIGGER = os.path.join(GLADE_DIR, ".rebuild-requested")
 REBUILD_LOCK    = os.path.join(GLADE_DIR, ".rebuild-running")
 REBUILD_LOG     = os.path.join(GLADE_DIR, "rebuild.log")
+PROJECTS_DIR    = os.path.join(GLADE_DIR, "projects")
 
 PORT_POOL = list(range(7690, 7700))
+
+_gh_auth_proc = None
+_gh_auth_lock = threading.Lock()
 
 # Shell key format: f"{sname}:{window_index}"  e.g. "proj-abc12345:0"
 SHELL_KEY_RE = re.compile(r'^proj-[0-9a-f]{8}:\d+$')
@@ -139,6 +146,11 @@ def ensure_tables():
                 raw_log_path TEXT
             );
         """)
+        # Migrate: add github_repo column if it doesn't exist yet
+        try:
+            conn.execute("ALTER TABLE projects ADD COLUMN github_repo TEXT")
+        except Exception:
+            pass
 
 
 # ---- tmux helpers -----------------------------------------------------------
@@ -449,6 +461,20 @@ class Handler(BaseHTTPRequestHandler):
     def parts(self):
         return [x for x in self.path.split("?")[0].split("/") if x]
 
+    def qs(self):
+        """Parse query string from the request path. Returns a dict of {key: value}."""
+        if "?" not in self.path:
+            return {}
+        qs = self.path.split("?", 1)[1]
+        result = {}
+        for part in qs.split("&"):
+            if "=" in part:
+                k, v = part.split("=", 1)
+                result[unquote(k)] = unquote(v)
+            elif part:
+                result[unquote(part)] = ""
+        return result
+
     def do_GET(self):
         p = self.parts()
         if p == ["api", "health"]:
@@ -487,9 +513,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._tail_current_log(p[3])
         if len(p) == 4 and p[:2] == ["api", "logs"]:
             return self._get_log_file(p[2], p[3])
+        if p == ["api", "github", "auth", "status"]:
+            return self._gh_auth_status()
+        if p == ["api", "github", "repos"]:
+            return self._gh_repos()
         self.send_json(404, {"error": "not found"})
-
-    def do_POST(self):
         p = self.parts()
         if p == ["api", "rebuild"]:
             return self._trigger_rebuild()
@@ -507,9 +535,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._create_snippet()
         if p == ["api", "upload-image"]:
             return self._upload_image()
+        if p == ["api", "github", "auth", "start"]:
+            return self._gh_auth_start()
         self.send_json(404, {"error": "not found"})
-
-    def do_PUT(self):
         p = self.parts()
         if len(p) == 3 and p[:2] == ["api", "projects"]:
             return self._update_project(p[2])
@@ -535,14 +563,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._delete_snippet(p[2])
         if len(p) == 4 and p[:2] == ["api", "logs"]:
             return self._delete_log_file(p[2], p[3])
+        if p == ["api", "github", "auth"]:
+            return self._gh_auth_disconnect()
         self.send_json(404, {"error": "not found"})
-
-    # -- projects --
 
     def _list_projects(self):
         with open_db() as conn:
             rows = conn.execute(
-                "SELECT id,name,directory,color,sort_order,created_at,last_active "
+                "SELECT id,name,directory,color,sort_order,created_at,last_active,github_repo "
                 "FROM projects ORDER BY sort_order, created_at"
             ).fetchall()
         result = []
@@ -578,14 +606,42 @@ class Handler(BaseHTTPRequestHandler):
         name = (data.get("name") or "").strip()
         directory = (data.get("directory") or "/").strip() or "/"
         color = (data.get("color") or "#89b4fa").strip()
+        github_repo = (data.get("github_repo") or "").strip()
         if not name:
             return self.send_json(400, {"error": "name required"})
+
+        if github_repo:
+            if not shutil.which("gh"):
+                return self.send_json(503, {"error": "gh CLI not available"})
+            repo_name = github_repo.split("/")[-1] if "/" in github_repo else github_repo
+            slug = slugify(repo_name)
+            clone_dir = os.path.join(PROJECTS_DIR, slug)
+            base = clone_dir
+            n = 1
+            while os.path.exists(clone_dir):
+                clone_dir = f"{base}-{n}"
+                n += 1
+            os.makedirs(PROJECTS_DIR, exist_ok=True)
+            r = subprocess.run(
+                ["gh", "repo", "clone", github_repo, clone_dir],
+                capture_output=True, text=True, timeout=120
+            )
+            if r.returncode != 0:
+                msg = (r.stderr or r.stdout or "unknown error").strip()
+                return self.send_json(422, {"error": f"Clone failed: {msg}"})
+            directory = clone_dir
+
         pid = str(uuid.uuid4())
         with open_db() as conn:
-            conn.execute("INSERT INTO projects (id,name,directory,color) VALUES (?,?,?,?)",
-                         (pid, name, directory, color))
-        self.send_json(201, {"id": pid, "name": name, "directory": directory,
-                              "color": color, "running": False, "port": None})
+            conn.execute(
+                "INSERT INTO projects (id,name,directory,color,github_repo) VALUES (?,?,?,?,?)",
+                (pid, name, directory, color, github_repo or None)
+            )
+        self.send_json(201, {
+            "id": pid, "name": name, "directory": directory,
+            "color": color, "github_repo": github_repo or None,
+            "running": False, "port": None,
+        })
 
     def _update_project(self, pid):
         data, err = self._read_body()
@@ -655,6 +711,111 @@ class Handler(BaseHTTPRequestHandler):
         if not tmux_session_exists(sname):
             return self.send_json(200, [])
         self.send_json(200, self._shells_with_ports(pid, sname))
+
+    # ── GitHub ───────────────────────────────────────────────────────────────
+
+    def _gh_available(self):
+        return shutil.which("gh") is not None
+
+    def _gh_auth_status(self):
+        if not self._gh_available():
+            return self.send_json(200, {"connected": False, "error": "gh not installed"})
+        try:
+            r = subprocess.run(
+                ["gh", "auth", "status", "-h", "github.com"],
+                capture_output=True, text=True, timeout=10
+            )
+            if r.returncode != 0:
+                return self.send_json(200, {"connected": False})
+            ur = subprocess.run(
+                ["gh", "api", "user", "--jq", "{login: .login, avatar_url: .avatar_url}"],
+                capture_output=True, text=True, timeout=10
+            )
+            if ur.returncode == 0:
+                try:
+                    info = json.loads(ur.stdout.strip())
+                    return self.send_json(200, {
+                        "connected": True,
+                        "username": info.get("login", ""),
+                        "avatar_url": info.get("avatar_url", ""),
+                    })
+                except Exception:
+                    pass
+            return self.send_json(200, {"connected": True, "username": "", "avatar_url": ""})
+        except Exception as e:
+            return self.send_json(200, {"connected": False, "error": str(e)})
+
+    def _gh_auth_start(self):
+        global _gh_auth_proc
+        if not self._gh_available():
+            return self.send_json(503, {"error": "gh CLI not installed in this container"})
+        with _gh_auth_lock:
+            if _gh_auth_proc and _gh_auth_proc.poll() is None:
+                _gh_auth_proc.terminate()
+            proc = subprocess.Popen(
+                ["gh", "auth", "login", "-h", "github.com", "--git-protocol", "https", "-w"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            _gh_auth_proc = proc
+
+        user_code = None
+        verification_uri = "https://github.com/login/device"
+        deadline = time.time() + 20
+        for line in proc.stdout:
+            line = strip_ansi(line).strip()
+            m = re.search(r'one-time code[:\s]+([A-Z0-9]{4}-[A-Z0-9]{4})', line, re.I)
+            if m:
+                user_code = m.group(1)
+            m = re.search(r'(https://github\.com/login/device\S*)', line)
+            if m:
+                verification_uri = m.group(1).rstrip(".")
+            if user_code:
+                break
+            if time.time() > deadline:
+                break
+
+        if not user_code:
+            return self.send_json(503, {"error": "Could not start GitHub device flow — check that gh is authenticated or try again"})
+
+        return self.send_json(200, {
+            "user_code": user_code,
+            "verification_uri": verification_uri,
+        })
+
+    def _gh_auth_disconnect(self):
+        if not self._gh_available():
+            return self.send_json(503, {"error": "gh CLI not installed"})
+        subprocess.run(
+            ["gh", "auth", "logout", "-h", "github.com"],
+            input="y\n", capture_output=True, text=True, timeout=10
+        )
+        self.send_json(200, {"ok": True})
+
+    def _gh_repos(self):
+        if not self._gh_available():
+            return self.send_json(200, [])
+        q = self.qs().get("q", "").strip().lower()
+        try:
+            r = subprocess.run(
+                ["gh", "repo", "list", "--limit", "100",
+                 "--json", "nameWithOwner,name,description,isPrivate"],
+                capture_output=True, text=True, timeout=30
+            )
+            if r.returncode != 0:
+                return self.send_json(200, [])
+            repos = json.loads(r.stdout or "[]")
+            if q:
+                repos = [
+                    repo for repo in repos
+                    if q in repo.get("nameWithOwner", "").lower()
+                    or q in (repo.get("description") or "").lower()
+                ]
+            return self.send_json(200, repos)
+        except Exception:
+            return self.send_json(200, [])
 
     def _new_shell(self, pid):
         with open_db() as conn:
