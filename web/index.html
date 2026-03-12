@@ -1678,6 +1678,10 @@
                 <span class="settings-label">Glade</span>
                 <span class="settings-value" style="color:#6c7086">v1.0.0</span>
             </div>
+            <div class="settings-row">
+                <span class="settings-label">Build</span>
+                <span class="settings-value" id="settings-build-date" style="color:#6c7086">—</span>
+            </div>
             <div style="margin-top:8px;font-size:11px;color:#6c7086;line-height:1.5">
                 Catppuccin Mocha · Berkeley Mono · ttyd 1.7.7
             </div>
@@ -2992,9 +2996,16 @@
                 if (compactMeta) compactMeta.textContent = compactLayout.rows.length + ' rows';
 
                 // Server health
-                fetch('/api/health').then(function(r) { return r.json(); }).then(function() {
+                fetch('/api/health').then(function(r) { return r.json(); }).then(function(h) {
                     const el = document.getElementById('settings-status-val');
                     if (el) { el.textContent = 'Online'; el.style.color = '#a6e3a1'; }
+                    const bd = document.getElementById('settings-build-date');
+                    if (bd && h.build_date) {
+                        var d = h.build_date;
+                        bd.textContent = d.length === 14
+                            ? d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)+' '+d.slice(8,10)+':'+d.slice(10,12)+':'+d.slice(12,14)
+                            : d;
+                    }
                 }).catch(function() {
                     const el = document.getElementById('settings-status-val');
                     if (el) { el.textContent = 'Offline'; el.style.color = '#f38ba8'; }

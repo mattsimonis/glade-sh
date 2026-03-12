@@ -46,6 +46,9 @@ RUN chmod +x /entrypoint.sh
 ENV TERM=xterm-256color
 ENV GLADE_DIR=/root/.glade
 
+ARG BUILD_DATE=unknown
+ENV GLADE_BUILD_DATE=${BUILD_DATE}
+
 EXPOSE 7681 7683 7690 7691 7692 7693 7694 7695 7696 7697 7698 7699
 
 ENTRYPOINT ["/entrypoint.sh"]

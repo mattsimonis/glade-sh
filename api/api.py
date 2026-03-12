@@ -482,6 +482,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": True,
                 "update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/glade-update-pending"),
                 "image_update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/glade-image-update-pending"),
+                "build_date": os.environ.get("GLADE_BUILD_DATE", ""),
             })
         if p == ["api", "projects", "activity"]:
             return self._get_activity()

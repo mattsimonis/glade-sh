@@ -36,7 +36,7 @@ restart:
 
 # Full rebuild — only needed after Dockerfile, entrypoint.sh, or config/ changes
 build:
-	docker compose build ttyd && docker compose up -d
+	docker compose build --build-arg BUILD_DATE=$(shell date +%Y%m%d%H%M%S) ttyd && docker compose up -d
 
 # Tail logs for all services (Ctrl-C to stop)
 logs:
