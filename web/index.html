@@ -3883,6 +3883,7 @@
             } else if (!currentProjectId && projects.length > 0) {
                 switchProject(projects[0].id);
             } else if (!currentProjectId) {
+                setConnectionState('connected'); // nothing to reconnect to — clear any stale overlay
                 openProjectGrid();
             }
         }
@@ -5263,6 +5264,7 @@
         const MAX_FAIL_RECONNECTING = 2, MAX_FAIL_DISCONNECTED = 6;
         function checkConnection() {
             if (reconnectInProgress) return; // don't fight an active reconnect
+            if (!currentProjectId) { consecutiveFailures = 0; return; } // no project — nothing to connect to
             try {
                 const doc = iframe.contentWindow && iframe.contentWindow.document;
                 if (doc && doc.body && doc.body.children.length > 0) {
