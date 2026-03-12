@@ -1142,6 +1142,20 @@
         .kb-btn::after { content:''; position:absolute; inset:0; background:rgba(205,214,244,0.08); border-radius:inherit; opacity:0; transform:scale(0.6); transition:opacity 300ms, transform 300ms; pointer-events:none; }
         .kb-btn:active::after { opacity:1; transform:scale(1); transition:none; }
 
+        /* ── Host unreachable overlay ────────────────────────── */
+        #host-unreachable-overlay {
+            position:fixed; inset:0; z-index:500; background:#11111b;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            padding:40px; text-align:center;
+            opacity:0; pointer-events:none; transition:opacity 400ms;
+        }
+        #host-unreachable-overlay.visible { opacity:1; pointer-events:auto; }
+        .hu-icon { margin-bottom:20px; }
+        .hu-title { font-size:18px; font-weight:600; color:#cdd6f4; font-family:var(--font-mono); margin-bottom:10px; }
+        .hu-body { font-size:13px; color:#6c7086; line-height:1.6; max-width:280px; margin-bottom:24px; }
+        .hu-checking { display:flex; align-items:center; gap:8px; font-size:12px; color:#45475a; font-family:var(--font-mono); }
+        .hu-spinner { width:14px; height:14px; border:2px solid #313244; border-top-color:#585b70; border-radius:50%; animation:gh-spin 1s linear infinite; flex-shrink:0; }
+
         /* ── Connection state pulse ──────────────────────────── */
         @keyframes conn-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
 
@@ -3855,7 +3869,13 @@
 
         // ── Load & render project tabs ─────────────────────────────────────────
         async function loadProjects() {
-            try { projects = await apiJson('/api/projects'); } catch (e) { projects = []; }
+            try {
+                projects = await apiJson('/api/projects');
+                hideHostUnreachable();
+            } catch (e) {
+                if (isNetworkError(e)) { showHostUnreachable(); return; }
+                projects = [];
+            }
             renderProjectTabs();
             const saved = localStorage.getItem('lastProjectId');
             if (saved && projects.find(function(p){ return p.id === saved; })) {
@@ -5067,6 +5087,34 @@
         })();
 
         // ── Connection monitoring ───────────────────────────────────────────────
+        const huOverlay = document.getElementById('host-unreachable-overlay');
+        let huPollTimer = null;
+
+        function isNetworkError(e) {
+            return e instanceof TypeError;
+        }
+        function showHostUnreachable() {
+            if (huOverlay) huOverlay.classList.add('visible');
+            if (!huPollTimer) {
+                huPollTimer = setInterval(function() {
+                    fetch('/api/health').then(function(r) {
+                        if (r.ok) {
+                            hideHostUnreachable();
+                            reconnectInProgress = false;
+                            loadProjects().then(function() {
+                                if (currentProjectId) forceReconnect();
+                            }).catch(function(){});
+                        }
+                    }).catch(function(){});
+                }, 5000);
+            }
+        }
+        function hideHostUnreachable() {
+            if (huOverlay) huOverlay.classList.remove('visible');
+            if (huPollTimer) { clearInterval(huPollTimer); huPollTimer = null; }
+        }
+
+
         const reconnectTitle = document.getElementById('reconnect-title');
         const reconnectHint  = document.getElementById('reconnect-hint');
         let termPollTimer = null;
@@ -5113,7 +5161,8 @@
                     iframe.src = 'about:blank';
                     requestAnimationFrame(function () { iframe.src = url; startTerminalPoll(); startShellPoll(pid); });
                 })
-                .catch(function () {
+                .catch(function (e) {
+                    if (isNetworkError(e)) { showHostUnreachable(); reconnectInProgress = false; return; }
                     const url = iframe.src;
                     try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
                     iframe.src = 'about:blank';
@@ -5864,6 +5913,21 @@
 
     })();
     </script>
+    <!-- Host unreachable — shown when API cannot be reached at all -->
+    <div id="host-unreachable-overlay">
+        <div class="hu-icon">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#45475a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>
+                <line x1="4" y1="4" x2="20" y2="20" stroke="#585b70" stroke-width="1.5"/>
+            </svg>
+        </div>
+        <div class="hu-title">Can't reach Glade</div>
+        <div class="hu-body">Make sure you're on the same network or VPN as your server. Glade will reconnect automatically.</div>
+        <div class="hu-checking">
+            <div class="hu-spinner"></div>
+            <span>Checking…</span>
+        </div>
+    </div>
 
 </body>
 </html>
