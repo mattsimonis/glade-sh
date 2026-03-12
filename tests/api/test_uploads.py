@@ -14,8 +14,11 @@ _PNG_1X1 = (
     "AABjkB6QAAAABJRU5ErkJggg=="
 )
 
+# Minimal plain-text content (base64-encoded)
+_TXT_HELLO = base64.b64encode(b"Hello, Glade!\n").decode()
 
-# ── Upload ────────────────────────────────────────────────────────────────────
+
+# ── Upload images ─────────────────────────────────────────────────────────────
 
 
 def test_upload_image_valid_png_returns_path_and_url(client):
@@ -46,6 +49,13 @@ def test_upload_image_jpeg_gets_jpg_extension(client):
     assert data["filename"].endswith(".jpg")
 
 
+def test_upload_image_returns_mime_field(client):
+    _, data, _ = client.post(
+        "/api/upload-image", {"data": _PNG_1X1, "type": "image/png"}
+    )
+    assert data["mime"] == "image/png"
+
+
 def test_upload_image_too_large_closes_connection(client):
     """
     read_json() hard-caps at 4 MB. A body larger than that drains the socket
@@ -69,6 +79,64 @@ def test_upload_image_invalid_base64_returns_400(client):
     )
     assert status == 400
     assert_cors(headers)
+
+
+# ── Universal file upload ─────────────────────────────────────────────────────
+
+
+def test_upload_text_file_gets_txt_extension(client):
+    """Plain-text files should be stored with a .txt extension."""
+    status, data, headers = client.post(
+        "/api/upload-image", {"data": _TXT_HELLO, "type": "text/plain"}
+    )
+    assert status == 200
+    assert data["filename"].endswith(".txt")
+    assert data["mime"] == "text/plain"
+    assert_cors(headers)
+
+
+def test_upload_with_original_filename_preserves_extension(client):
+    """When a filename is provided the server uses its extension."""
+    status, data, _ = client.post(
+        "/api/upload-image",
+        {"data": _TXT_HELLO, "type": "text/plain", "filename": "notes.md"},
+    )
+    assert status == 200
+    assert data["filename"].endswith(".md")
+
+
+def test_upload_filename_path_traversal_stripped(client):
+    """A malicious filename containing path separators must be sanitised."""
+    status, data, _ = client.post(
+        "/api/upload-image",
+        {"data": _TXT_HELLO, "type": "text/plain", "filename": "../etc/passwd"},
+    )
+    # Server should reject or sanitise — either a 4xx or a safe filename
+    if status == 200:
+        assert "/" not in data["filename"]
+        assert ".." not in data["filename"]
+    else:
+        assert status >= 400
+
+
+def test_upload_generic_binary_uses_file_prefix(client):
+    """Unknown MIME types should use the 'file-' prefix, not 'img-'."""
+    status, data, _ = client.post(
+        "/api/upload-image",
+        {"data": _TXT_HELLO, "type": "application/octet-stream"},
+    )
+    assert status == 200
+    assert data["filename"].startswith("file-")
+
+
+def test_upload_file_written_to_disk(client):
+    """Non-image upload must actually land on disk."""
+    _, data, _ = client.post(
+        "/api/upload-image", {"data": _TXT_HELLO, "type": "text/plain"}
+    )
+    assert os.path.isfile(data["path"])
+    with open(data["path"], "rb") as f:
+        assert f.read() == b"Hello, Glade!\n"
 
 
 # ── List uploads ──────────────────────────────────────────────────────────────
@@ -99,6 +167,28 @@ def test_list_uploads_returns_uploaded_files(client):
     assert "created_at" in entry
 
 
+def test_list_uploads_includes_mime_field(client):
+    """Each entry in the uploads list must carry a mime field."""
+    client.post("/api/upload-image", {"data": _PNG_1X1, "type": "image/png"})
+    _, data, _ = client.get("/api/uploads")
+    assert len(data) >= 1
+    assert "mime" in data[0]
+    # PNG file → image/png
+    assert data[0]["mime"] == "image/png"
+
+
+def test_list_uploads_mime_field_for_text_file(client):
+    """Text uploads must report the correct MIME type in the list."""
+    client.post(
+        "/api/upload-image",
+        {"data": _TXT_HELLO, "type": "text/plain", "filename": "readme.txt"},
+    )
+    _, data, _ = client.get("/api/uploads")
+    txt_entry = next((e for e in data if e["filename"].endswith(".txt")), None)
+    assert txt_entry is not None
+    assert "text" in txt_entry["mime"]
+
+
 def test_list_uploads_capped_at_ten(client):
     for _ in range(12):
         client.post("/api/upload-image", {"data": _PNG_1X1, "type": "image/png"})
@@ -118,6 +208,18 @@ def test_serve_upload_returns_correct_mime_type(client):
     assert status == 200
     assert "image" in headers.get("Content-Type", "")
     assert isinstance(body, bytes)  # binary content returned as bytes
+
+
+def test_serve_upload_text_file_returns_text_content(client):
+    _, upload, _ = client.post(
+        "/api/upload-image",
+        {"data": _TXT_HELLO, "type": "text/plain", "filename": "hello.txt"},
+    )
+    filename = upload["filename"]
+    status, body, headers = client.get(f"/api/uploads/{filename}")
+    assert status == 200
+    # _Client decodes text/plain to str; check content equality
+    assert "Hello, Glade!" in body
 
 
 def test_serve_upload_not_found_returns_404(client):
