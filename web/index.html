@@ -4568,6 +4568,19 @@
             bar.appendChild(mgr);
         }
 
+        // Per-device: remember which shell tab this device last used per project.
+        function _saveShellChoice(pid, idx) {
+            try { localStorage.setItem('lastShell_' + pid, idx); } catch(e) {}
+        }
+        function _savedShellChoice(pid, shells) {
+            try {
+                var saved = localStorage.getItem('lastShell_' + pid);
+                if (saved === null) return null;
+                var idx = parseInt(saved, 10);
+                return (shells || []).find(function(s) { return s.index === idx; }) || null;
+            } catch(e) { return null; }
+        }
+
         async function switchProject(pid) {
             currentProjectId = pid;
             currentShellIdx = null;  // reset — belongs to new project
@@ -4590,8 +4603,8 @@
             // Start project & get port
             try {
                 const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
-                // Use the active shell's port (if available) so we land on the right window
-                const active = (data.shells || []).find(function(s) { return s.active; });
+                // Prefer this device's last-used shell; fall back to tmux's active window
+                const active = _savedShellChoice(pid, data.shells) || (data.shells || []).find(function(s) { return s.active; });
                 const port = (active && active.port) || data.port;
                 if (active) currentShellIdx = active.index;
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
@@ -4709,7 +4722,7 @@
             const shell = currentShells.find(function(s) { return s.index === idx; });
             if (!shell || !shell.port) return;
             currentShellIdx = idx;
-            // Optimistic tab highlight
+            _saveShellChoice(currentProjectId, idx);
             const bar = document.getElementById('shell-tabs-bar');
             if (bar) {
                 bar.querySelectorAll('.shell-tab').forEach(function(t, i) {
@@ -4733,7 +4746,10 @@
                     result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
                 }
                 // Set tracking before refreshShells so the new tab renders as active
-                if (result && result.index !== undefined) currentShellIdx = result.index;
+                if (result && result.index !== undefined) {
+                    currentShellIdx = result.index;
+                    _saveShellChoice(currentProjectId, result.index);
+                }
                 await refreshShells();
                 if (result && result.port) {
                     window._freshShell = true;
@@ -6453,10 +6469,12 @@
             // We reconnect to whichever shell was last active.
             apiJson('/api/projects/' + pid + '/start', { method: 'POST' })
                 .then(function (data) {
-                    // Prefer the shell currently on screen; fall back to tmux's active flag
-                    const preferred = currentShellIdx !== null
-                        ? (data.shells || []).find(function(s) { return s.index === currentShellIdx; })
-                        : null;
+                    // Prefer this device's saved shell, then in-memory idx, then tmux's active flag
+                    const saved = _savedShellChoice(pid, data.shells);
+                    const preferred = saved ||
+                        (currentShellIdx !== null
+                            ? (data.shells || []).find(function(s) { return s.index === currentShellIdx; })
+                            : null);
                     const active = preferred || (data.shells || []).find(function(s) { return s.active; });
                     const port = (active && active.port) || data.port;
                     if (active) currentShellIdx = active.index;
