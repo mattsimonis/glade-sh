@@ -4608,7 +4608,7 @@
                 const port = (active && active.port) || data.port;
                 if (active) currentShellIdx = active.index;
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
-                iframe.src = '/ttyd/' + port + '/';
+                loadShellUrl('/ttyd/' + port + '/');
                 startShellPoll(pid);
                 markProjectViewed(pid);
                 if (isSidebarLayout() && typeof renderProjectGrid === 'function') renderProjectGrid();
@@ -4839,6 +4839,7 @@
                 } else {
                     currentProjectId = null;
                     localStorage.removeItem('lastProjectId');
+                    try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
                     iframe.src = 'about:blank';
                     setConnectionState('connected');
                     openProjectGrid();
