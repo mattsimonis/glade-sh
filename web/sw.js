@@ -2,7 +2,7 @@
 // Gives the app a proper "offline" screen instead of a blank error when the
 // server is unreachable.  Does NOT cache API calls or ttyd terminal streams.
 
-const CACHE = 'glade-shell-v1';
+const CACHE = 'glade-shell-v2';
 const SHELL  = ['/'];   // just the app shell; manifest is versioned by URL
 
 self.addEventListener('install', function (e) {
@@ -57,6 +57,23 @@ self.addEventListener('fetch', function (e) {
             })
             .catch(function () {
                 return caches.match(e.request);
+            })
+    );
+});
+
+// Notification click — focus the existing Glade window or open a new one.
+self.addEventListener('notificationclick', function (e) {
+    e.notification.close();
+    e.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(function (clients) {
+                for (var i = 0; i < clients.length; i++) {
+                    var c = clients[i];
+                    if (c.url.startsWith(self.location.origin) && 'focus' in c) {
+                        return c.focus();
+                    }
+                }
+                return self.clients.openWindow('/');
             })
     );
 });
