@@ -1239,7 +1239,9 @@ class Handler(BaseHTTPRequestHandler):
     def _delete_log_file(self, project, filename):
         if ".." in project or ".." in filename:
             return self.send_json(400, {"error": "invalid path"})
-        fpath = os.path.join(LOGS_DIR, project, filename)
+        fpath = os.path.normpath(os.path.join(LOGS_DIR, project, filename))
+        if not fpath.startswith(os.path.normpath(LOGS_DIR) + os.sep):
+            return self.send_json(400, {"error": "invalid path"})
         if not os.path.isfile(fpath):
             return self.send_json(404, {"error": "not found"})
         try:
