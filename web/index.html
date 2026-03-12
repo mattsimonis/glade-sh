@@ -523,6 +523,16 @@
         .settings-btn:active { background:var(--surface1); }
         .settings-btn-danger { border-color:color-mix(in srgb, var(--red) 35%, transparent); color:var(--red); }
         .settings-btn-danger:active { background:color-mix(in srgb, var(--red) 12%, transparent); }
+        .font-upload-zone {
+            display:flex; flex-direction:column; align-items:center; gap:6px;
+            border:1px dashed var(--surface1); border-radius:8px;
+            padding:14px 12px; margin-top:8px; cursor:pointer;
+            transition:border-color 120ms, background 120ms;
+        }
+        .font-upload-zone:hover { border-color:var(--blue); background:rgba(137,180,250,0.05); }
+        .font-upload-zone.dragover { border-color:var(--blue); background:rgba(137,180,250,0.08); }
+        .font-upload-zone-label { font-size:12px; color:var(--subtext0); pointer-events:none; }
+        .font-upload-zone-hint  { font-size:11px; color:var(--overlay0); pointer-events:none; }
 
         /* ── Panel ────────────────────────────────────────────── */
         #panel {
@@ -1999,6 +2009,21 @@
                    aria-label="Terminal font size">
         </div>
 
+        <!-- Custom Font section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Font</div>
+            <div class="settings-row">
+                <span class="settings-label">Active font</span>
+                <span class="settings-value" id="settings-font-name" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Commit Mono</span>
+            </div>
+            <input type="file" id="settings-font-file" accept=".woff2,.ttf,.otf" style="display:none">
+            <div class="font-upload-zone" id="settings-font-zone">
+                <span class="font-upload-zone-label" id="settings-font-zone-label">↑ Upload font file</span>
+                <span class="font-upload-zone-hint">.woff2 recommended · .ttf and .otf accepted</span>
+            </div>
+            <button class="settings-btn-full settings-btn-danger" id="settings-font-remove-btn" style="display:none;margin-top:8px">Remove custom font</button>
+        </div>
+
         <!-- Terminal Theme section -->
         <div class="settings-section">
             <div class="settings-section-title">Terminal Theme</div>
@@ -3453,6 +3478,115 @@
                     if (el) el.textContent = pct + '%';
                     applyTermFontScale(pct / 100);
                     localStorage.setItem('termFontScale', String(termFontScale));
+                });
+            }
+
+            // ── Custom font upload ────────────────────────────────
+            function applyCustomFont(cfg) {
+                var existingStyle = document.getElementById('custom-font-face');
+                if (existingStyle) existingStyle.remove();
+                var nameEl   = document.getElementById('settings-font-name');
+                var removeBtn = document.getElementById('settings-font-remove-btn');
+                var zoneLabel = document.getElementById('settings-font-zone-label');
+                if (!cfg || !cfg.url) {
+                    document.documentElement.style.removeProperty('--font-mono');
+                    if (nameEl)    nameEl.textContent    = 'Commit Mono';
+                    if (removeBtn) removeBtn.style.display = 'none';
+                    if (zoneLabel) zoneLabel.textContent = '↑ Upload font file';
+                    return;
+                }
+                var fmtMap = { woff2: 'woff2', ttf: 'truetype', otf: 'opentype' };
+                var ext    = (cfg.filename || '').split('.').pop().toLowerCase();
+                var fmt    = fmtMap[ext] || 'truetype';
+                var style  = document.createElement('style');
+                style.id   = 'custom-font-face';
+                style.textContent = '@font-face{font-family:"' + cfg.family + '";src:url("' + cfg.url + '") format("' + fmt + '");font-weight:100 900;font-style:normal;font-display:swap;}';
+                document.head.appendChild(style);
+                document.documentElement.style.setProperty('--font-mono', '"' + cfg.family + '","Commit Mono",ui-monospace,"Menlo",monospace');
+                if (nameEl)    nameEl.textContent    = cfg.name || cfg.family;
+                if (removeBtn) removeBtn.style.display = '';
+                if (zoneLabel) zoneLabel.textContent = '↑ Replace font file';
+            }
+
+            function loadCustomFont() {
+                fetch('/api/settings/font').then(function(r) {
+                    if (!r.ok) return;
+                    r.json().then(function(cfg) { applyCustomFont(cfg); }).catch(function(){});
+                }).catch(function(){});
+            }
+            loadCustomFont();
+
+            function doFontUpload(file) {
+                if (!file) return;
+                var ext = file.name.split('.').pop().toLowerCase();
+                if (!['woff2', 'ttf', 'otf'].includes(ext)) {
+                    alert('Unsupported format. Use .woff2, .ttf, or .otf');
+                    return;
+                }
+                var zone  = document.getElementById('settings-font-zone');
+                var label = document.getElementById('settings-font-zone-label');
+                if (label) label.textContent = 'Uploading…';
+                if (zone)  zone.style.pointerEvents = 'none';
+
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var b64 = ev.target.result.split(',')[1];
+                    fetch('/api/upload-font', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: b64, filename: file.name })
+                    }).then(function(r) { return r.json(); }).then(function(up) {
+                        if (up.error) throw new Error(up.error);
+                        var family = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+                        var cfg = { url: up.url, filename: up.filename, name: file.name, family: family };
+                        return fetch('/api/settings/font', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(cfg)
+                        }).then(function() { return cfg; });
+                    }).then(function(cfg) {
+                        applyCustomFont(cfg);
+                    }).catch(function(e) {
+                        if (label) label.textContent = '↑ Upload failed — try again';
+                        setTimeout(function() {
+                            if (label) label.textContent = '↑ Upload font file';
+                        }, 3000);
+                    }).finally(function() {
+                        if (zone) zone.style.pointerEvents = '';
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Click to open file picker
+            var fontZone = document.getElementById('settings-font-zone');
+            var fontInput = document.getElementById('settings-font-file');
+            if (fontZone && fontInput) {
+                fontZone.addEventListener('click', function() { fontInput.click(); });
+                fontInput.addEventListener('change', function() {
+                    if (fontInput.files && fontInput.files[0]) doFontUpload(fontInput.files[0]);
+                    fontInput.value = '';
+                });
+                // Drag-and-drop
+                fontZone.addEventListener('dragover', function(e) {
+                    e.preventDefault(); fontZone.classList.add('dragover');
+                });
+                fontZone.addEventListener('dragleave', function() {
+                    fontZone.classList.remove('dragover');
+                });
+                fontZone.addEventListener('drop', function(e) {
+                    e.preventDefault(); fontZone.classList.remove('dragover');
+                    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+                    if (f) doFontUpload(f);
+                });
+            }
+            // Remove custom font
+            var fontRemoveBtn = document.getElementById('settings-font-remove-btn');
+            if (fontRemoveBtn) {
+                fontRemoveBtn.addEventListener('click', function() {
+                    fetch('/api/settings/font', { method: 'DELETE' })
+                        .then(function() { applyCustomFont(null); })
+                        .catch(function(){});
                 });
             }
 

@@ -332,7 +332,7 @@ def _start_shell_ttyd(sname, window_idx, port):
         "ttyd", "-p", str(port), "--writable", "--max-clients", "5",
         "-t", "theme=" + TTYD_THEME,
         "-t", "fontSize=14",
-        "-t", "fontFamily=Berkeley Mono Nerd Font,JetBrains Mono,Fira Code,monospace",
+        "-t", "fontFamily=Commit Mono,JetBrains Mono,Fira Code,monospace",
         "-t", "cursorStyle=block",
         "-t", "cursorBlink=true",
         "-t", "scrollback=0",
@@ -494,6 +494,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._list_shells(p[2])
         if p == ["api", "snippets"]:
             return self._list_snippets()
+        if p == ["api", "settings", "font"]:
+            return self._get_setting("font")
         if p == ["api", "settings", "layout"]:
             return self._get_layout()
         if p == ["api", "settings", "compact-layout"]:
@@ -540,6 +542,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._create_snippet()
         if p == ["api", "upload-image"]:
             return self._upload_image()
+        if p == ["api", "upload-font"]:
+            return self._upload_font()
         if p == ["api", "github", "auth", "start"]:
             return self._gh_auth_start()
         self.send_json(404, {"error": "not found"})
@@ -552,6 +556,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._mark_viewed(p[2])
         if len(p) == 6 and p[:2] == ["api", "projects"] and p[3] == "shells" and p[5] == "select":
             return self._select_shell(p[2], p[4])
+        if p == ["api", "settings", "font"]:
+            return self._put_setting("font")
         if p == ["api", "settings", "layout"]:
             return self._save_layout()
         if p == ["api", "settings", "compact-layout"]:
@@ -572,6 +578,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._delete_log_file(p[2], p[3])
         if p == ["api", "github", "auth"]:
             return self._gh_auth_disconnect()
+        if p == ["api", "settings", "font"]:
+            return self._delete_custom_font()
         self.send_json(404, {"error": "not found"})
 
     def _list_projects(self):
@@ -981,6 +989,46 @@ class Handler(BaseHTTPRequestHandler):
             "filename": filename,
             "mime":     mime,
         })
+
+    def _upload_font(self):
+        data, err = self._read_body()
+        if err:
+            return
+        b64 = data.get("data", "")
+        if len(b64) > 30 * 1024 * 1024:  # ~22 MB decoded — generous for large Nerd Font variants
+            return self.send_json(400, {"error": "file too large (max ~22 MB)"})
+        orig_name = data.get("filename", "")
+        ext = orig_name.rsplit(".", 1)[-1].lower() if "." in orig_name else ""
+        if ext not in ("woff2", "ttf", "otf"):
+            return self.send_json(400, {"error": "unsupported font format; use .woff2, .ttf, or .otf"})
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
+        ts       = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        short_id = str(uuid.uuid4()).replace("-", "")[:8]
+        filename = f"font-{ts}-{short_id}.{ext}"
+        path     = os.path.join(UPLOADS_DIR, filename)
+        try:
+            with open(path, "wb") as f:
+                f.write(base64.b64decode(b64))
+        except Exception as e:
+            return self.send_json(400, {"error": str(e)})
+        self.send_json(200, {
+            "url":      f"/api/uploads/{filename}",
+            "filename": filename,
+        })
+
+    def _delete_custom_font(self):
+        with open_db() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key='font'").fetchone()
+            if row:
+                try:
+                    cfg = json.loads(row["value"])
+                    fpath = os.path.join(UPLOADS_DIR, cfg.get("filename", ""))
+                    if os.path.isfile(fpath):
+                        os.remove(fpath)
+                except Exception:
+                    pass
+                conn.execute("DELETE FROM settings WHERE key='font'")
+        self.send_json(200, {"ok": True})
 
     def _serve_upload(self, filename):
         # Only allow simple filenames — no path traversal
