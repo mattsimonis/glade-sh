@@ -7090,6 +7090,7 @@
                 }
                 repositionPathFooter();
             }
+            window.toggleDesktopPanel = toggleDesktopPanel;
             if (desktopPanelBtn) {
                 desktopPanelBtn.addEventListener('click', toggleDesktopPanel);
             }
@@ -7192,6 +7193,7 @@
         // Ctrl+`           — toggle bottom panel (desktop)
         // ?                — keyboard shortcuts help
         document.addEventListener('keydown', function (e) {
+            console.log('Keydown:', { key: e.key, code: e.code, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey, alt: e.altKey });
             // Escape: close topmost open modal ──────────────────────────────────
             if (e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
                 var modalChecks = [
