@@ -230,6 +230,18 @@
     footer a:hover { color: var(--text); }
     .footer-links { display: flex; gap: 1.5rem; justify-content: center; margin-top: 0.875rem; }
 
+    /* ── Scrollbars (desktop) ────────────────────────────── */
+    @media (min-width: 641px) {
+      * { scrollbar-width: thin; scrollbar-color: var(--surface2) transparent; }
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb {
+        background: var(--surface2); border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover { background: var(--overlay0); }
+      ::-webkit-scrollbar-corner { background: transparent; }
+    }
+
     /* ── Responsive ─────────────────────────────────────── */
     @media (max-width: 640px) {
       nav { padding: 0 1rem; }
