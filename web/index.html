@@ -1393,9 +1393,13 @@
         .gh-code-block {
             background:var(--crust); border:1px solid var(--surface0); border-radius:8px;
             padding:14px; text-align:center; margin-bottom:16px;
+            cursor:pointer; transition:border-color 120ms;
         }
+        .gh-code-block:hover { border-color:var(--surface2); }
+        .gh-code-block:active { border-color:var(--blue); }
         .gh-code-label { font-size:10px; color:var(--overlay0); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
-        .gh-code-value { font-size:22px; font-weight:700; color:var(--blue); font-family:var(--font-mono); letter-spacing:0.1em; }
+        .gh-code-value { font-size:22px; font-weight:700; color:var(--blue); font-family:var(--font-mono); letter-spacing:0.1em; user-select:text; cursor:text; }
+        .gh-code-hint  { font-size:10px; color:var(--overlay0); margin-top:6px; }
         .gh-open-btn {
             width:100%; padding:10px; border:none; border-radius:8px; font-size:13px;
             cursor:pointer; background:var(--surface0); color:var(--text); margin-bottom:8px; transition:background 120ms;
@@ -1871,9 +1875,10 @@
     <div id="github-modal" role="dialog" aria-modal="true" aria-labelledby="gh-modal-title">
         <div class="gh-modal-title" id="gh-modal-title">Connect GitHub</div>
         <div class="gh-modal-sub">Open the link below and enter the code to authorize Glade.</div>
-        <div class="gh-code-block">
+        <div class="gh-code-block" id="gh-code-block">
             <div class="gh-code-label">One-time code</div>
             <div class="gh-code-value" id="gh-user-code">—</div>
+            <div class="gh-code-hint" id="gh-code-hint">Tap to copy</div>
         </div>
         <div class="gh-spinner">
             <div class="gh-spinner-icon"></div>
@@ -5200,10 +5205,32 @@
         }
 
         if (ghOpenBtn) ghOpenBtn.addEventListener('click', function() {
+            var code = ghUserCodeEl ? ghUserCodeEl.textContent : '';
+            if (code && code !== '—') {
+                navigator.clipboard.writeText(code).catch(function(){});
+            }
             window.open(ghVerificationUri, '_blank');
         });
         if (ghCancelBtn) ghCancelBtn.addEventListener('click', closeGhModal);
         if (ghModalBackdrop) ghModalBackdrop.addEventListener('click', closeGhModal);
+
+        var ghCodeBlock = document.getElementById('gh-code-block');
+        var ghCodeHint  = document.getElementById('gh-code-hint');
+        if (ghCodeBlock) {
+            ghCodeBlock.addEventListener('click', function(e) {
+                if (window.getSelection && window.getSelection().toString()) return; // don't copy on text selection
+                var code = ghUserCodeEl ? ghUserCodeEl.textContent : '';
+                if (!code || code === '—') return;
+                navigator.clipboard.writeText(code).then(function() {
+                    if (ghCodeHint) { ghCodeHint.textContent = 'Copied!'; ghCodeHint.style.color = 'var(--green)'; }
+                    setTimeout(function() {
+                        if (ghCodeHint) { ghCodeHint.textContent = 'Tap to copy'; ghCodeHint.style.color = ''; }
+                    }, 2000);
+                }).catch(function() {
+                    if (ghCodeHint) { ghCodeHint.textContent = 'Select the code above to copy'; }
+                });
+            });
+        }
 
         if (ghConnectBtn) ghConnectBtn.addEventListener('click', function() {
             startGhAuth(false);
