@@ -5207,7 +5207,9 @@
             if (code && code !== '—') {
                 navigator.clipboard.writeText(code).catch(function(){});
             }
-            window.open(ghVerificationUri, '_blank');
+            // window.open is silently blocked in iOS PWA standalone mode — use location.href
+            var opened = window.open(ghVerificationUri, '_blank');
+            if (!opened) window.location.href = ghVerificationUri;
         });
         if (ghCancelBtn) ghCancelBtn.addEventListener('click', closeGhModal);
         if (ghModalBackdrop) ghModalBackdrop.addEventListener('click', closeGhModal);
