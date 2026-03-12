@@ -6681,7 +6681,37 @@
         }, { passive: false });
 
         // ── Focus Mode ───────────────────────────────────────────────────────────
-        function haptic(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e){} }
+        // iOS 18+ haptic via hidden checkbox[switch] + label trick
+        var _hapticIsIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        var _hapticLabel = null;
+        (function() {
+            var inp = document.createElement('input');
+            inp.type = 'checkbox'; inp.setAttribute('switch', ''); inp.style.display = 'none';
+            var lbl = document.createElement('label');
+            lbl.style.display = 'none';
+            document.body.appendChild(inp); document.body.appendChild(lbl);
+            lbl.htmlFor = inp.id = 'haptic-sw-' + Math.random().toString(36).slice(2);
+            _hapticLabel = lbl;
+        })();
+        function haptic(pattern) {
+            try {
+                if (_hapticIsIOS) {
+                    if (Array.isArray(pattern)) {
+                        var t = 0;
+                        for (var i = 0; i < pattern.length; i++) {
+                            if (i % 2 === 0 && pattern[i] > 0) {
+                                (function(d){ setTimeout(function(){ _hapticLabel && _hapticLabel.click(); }, d); })(t);
+                            }
+                            t += pattern[i];
+                        }
+                    } else { _hapticLabel && _hapticLabel.click(); }
+                } else if (navigator.vibrate) {
+                    navigator.vibrate(pattern);
+                } else {
+                    _hapticLabel && _hapticLabel.click();
+                }
+            } catch(e) {}
+        }
         function toggleFocusMode() {
             focusModeActive = !focusModeActive;
             document.getElementById('app').classList.toggle('focus-mode', focusModeActive);
@@ -7221,8 +7251,14 @@
             document.getElementById('dbg-haptic-medium').onclick = function () { haptic(40); };
             document.getElementById('dbg-haptic-error').onclick  = function () { haptic([50,30,50]); };
             if (!navigator.vibrate) {
-                document.getElementById('dbg-haptic-row').querySelectorAll('button').forEach(function(b){ b.disabled = true; });
-                document.getElementById('dbg-haptic-note').style.display = '';
+                var hapticNote = document.getElementById('dbg-haptic-note');
+                if (_hapticIsIOS) {
+                    hapticNote.style.color = '#a6e3a1';
+                    hapticNote.textContent = 'iOS 18+: using switch haptic workaround';
+                } else {
+                    document.getElementById('dbg-haptic-row').querySelectorAll('button').forEach(function(b){ b.disabled = true; });
+                }
+                hapticNote.style.display = '';
             }
 
             // State refresh
