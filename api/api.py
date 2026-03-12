@@ -221,10 +221,19 @@ def list_shells_tmux(sname):
 
 def new_shell_tmux(sname, directory):
     # -d: create in background so existing ttyd clients keep their current window
-    # Only pass -c if the directory actually exists in the container
+    # -a: insert AFTER the target window — targeting the last window guarantees
+    #     the new tab always appears at the rightmost position in the tab bar.
     effective_dir = directory if (directory and os.path.isdir(directory)) else "/root"
+    # Find the current last window index so we can append after it
+    ls = subprocess.run(
+        ["tmux", "list-windows", "-t", sname, "-F", "#{window_index}"],
+        capture_output=True, text=True
+    )
+    indices = [int(x) for x in ls.stdout.split() if x.isdigit()]
+    last_idx = max(indices) if indices else 0
     r = subprocess.run(
-        ["tmux", "new-window", "-d", "-t", sname, "-c", effective_dir, "-P", "-F", "#{window_index}"],
+        ["tmux", "new-window", "-d", "-a", "-t", f"{sname}:{last_idx}",
+         "-c", effective_dir, "-P", "-F", "#{window_index}"],
         capture_output=True, text=True
     )
     s = r.stdout.strip()
