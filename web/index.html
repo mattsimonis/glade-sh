@@ -4842,7 +4842,9 @@
         }
 
         function confirmCloseShell(idx) {
-            confirmCloseShell(idx);
+            showConfirm('Close tab', 'Close this shell tab?', [
+                { label: 'Close', style: 'danger', onConfirm: function() { closeShell(idx); } }
+            ]);
         }
 
         // ── Long-press helper ─────────────────────────────────────────────────
@@ -4885,6 +4887,7 @@
         }
 
 
+        function renderProjectGrid() {
             const grid = document.getElementById('project-grid-cards');
             if (!grid) return;
             grid.innerHTML = '';
