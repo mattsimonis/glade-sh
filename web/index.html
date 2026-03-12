@@ -800,7 +800,7 @@
             -webkit-tap-highlight-color:transparent;
             transition:background 60ms;
         }
-        .cp-item:active { background:#313244; }
+        .cp-item:active, .cp-item.cp-focused { background:#313244; }
         .cp-icon {
             width:34px; height:34px; border-radius:9px;
             display:flex; align-items:center; justify-content:center; flex-shrink:0;
@@ -1175,8 +1175,10 @@
         .snippet-tile.flash-insert { background: rgba(166,227,161,0.18) !important; transition: none !important; }
 
         /* ── Project grid empty state ────────────────────────── */
-        .proj-grid-empty { grid-column:1/-1; text-align:center; padding:28px 16px 8px; color:#45475a; font-size:12px; line-height:1.7; }
-        .proj-grid-empty-icon { font-size:28px; margin-bottom:4px; }
+        .proj-grid-empty { grid-column:1/-1; text-align:center; padding:36px 20px 12px; }
+        .proj-grid-empty-icon { font-size:44px; margin-bottom:12px; line-height:1; }
+        .proj-grid-empty-title { font-size:16px; font-weight:700; color:#cdd6f4; margin-bottom:6px; letter-spacing:-.01em; }
+        .proj-grid-empty-body { font-size:13px; color:#6c7086; line-height:1.6; }
 
         /* ── Keyboard key ripple ─────────────────────────────── */
         .kb-btn { position:relative; overflow:hidden; }
@@ -4158,8 +4160,18 @@
 
         function markProjectViewed(pid) {
             activityBadges[pid] = false;
+            syncAppBadge();
             renderProjectTabs();
             fetch('/api/projects/' + pid + '/viewed', { method: 'PUT' }).catch(function(){});
+        }
+
+        function syncAppBadge() {
+            if (!('setAppBadge' in navigator)) return;
+            const count = Object.values(activityBadges).filter(Boolean).length;
+            try {
+                if (count > 0) navigator.setAppBadge(count);
+                else navigator.clearAppBadge();
+            } catch(e) {}
         }
 
         // ── Shell tabs ─────────────────────────────────────────────────────────
@@ -4327,7 +4339,7 @@
                             activityBadges[item.id] = true; changed = true;
                         }
                     });
-                    if (changed) renderProjectTabs();
+                    if (changed) { renderProjectTabs(); syncAppBadge(); }
                 } catch(e) {}
             }, 3000);
         }
@@ -4433,7 +4445,10 @@
             if (projects.length === 0) {
                 const empty = document.createElement('div');
                 empty.className = 'proj-grid-empty';
-                empty.innerHTML = '<div class="proj-grid-empty-icon">🪺</div><div>No projects yet.<br>Create one to get started.</div>';
+                empty.innerHTML =
+                    '<div class="proj-grid-empty-icon">🪴</div>' +
+                    '<div class="proj-grid-empty-title">Welcome to Glade</div>' +
+                    '<div class="proj-grid-empty-body">Each project gets its own shell,<br>snippets, and persistent session.</div>';
                 grid.appendChild(empty);
             }
             // Add card
@@ -6071,7 +6086,24 @@
             { id:'notify-done',  label:'Notify when done',  desc:'Ping me when shell goes idle',    fn:function(){ requestNotifyWhenDone(); } },
         ];
 
-        let cpListScrolled = false, cpListTouchY = 0;
+        // Web Share — only register if the browser supports it
+        if (navigator.share) {
+            CP_ACTIONS.push({
+                id: 'share',
+                label: 'Share via\u2026',
+                desc: 'Share clipboard contents via system share sheet',
+                fn: async function() {
+                    try {
+                        const text = await navigator.clipboard.readText().catch(function() { return window.location.href; });
+                        await navigator.share({ title: 'Glade', text: text });
+                    } catch(e) {
+                        if (e.name !== 'AbortError') toast('Share failed', 'error');
+                    }
+                }
+            });
+        }
+
+        let cpListScrolled = false, cpListTouchY = 0, cpFocusIdx = -1;
         cpList.addEventListener('touchstart', function(e) {
             cpListScrolled = false;
             cpListTouchY = e.touches[0].clientY;
@@ -6081,6 +6113,7 @@
         }, { passive: true });
 
         function openPalette() {
+            cpFocusIdx = -1;
             cpInput.value = '';
             cpBackdrop.style.display = 'block';
             requestAnimationFrame(function(){
@@ -6108,6 +6141,7 @@
         }
 
         function renderPalette(query) {
+            cpFocusIdx = -1;
             cpList.innerHTML = '';
             const q = (query || '').trim().toLowerCase();
 
@@ -6193,6 +6227,26 @@
         }
 
         cpInput.addEventListener('input', function(){ renderPalette(this.value); });
+        cpInput.addEventListener('keydown', function(e) {
+            const items = cpList.querySelectorAll('.cp-item');
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                cpFocusIdx = Math.min(cpFocusIdx + 1, items.length - 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                cpFocusIdx = Math.max(cpFocusIdx - 1, 0);
+            } else if (e.key === 'Enter' && cpFocusIdx >= 0) {
+                e.preventDefault();
+                items[cpFocusIdx].click();
+                return;
+            } else if (e.key === 'Escape') {
+                closePalette();
+                return;
+            } else { return; }
+            items.forEach(function(el, i) { el.classList.toggle('cp-focused', i === cpFocusIdx); });
+            if (items[cpFocusIdx]) items[cpFocusIdx].scrollIntoView({ block: 'nearest' });
+        });
         cpCancelBtn.addEventListener('click', closePalette);
         cpCancelBtn.addEventListener('touchend', function(e){ e.preventDefault(); closePalette(); }, { passive:false });
         cpBackdrop.addEventListener('click', closePalette);
@@ -6332,6 +6386,15 @@
             // Load projects after layout/snippets ready
             await loadProjects();
             startActivityPoll();
+
+            // Handle home screen shortcut actions (?action=new-project, ?action=palette)
+            const _urlAction = new URLSearchParams(window.location.search).get('action');
+            if (_urlAction) history.replaceState({}, '', '/');
+            if (_urlAction === 'new-project') {
+                setTimeout(function() { openProjectGrid(); setTimeout(openAddProjectSheet, 300); }, 400);
+            } else if (_urlAction === 'palette') {
+                setTimeout(openPalette, 400);
+            }
         })();
 
         // ── Debug panel ─────────────────────────────────────────────────────────

@@ -9,6 +9,22 @@
   "background_color": "#1e1e2e",
   "theme_color": "#1e1e2e",
   "orientation": "any",
+  "shortcuts": [
+    {
+      "name": "New Project",
+      "short_name": "New",
+      "description": "Create a new terminal project",
+      "url": "/?action=new-project",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Command Palette",
+      "short_name": "Commands",
+      "description": "Quick commands and actions",
+      "url": "/?action=palette",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     { "src": "/icons/icon-48.png",  "sizes": "48x48",   "type": "image/png" },
     { "src": "/icons/icon-72.png",  "sizes": "72x72",   "type": "image/png" },
