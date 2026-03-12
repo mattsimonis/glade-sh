@@ -170,6 +170,26 @@
             display: flex; align-items: center; justify-content: center;
         }
         #project-grid-close:active { background: #45475a; }
+        #project-grid-search-row {
+            flex-shrink: 0; padding: 8px 16px 10px; border-bottom: 1px solid #313244;
+        }
+        #pg-search {
+            width: 100%; background: #313244; border: none; border-radius: 10px;
+            padding: 8px 12px; color: #cdd6f4; font-size: 14px; font-family: var(--font-sans);
+            -webkit-appearance: none; appearance: none; box-sizing: border-box;
+        }
+        #pg-search::placeholder { color: #585b70; }
+        #pg-search:focus { outline: none; }
+        #pg-search::-webkit-search-cancel-button { -webkit-appearance: none; }
+        /* ── Pull-to-refresh indicator ──────────────── */
+        #pg-ptr {
+            grid-column: 1/-1; display: flex; align-items: center; justify-content: center;
+            height: 0; overflow: hidden; color: #585b70; transition: height 160ms ease;
+        }
+        #pg-ptr.pulling { height: 44px; }
+        #pg-ptr svg { width: 20px; height: 20px; }
+        #pg-ptr.spinning svg { animation: ptr-spin 0.7s linear infinite; }
+        @keyframes ptr-spin { to { transform: rotate(360deg); } }
         #project-grid-cards {
             flex: 1; overflow-y: auto; padding: 16px;
             display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;
@@ -179,9 +199,10 @@
             background: #1e1e2e; border: 1px solid #313244; border-radius: 14px;
             padding: 14px 12px; cursor: pointer; position: relative; overflow: hidden;
             display: flex; flex-direction: column; gap: 6px; min-height: 90px;
-            -webkit-tap-highlight-color: transparent; transition: background 100ms;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 100ms, transform 80ms cubic-bezier(0.34,1.4,0.64,1);
         }
-        .proj-card:active { background: #313244; }
+        .proj-card:active { background: #313244; transform: scale(0.97); }
         .proj-card.active-proj { border-color: #585b70; }
         .proj-card-accent {
             position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0;
@@ -1164,8 +1185,16 @@
         .settings-btn-full:active { background:#45475a; }
 
         /* ── Grid skeleton shimmer ───────────────────────────── */
-        @keyframes shimmer { 0%{opacity:0.4} 50%{opacity:0.8} 100%{opacity:0.4} }
-        .grid-skeleton { height:72px; background:#1e1e2e; border-radius:12px; animation:shimmer 1.2s infinite; margin-bottom:8px; }
+        @keyframes shimmer {
+            0%   { background-position: -200% center; }
+            100% { background-position:  200% center; }
+        }
+        .grid-skeleton {
+            height: 90px; border-radius: 14px;
+            background: linear-gradient(90deg, #181825 25%, #313244 50%, #181825 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s ease-in-out infinite;
+        }
 
         /* ── Project card appear animation ───────────────────── */
         @keyframes card-appear { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
@@ -1274,6 +1303,44 @@
         .proj-card-gh-badge {
             position:absolute; top:6px; right:32px;
             width:14px; height:14px; opacity:0.45;
+        }
+
+        /* ── Keyboard shortcuts overlay ────────────────────────── */
+        #shortcuts-backdrop {
+            display:none; position:fixed; inset:0; z-index:3200;
+            background:rgba(0,0,0,0.55); backdrop-filter:blur(6px);
+        }
+        #shortcuts-backdrop.visible { display:flex; align-items:flex-end; justify-content:center; }
+        @media (min-width:600px) { #shortcuts-backdrop.visible { align-items:center; } }
+        #shortcuts-sheet {
+            background:#1e1e2e; border-radius:20px 20px 0 0;
+            width:100%; max-width:540px; max-height:85dvh;
+            overflow-y:auto; padding:20px 20px 36px;
+            -webkit-overflow-scrolling:touch;
+        }
+        @media (min-width:600px) { #shortcuts-sheet { border-radius:16px; max-height:80dvh; } }
+        #shortcuts-sheet h2 {
+            margin:0 0 18px; font-size:17px; font-weight:600; color:#cdd6f4;
+            display:flex; align-items:center; gap:8px;
+        }
+        #shortcuts-sheet h2 svg { flex-shrink:0; }
+        .shortcuts-section { margin-bottom:20px; }
+        .shortcuts-section-title {
+            font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+            color:#6c7086; margin-bottom:8px;
+        }
+        .shortcuts-row {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:8px 0; border-bottom:1px solid rgba(69,71,90,.4);
+        }
+        .shortcuts-row:last-child { border-bottom:none; }
+        .shortcuts-desc { font-size:14px; color:#cdd6f4; }
+        .shortcuts-keys { display:flex; gap:4px; align-items:center; flex-shrink:0; }
+        .kbd {
+            display:inline-flex; align-items:center; justify-content:center;
+            background:#313244; border-radius:5px;
+            font-size:12px; font-family:var(--font-mono); color:#a6adc8;
+            padding:2px 7px; border:1px solid #45475a; line-height:1.4;
         }
     </style>
 </head>
@@ -1537,6 +1604,41 @@
         </div>
     </div>
 
+    <!-- Keyboard shortcuts overlay -->
+    <div id="shortcuts-backdrop">
+      <div id="shortcuts-sheet">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cba6f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+          Keyboard Shortcuts
+        </h2>
+        <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Global</div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Command Palette</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">K</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Find in scrollback</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">F</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Toggle bottom panel</span><span class="shortcuts-keys"><span class="kbd">Ctrl</span><span class="kbd">`</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">This help sheet</span><span class="shortcuts-keys"><span class="kbd">?</span></span></div>
+        </div>
+        <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Tabs</div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">New shell tab</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">T</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Close current tab</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">W</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Next / previous tab</span><span class="shortcuts-keys"><span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">]</span> / <span class="kbd">[</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Switch to tab 1–9</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">1</span>–<span class="kbd">9</span></span></div>
+        </div>
+        <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Projects</div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Open project switcher</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">K</span> → projects</span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Close any overlay</span><span class="shortcuts-keys"><span class="kbd">Esc</span></span></div>
+        </div>
+        <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Terminal (iOS)</div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Pinch</span><span class="shortcuts-keys">Resize font</span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Long-press project card</span><span class="shortcuts-keys">Action sheet</span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Swipe toast up</span><span class="shortcuts-keys">Dismiss</span></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Command palette -->
     <div id="cmd-palette-backdrop"></div>
     <div id="cmd-palette-sheet">
@@ -1567,6 +1669,10 @@
         <div id="project-grid-header">
             <span>Projects</span>
             <button id="project-grid-close">&#x2715;</button>
+        </div>
+        <div id="project-grid-search-row">
+            <input id="pg-search" type="search" placeholder="Search projects&#8230;"
+                   autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
         </div>
         <div id="project-grid-cards"></div>
     </div>
@@ -1898,6 +2004,7 @@
         let projects = [];
         let currentProjectId = null;
         let activityBadges = {};   // projectId -> bool
+        let projFilter = '';       // text filter for project grid
         let shellPollTimer = null;
         let currentShells = [];    // [{index, name, active, port}] — last fetched shell list
         let currentShellIdx = null; // index of shell currently displayed in the iframe
@@ -3336,6 +3443,26 @@
             el.appendChild(msgEl);
             c.appendChild(el);
 
+            // Swipe-up to dismiss (iOS native gesture)
+            var _swipeStartY = 0, _swipeDragging = false;
+            el.addEventListener('touchstart', function(e) {
+                _swipeStartY = e.touches[0].clientY;
+                _swipeDragging = true;
+                el.style.transition = 'none';
+            }, { passive: true });
+            el.addEventListener('touchmove', function(e) {
+                if (!_swipeDragging) return;
+                var dy = e.touches[0].clientY - _swipeStartY;
+                if (dy < 0) el.style.transform = 'translateY(' + dy + 'px)';
+            }, { passive: true });
+            el.addEventListener('touchend', function(e) {
+                _swipeDragging = false;
+                var endY = e.changedTouches[0].clientY;
+                el.style.transition = '';
+                el.style.transform = '';
+                if ((_swipeStartY - endY) > 40) dismissToast();
+            }, { passive: true });
+
             function dismissToast() {
                 el.classList.add('t-exit');
                 setTimeout(function () {
@@ -4346,6 +4473,9 @@
 
         // ── Project grid overlay ───────────────────────────────────────────────
         async function openProjectGrid() {
+            projFilter = '';
+            const srch = document.getElementById('pg-search');
+            if (srch) srch.value = '';
             const grid = document.getElementById('project-grid-cards');
             if (grid) {
                 grid.innerHTML = '<div class="grid-skeleton"></div><div class="grid-skeleton"></div><div class="grid-skeleton"></div>';
@@ -4353,6 +4483,7 @@
             document.getElementById('project-grid-overlay').classList.add('open');
             try { projects = await apiJson('/api/projects'); } catch (e) {}
             renderProjectGrid();
+            setupPullToRefresh();
         }
 
         function closeProjectGrid() {
@@ -4363,7 +4494,32 @@
             const grid = document.getElementById('project-grid-cards');
             if (!grid) return;
             grid.innerHTML = '';
-            projects.forEach(function(p, i) {
+
+            // pull-to-refresh placeholder (always first, height=0 normally)
+            const ptr = document.createElement('div');
+            ptr.id = 'pg-ptr';
+            ptr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>';
+            grid.appendChild(ptr);
+
+            const q = projFilter.toLowerCase();
+            let displayProjects = q
+                ? projects.filter(function(p) {
+                    return p.name.toLowerCase().includes(q) || (p.directory || '').toLowerCase().includes(q);
+                })
+                : projects.slice();
+
+            // Running projects surface first
+            displayProjects.sort(function(a, b) {
+                if (a.running && !b.running) return -1;
+                if (!a.running && b.running) return 1;
+                return 0;
+            });
+
+            // Update header count
+            const hdrSpan = document.querySelector('#project-grid-header span');
+            if (hdrSpan) hdrSpan.textContent = projects.length ? 'Projects\u00a0(' + projects.length + ')' : 'Projects';
+
+            displayProjects.forEach(function(p, i) {
                 const card = document.createElement('div');
                 card.className = 'proj-card' + (p.id === currentProjectId ? ' active-proj' : '') + ' proj-card-new';
                 card.style.animationDelay = (i * 30) + 'ms';
@@ -4396,19 +4552,24 @@
                         lpTimer = null; lpFired = true;
                         haptic(15);
                         showConfirm(
-                            'Delete \u201c' + p.name + '\u201d?',
+                            p.name,
                             p.directory || '',
-                            [{ label: 'Delete', style: 'danger', onConfirm: function() {
-                                apiJson('/api/projects/' + p.id, { method: 'DELETE' })
-                                    .then(function() {
-                                        projects = projects.filter(function(x) { return x.id !== p.id; });
-                                        if (currentProjectId === p.id && projects.length > 0) switchProject(projects[0].id);
-                                        renderProjectGrid();
-                                        renderProjectTabs();
-                                        toast('Project deleted', 'success');
-                                    })
-                                    .catch(function() { toast('Delete failed', 'error'); });
-                            }}]
+                            [
+                                { label: 'Open', style: 'neutral', onConfirm: function() {
+                                    closeProjectGrid(); switchProject(p.id);
+                                }},
+                                { label: 'Delete', style: 'danger', onConfirm: function() {
+                                    apiJson('/api/projects/' + p.id, { method: 'DELETE' })
+                                        .then(function() {
+                                            projects = projects.filter(function(x) { return x.id !== p.id; });
+                                            if (currentProjectId === p.id && projects.length > 0) switchProject(projects[0].id);
+                                            renderProjectGrid();
+                                            renderProjectTabs();
+                                            toast('Project deleted', 'success');
+                                        })
+                                        .catch(function() { toast('Delete failed', 'error'); });
+                                }}
+                            ]
                         );
                     }, 500);
                 }, { passive: true });
@@ -4441,14 +4602,21 @@
                 });
                 grid.appendChild(card);
             });
-            // Empty state when no projects exist yet
-            if (projects.length === 0) {
+            // Empty state
+            if (displayProjects.length === 0 && !q) {
                 const empty = document.createElement('div');
                 empty.className = 'proj-grid-empty';
                 empty.innerHTML =
                     '<div class="proj-grid-empty-icon">🪴</div>' +
                     '<div class="proj-grid-empty-title">Welcome to Glade</div>' +
                     '<div class="proj-grid-empty-body">Each project gets its own shell,<br>snippets, and persistent session.</div>';
+                grid.appendChild(empty);
+            } else if (displayProjects.length === 0 && q) {
+                const empty = document.createElement('div');
+                empty.className = 'proj-grid-empty';
+                empty.innerHTML =
+                    '<div class="proj-grid-empty-icon" style="font-size:28px">🔍</div>' +
+                    '<div class="proj-grid-empty-title" style="font-size:13px;color:#6c7086">No projects match \u201c' + escapeHtml(q) + '\u201d</div>';
                 grid.appendChild(empty);
             }
             // Add card
@@ -4460,6 +4628,41 @@
         }
 
         document.getElementById('project-grid-close').addEventListener('click', closeProjectGrid);
+
+        document.getElementById('pg-search').addEventListener('input', function() {
+            projFilter = this.value.trim();
+            renderProjectGrid();
+        });
+
+        // ── Pull-to-refresh for project grid ──────────────────────────────────
+        let ptrActive = false, ptrStartY = 0, ptrRefreshing = false;
+        function setupPullToRefresh() {
+            const grid = document.getElementById('project-grid-cards');
+            if (!grid || grid._ptrSetup) return;
+            grid._ptrSetup = true;
+            grid.addEventListener('touchstart', function(e) {
+                if (grid.scrollTop === 0) { ptrStartY = e.touches[0].clientY; ptrActive = true; }
+            }, { passive: true });
+            grid.addEventListener('touchmove', function(e) {
+                if (!ptrActive || ptrRefreshing) return;
+                const delta = e.touches[0].clientY - ptrStartY;
+                const ptr = document.getElementById('pg-ptr');
+                if (ptr && delta > 10) ptr.classList.add('pulling');
+            }, { passive: true });
+            grid.addEventListener('touchend', async function() {
+                if (!ptrActive) return;
+                ptrActive = false;
+                const ptr = document.getElementById('pg-ptr');
+                if (!ptr || !ptr.classList.contains('pulling')) return;
+                ptrRefreshing = true;
+                ptr.classList.add('spinning');
+                haptic(5);
+                try { projects = await apiJson('/api/projects'); } catch(e) {}
+                ptrRefreshing = false;
+                if (ptr) { ptr.classList.remove('pulling', 'spinning'); }
+                renderProjectGrid();
+            }, { passive: true });
+        }
 
         // ── Add project sheet ──────────────────────────────────────────────────
         const apBackdrop = document.getElementById('add-project-backdrop');
@@ -6103,6 +6306,14 @@
             });
         }
 
+        CP_ACTIONS.push({
+            id: 'shortcuts',
+            label: 'Keyboard shortcuts',
+            desc: 'View all hotkeys and gestures',
+            fn: function() { openShortcuts(); },
+            badge: '?'
+        });
+
         let cpListScrolled = false, cpListTouchY = 0, cpFocusIdx = -1;
         cpList.addEventListener('touchstart', function(e) {
             cpListScrolled = false;
@@ -6395,6 +6606,37 @@
             } else if (_urlAction === 'palette') {
                 setTimeout(openPalette, 400);
             }
+
+            // Handle share target (?share — registered in manifest share_target)
+            const _shareParams = new URLSearchParams(window.location.search);
+            if (_shareParams.has('share')) {
+                history.replaceState({}, '', '/');
+                const sharedText = (_shareParams.get('text') || _shareParams.get('url') || '').trim();
+                if (sharedText) {
+                    setTimeout(function() {
+                        if (currentProjectId) {
+                            sendTextToTerminal(sharedText);
+                            toast('Shared text pasted to terminal', 'success');
+                        } else {
+                            toast('Open a project first, then share again', 'error', 4000);
+                        }
+                    }, 600);
+                }
+            }
+
+            // iOS "Add to Home Screen" prompt — show once to Safari browser users
+            if (isIOS && !window.navigator.standalone &&
+                !localStorage.getItem('iosInstallPromptSeen')) {
+                setTimeout(function() {
+                    localStorage.setItem('iosInstallPromptSeen', '1');
+                    toast('Tip: tap \u{1F4E4} Share \u2192 \u201cAdd to Home Screen\u201d for the full experience', 'success', 0);
+                }, 3000);
+            }
+
+            // Persistent storage — ask browser not to evict service worker cache
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().catch(function(){});
+            }
         })();
 
         // ── Debug panel ─────────────────────────────────────────────────────────
@@ -6525,6 +6767,7 @@
         // Cmd+W            — close current shell tab (with confirm)
         // Cmd+1-9          — switch to nth shell tab
         // Ctrl+`           — toggle bottom panel (desktop)
+        // ?                — keyboard shortcuts help
         document.addEventListener('keydown', function (e) {
             // Escape: close topmost open modal ──────────────────────────────────
             if (e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
@@ -6536,6 +6779,7 @@
                     ['snippet-fill-sheet',   closeFillSheet],
                     ['add-project-sheet',    closeAddProjectSheet],
                     ['cmd-palette-sheet',    closePalette],
+                    ['shortcuts-backdrop',   closeShortcuts],
                     ['settings-overlay',     function(){ document.getElementById('settings-overlay').classList.remove('open'); }],
                     ['project-grid-overlay', closeProjectGrid],
                 ];
@@ -6623,7 +6867,34 @@
                 }
                 return;
             }
+
+            // ? — keyboard shortcuts help ─────────────────────────────────────────
+            if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '?') {
+                var sc = document.getElementById('shortcuts-backdrop');
+                if (sc && sc.classList.contains('visible')) return; // already open
+                e.preventDefault(); e.stopImmediatePropagation();
+                openShortcuts();
+                return;
+            }
         }, true); // capture phase — fires before kbRelay's listener
+
+        // ── Shortcuts overlay ─────────────────────────────────────────────────────
+        (function() {
+            var backdrop = document.getElementById('shortcuts-backdrop');
+            var sheet    = document.getElementById('shortcuts-sheet');
+            function openShortcutsInner() {
+                backdrop.classList.add('visible');
+            }
+            function closeShortcutsInner() {
+                backdrop.classList.remove('visible');
+            }
+            window.openShortcuts  = openShortcutsInner;
+            window.closeShortcuts = closeShortcutsInner;
+            backdrop.addEventListener('click', function(e) {
+                if (e.target === backdrop) closeShortcutsInner();
+            });
+            attachSwipeToDismiss(sheet, sheet, closeShortcutsInner, backdrop);
+        })();
 
         // ── Update banner ─────────────────────────────────────────────────────────
         var _updateBannerShown = false;
