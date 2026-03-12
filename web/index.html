@@ -2157,7 +2157,6 @@
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isDesktop = !isIOS && window.matchMedia('(hover: hover)').matches;
-        console.log('isIOS:', isIOS, 'isDesktop:', isDesktop);
         if (isDesktop) document.body.classList.add('is-desktop');
 
         // ── State ───────────────────────────────────────────────────────────────
@@ -6606,6 +6605,26 @@
                     iDoc.head.appendChild(s);
                 }
             } catch (e) {}
+            // Forward app-level shortcuts from the iframe to the parent document.
+            // When the terminal has focus, keydown events fire on the iframe's window,
+            // not the parent's — so Cmd+K, Ctrl+`, Cmd+W, etc. are silently swallowed.
+            try {
+                const iWin = iframe.contentWindow;
+                if (iWin) {
+                    iWin.addEventListener('keydown', function (e) {
+                        var isAppShortcut = e.metaKey ||
+                            (e.ctrlKey && e.code === 'Backquote') ||
+                            (e.key === 'Escape');
+                        if (!isAppShortcut) return;
+                        document.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: e.key, code: e.code,
+                            ctrlKey: e.ctrlKey, metaKey: e.metaKey,
+                            shiftKey: e.shiftKey, altKey: e.altKey,
+                            bubbles: true, cancelable: true
+                        }));
+                    }, true);
+                }
+            } catch (e) {}
         });
         iframe.addEventListener('error', function () {
             consecutiveFailures = MAX_FAIL_RECONNECTING; setConnectionState('reconnecting');
@@ -7193,7 +7212,6 @@
         // Ctrl+`           — toggle bottom panel (desktop)
         // ?                — keyboard shortcuts help
         document.addEventListener('keydown', function (e) {
-            console.log('Keydown:', { key: e.key, code: e.code, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey, alt: e.altKey });
             // Escape: close topmost open modal ──────────────────────────────────
             if (e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
                 var modalChecks = [
