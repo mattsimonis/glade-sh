@@ -58,6 +58,8 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 - **GitHub integration** — connect your GitHub account in Settings; create projects directly from any repo without manual cloning; auth persists across container restarts
 - **Auto-reconnect** — recovers from network drops and app backgrounding automatically; shows a clear overlay if the host can't be reached
 - **In-app rebuild** — queue a `git pull && docker compose build` from the UI; no SSH needed
+- **Commit Mono font (bundled)** — ships as the default; upload a custom font via Settings → Font for a personalized look
+- **Haptic feedback** — iOS 18+ light haptic on key presses and interactions via the WebKit `switch` input trick; falls back to `navigator.vibrate` on Android
 - **Catppuccin Mocha** — consistent theme across terminal, UI, and toolbar
 
 ---
@@ -76,7 +78,6 @@ Most mobile terminal apps drop your session, cost money, or only work on one pla
 | Docker Desktop | Container runtime |
 | Standalone `caddy-proxy` container | Handles TLS for `*.local` domains |
 | Tailscale *(optional)* | Remote access outside the home network |
-| Berkeley Mono Nerd Font `.woff2` *(optional)* | Licensed; supply your own |
 
 ---
 

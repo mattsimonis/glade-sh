@@ -6,7 +6,7 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~6620 lines). The backend is a stdlib Python API (`api/api.py`, ~1300 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~7450 lines). The backend is a stdlib Python API (`api/api.py`, ~1350 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
 GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a named Docker volume (`gh-config`), and projects can be created directly from GitHub repos.
 
@@ -38,7 +38,7 @@ install.sh                  ← Host-side installer (copies files, initialises D
 db/history.db           ← SQLite: projects, snippets, settings
 logs/{project-slug}/    ← Session log files (flat, one per tmux session)
 uploads/                ← Pasted images
-assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
+assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 ```
 
 ---
@@ -71,6 +71,10 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 - `PUT /api/settings/layout` — save keyboard layout
 - `GET /api/settings/compact-layout` — compact layout
 - `PUT /api/settings/compact-layout` — save compact layout
+- `GET /api/settings/font` — `{family, url}` or `null`
+- `PUT /api/settings/font` — save font config JSON
+- `POST /api/font` — upload font file → `{family, url}`
+- `DELETE /api/font` — remove custom font + DB entry
 
 ### Session Logs
 - `GET /api/logs` — list all log files (newest first)
@@ -174,6 +178,10 @@ assets/fonts/           ← Berkeley Mono Nerd Font (user-provided)
 | `applyTermTheme(name)` | Apply one of 6 xterm.js themes to the terminal (Catppuccin Mocha/Frappé/Macchiato/Latte, Solarized Dark, One Dark); persisted in localStorage |
 | `openFind()` | Open floating find-in-scrollback bar (Cmd+F); scans xterm.js buffer via `getLine()` |
 | `looksLikeSecret(str)` | Detect credentials (GitHub PAT, OpenAI key, AWS AKIA, JWT, Slack, PEM) in pasted text |
+| `applyCustomFont(cfg)` | Inject `@font-face` style tag (`id="custom-font-face"`) and set `--font-mono` CSS var; `applyCustomFont(null)` removes it and falls back to Commit Mono |
+| `loadCustomFont()` | Fetch `/api/settings/font` on startup; call `applyCustomFont()` with the result |
+| `doFontUpload(file)` | Validate, POST to `/api/font`, apply the returned config |
+| `haptic(pattern)` | Unified haptic: iOS 18+ fires `label.click()` on hidden `input[switch]`; Android uses `navigator.vibrate`; array patterns fire one click per "on" segment with timed delays |
 
 ---
 
@@ -252,10 +260,14 @@ make shell
 
 16. **`make build` stamps the build date** — `BUILD_DATE=$(shell date +%Y%m%d%H%M%S)` is passed as a Docker `--build-arg` and baked into `GLADE_BUILD_DATE` env var in the image. The `/api/health` response includes `build_date`. Since the app auto-updates via git pull (not rebuild), this only changes when `make build` is run explicitly.
 
-17. **`navigator.vibrate` is Android-only** — The Vibration API is not supported on iOS Safari (including PWA mode). The `haptic()` function silently no-ops on iOS. The debug panel shows a note when `navigator.vibrate` is undefined.
+17. **`navigator.vibrate` is Android-only** — iOS 18+ haptic is now supported via the WebKit `<input type="checkbox" switch>` trick. `haptic()` detects iOS via userAgent (`/iPhone|iPad|iPod/i`) and calls `label.click()` on a hidden switch input injected into the body on page load. `navigator.vibrate` is still used on Android. Older browsers/iOS: silent no-op.
 
-18. **Terminal themes persist in localStorage** — `applyTermTheme(name)` stores the chosen theme in `localStorage`. On reconnect, it reads back and reapplies. Six themes: Catppuccin Mocha (default), Frappé, Macchiato, Latte, Solarized Dark, One Dark.
+18. **`input[type=checkbox][switch]` haptic trick** — `_hapticIsIOS` detects iOS via userAgent. A hidden `input[switch]` + `label` pair is injected into the body on page load. `label.click()` triggers iOS 18+ WebKit haptic even with `display:none`. This is the same technique used in production PWAs.
 
-19. **Paste guard on multiline input** — pasting text with newlines shows a confirm dialog with line count before sending. Smart paste also detects secrets (PAT, OpenAI key, AWS AKIA, JWT, PEM, Slack token) and offers bracketed paste (concealed mode) via `looksLikeSecret()`.
+19. **Terminal iframe keyboard forwarding** — when the terminal iframe has focus, keydown fires on `iframe.contentWindow`, not the parent. A capture-phase listener on `iframe.contentWindow` forwards Meta / Ctrl+` / Escape combos to the parent via synthetic `KeyboardEvent`. Does not call `preventDefault`, so the terminal still receives keys normally.
 
-20. **Shell-idle polling uses `pane_current_command`** — `GET /api/projects/:id/shell-idle` queries tmux `#{pane_current_command}`. Returns `{idle: true}` when the command is one of the known shell names (bash, zsh, sh, fish, -bash, -zsh). Used by the "Notify when done" feature.
+20. **Terminal themes persist in localStorage** — `applyTermTheme(name)` stores the chosen theme in `localStorage`. On reconnect, it reads back and reapplies. Six themes: Catppuccin Mocha (default), Frappé, Macchiato, Latte, Solarized Dark, One Dark.
+
+21. **Paste guard on multiline input** — pasting text with newlines shows a confirm dialog with line count before sending. Smart paste also detects secrets (PAT, OpenAI key, AWS AKIA, JWT, PEM, Slack token) and offers bracketed paste (concealed mode) via `looksLikeSecret()`.
+
+22. **Shell-idle polling uses `pane_current_command`** — `GET /api/projects/:id/shell-idle` queries tmux `#{pane_current_command}`. Returns `{idle: true}` when the command is one of the known shell names (bash, zsh, sh, fish, -bash, -zsh). Used by the "Notify when done" feature.

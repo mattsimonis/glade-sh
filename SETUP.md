@@ -70,17 +70,9 @@ services:
 
 ---
 
-## Step 4: Add Your Font (Optional)
+## Step 4: Add a Custom Font (Optional)
 
-Copy the Regular Nerd Font variant into place:
-
-```bash
-cp BerkeleyMonoNerdFont-Regular.ttf ~/.glade/assets/fonts/
-```
-
-The filename must start with `BerkeleyMonoNerdFont-Regular`. If yours is named differently, rename it.
-
-If you skip this, the UI falls back to JetBrains Mono → Fira Code → system monospace.
+Commit Mono ships as the default and requires no setup. To use a custom font, open the Glade UI → Settings → Font and drag-drop a `.woff2`, `.ttf`, or `.otf` file. The font is stored server-side and applied automatically on next load.
 
 ---
 

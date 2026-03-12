@@ -1,7 +1,7 @@
 # Glade — Architecture Reference
 
 > Self-hosted, always-on terminal accessible from any device via browser.
-> Runs on any always-on host with Docker. Catppuccin Mocha theme. Berkeley Mono font.
+> Runs on any always-on host with Docker. Catppuccin Mocha theme. Commit Mono font (bundled).
 
 For AI-specific guidance (endpoints, gotchas, common tasks), see `COPILOT_INSTRUCTIONS.md`.
 For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
@@ -115,7 +115,7 @@ Two Docker services defined in `docker-compose.yml`:
 | Auth | Tailscale (network-level) | No passwords, no tokens, no sessions |
 | Package installs | `config/packages.sh` build-time hook | Image ships lean; user adds what they need |
 | Reverse proxy | Caddy (standalone container) | Shared with other `*.home` services |
-| Font | Berkeley Mono Nerd Font | Licensed, beautiful, Nerd glyph support |
+| Font | Commit Mono (variable font, bundled in repo; custom upload via Settings) | Licensed beautifully; variable font ships in repo; user can override |
 
 ---
 
@@ -139,8 +139,8 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 
 | File | Lines | Purpose |
 |---|---|---|
-| `web/index.html` | ~6620 | Single-file PWA: CSS, HTML, JavaScript inline |
-| `api/api.py` | ~1300 | REST API: projects, snippets, logs, uploads, GitHub auth |
+| `web/index.html` | ~7450 | Single-file PWA: CSS, HTML, JavaScript inline |
+| `api/api.py` | ~1350 | REST API: projects, snippets, logs, uploads, GitHub auth |
 | `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
 | `docker-compose.yml` | ~65 | Two services: ttyd + web |
@@ -163,7 +163,7 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 | `logs/_main/` | Main shell logs (reserved, currently unused) |
 | `projects/{slug}/` | GitHub-cloned repos (created on project creation from GitHub source) |
 | `uploads/` | Pasted images (temporary storage) |
-| `assets/fonts/` | Berkeley Mono Nerd Font (user-provided, not in repo) |
+| `assets/fonts/` | Custom font uploads (user-supplied via Settings UI) |
 
 ---
 

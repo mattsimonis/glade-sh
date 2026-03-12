@@ -6,6 +6,18 @@ All notable changes to Glade are documented here.
 
 ## [Unreleased]
 
+### Changed
+- **Commit Mono replaces Berkeley Mono** as the default font; variable font (`CommitMonoV143-VF.woff2`) is now bundled in the repo (`web/assets/fonts/`, `docs/assets/fonts/`); no user setup required
+- **iOS 18+ haptic feedback** — `haptic()` now detects iOS via userAgent and fires a light haptic using a hidden `<input type="checkbox" switch>` + `<label>` trick; Android still uses `navigator.vibrate`; older browsers silent no-op
+- **Service worker fixed** — `res.clone()` must be called synchronously before any async gap; was throwing `TypeError: Failed to execute 'clone' on 'Response': Response body is already used`; cache bumped to `glade-shell-v3`
+- **`toggleDesktopPanel` scope fix** — was defined inside an IIFE but called from outer keydown handler; fixed via `window.toggleDesktopPanel = toggleDesktopPanel`
+
+### Added
+- **Custom font upload** — Settings → Font: drag-drop zone or file picker accepts `.woff2`, `.ttf`, `.otf`; stored as `font-{ts}-{uuid}.{ext}` in `~/.glade/uploads/`; config persisted via `PUT /api/settings/font`
+- **Font API endpoints** — `GET /api/settings/font`, `PUT /api/settings/font`, `POST /api/font`, `DELETE /api/font`
+- **GitHub device auth UX** — `.gh-code-block` is now tappable (tap to copy with "Copied!" feedback); `.gh-code-value` has `user-select:text` for manual selection; "Open github.com/login/device" button copies the code before opening the URL
+- **Keyboard shortcuts from iframe** — capture-phase keydown listener on `iframe.contentWindow` forwards Meta / Ctrl+` / Escape combos to the parent via synthetic `KeyboardEvent`
+
 ---
 
 ## [1.0.0] — 2025
