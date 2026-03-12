@@ -1,11 +1,11 @@
-# Roost — web container file server
+# Glade — web container file server
 # Serves the HTML wrapper and static assets for caddy-proxy to front.
-# Mounted into the roost-web container at /etc/caddy/Caddyfile.
+# Mounted into the glade-web container at /etc/caddy/Caddyfile.
 
 :7682 {
 	# API proxy — routes to ttyd container (API runs there now)
 	handle /api/* {
-		reverse_proxy roost-ttyd:7683
+		reverse_proxy glade-ttyd:7683
 	}
 
 	# Assets (fonts, etc.) — long cache, they never change
