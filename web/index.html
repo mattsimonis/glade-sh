@@ -130,22 +130,9 @@
         }
         .shell-tab:hover .shell-close, .shell-tab.active .shell-close { opacity: 0.7; }
         .shell-close:active { opacity: 1; background: #45475a; }
-        /* On touch devices: hide tiny ×, long-press enters close mode instead */
+        /* On touch devices: hide tiny ×, long-press shows close confirm instead */
         @media (pointer: coarse) {
             .shell-close { display: none; }
-        }
-        /* Close mode: × visible and red-tinted */
-        #shell-tabs-bar.close-mode .shell-close {
-            display: inline !important;
-            opacity: 1 !important;
-            color: #f38ba8;
-            background: rgba(243,139,168,0.15);
-        }
-        @keyframes tab-shake {
-            0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)}
-        }
-        #shell-tabs-bar.close-mode .shell-tab {
-            animation: tab-shake 120ms ease-in-out;
         }
         #shell-add-btn {
             flex-shrink: 0; width: 36px; height: 26px;
@@ -3969,21 +3956,6 @@
             ]);
         }
 
-        function enterCloseMode() {
-            var bar = document.getElementById('shell-tabs-bar');
-            if (bar) { bar.classList.add('close-mode'); haptic(15); }
-        }
-        function exitCloseMode() {
-            var bar = document.getElementById('shell-tabs-bar');
-            if (bar) bar.classList.remove('close-mode');
-        }
-        // Tap anywhere outside the tab bar to leave close mode
-        document.addEventListener('touchstart', function(e) {
-            var bar = document.getElementById('shell-tabs-bar');
-            if (!bar || !bar.classList.contains('close-mode')) return;
-            if (!bar.contains(e.target)) exitCloseMode();
-        }, { passive: true });
-
         function renderShellTabs(shells) {
             const bar = document.getElementById('shell-tabs-bar');
             if (!bar) return;
@@ -4012,15 +3984,15 @@
                         showShellCtx(sh.index, e.clientX, e.clientY);
                     });
                 }
-                // Long-press (300ms) enters or exits close mode
+                // Long-press (500ms) → confirm close for this specific tab
                 var lpFired = false, lpTimer = null;
                 btn.addEventListener('touchstart', function() {
                     lpFired = false;
                     lpTimer = setTimeout(function() {
                         lpTimer = null; lpFired = true;
-                        if (bar.classList.contains('close-mode')) exitCloseMode();
-                        else enterCloseMode();
-                    }, 300);
+                        haptic(15);
+                        showShellCtx(sh.index);
+                    }, 500);
                 }, { passive: true });
                 function cancelLp() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
                 btn.addEventListener('touchend', cancelLp, { passive: true });
@@ -4029,20 +4001,7 @@
                 function doSwitch(e) {
                     if (e) { e.preventDefault(); e.stopPropagation(); }
                     if (lpFired) { lpFired = false; return; }
-                    if (bar.classList.contains('close-mode')) {
-                        exitCloseMode();
-                        if (!btn.classList.contains('active')) switchShell(sh.index);
-                        return;
-                    }
-                    if (btn.classList.contains('active') && shells.length > 1) {
-                        // Tap the active tab again → show close menu
-                        const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-                        const y = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-                        haptic(8);
-                        showShellCtx(sh.index, x, y);
-                    } else {
-                        switchShell(sh.index);
-                    }
+                    switchShell(sh.index);
                 }
                 btn.addEventListener('click', doSwitch);
                 btn.addEventListener('touchend', doSwitch, { passive: false });
