@@ -5695,7 +5695,10 @@
             } catch(e) {}
             // Update swatch active state
             document.querySelectorAll('.theme-swatch').forEach(function(el) {
-                el.classList.toggle('active', el.dataset.themeId === themeId);
+                const active = el.dataset.themeId === themeId;
+                el.classList.toggle('active', active);
+                const swatchTheme = TERM_THEMES[el.dataset.themeId];
+                el.style.border = '2px solid ' + (active && swatchTheme ? swatchTheme.theme.blue : 'transparent');
             });
         }
 
