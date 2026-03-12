@@ -518,6 +518,8 @@ class Handler(BaseHTTPRequestHandler):
         if p == ["api", "github", "repos"]:
             return self._gh_repos()
         self.send_json(404, {"error": "not found"})
+
+    def do_POST(self):
         p = self.parts()
         if p == ["api", "rebuild"]:
             return self._trigger_rebuild()
@@ -538,6 +540,8 @@ class Handler(BaseHTTPRequestHandler):
         if p == ["api", "github", "auth", "start"]:
             return self._gh_auth_start()
         self.send_json(404, {"error": "not found"})
+
+    def do_PUT(self):
         p = self.parts()
         if len(p) == 3 and p[:2] == ["api", "projects"]:
             return self._update_project(p[2])
