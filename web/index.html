@@ -6629,6 +6629,14 @@
         });
         iframe.addEventListener('load', function () {
             if (iframe.src === 'about:blank' || !iframe.src || iframe.src === location.origin + '/') return; // skip blank navigations
+            // ttyd registers window.addEventListener('beforeunload', ...) to warn on accidental
+            // navigation. Setting onbeforeunload=null doesn't remove those listeners. Intercept
+            // in the capture phase so ttyd's handler never runs and the dialog never appears.
+            try {
+                iframe.contentWindow.addEventListener('beforeunload', function (e) {
+                    e.stopImmediatePropagation();
+                }, true);
+            } catch (e) {}
             setTimeout(function () { consecutiveFailures = 0; setConnectionState('connected'); findTerminal();
                 // Nudge FitAddon after ttyd is fully initialized — ResizeObserver fires too
                 // early (before xterm is ready) on first load, especially on mobile.
