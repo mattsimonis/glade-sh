@@ -82,6 +82,23 @@
                 --sky:      #04a5e5;
             }
         }
+        /* Manual theme overrides — take precedence over prefers-color-scheme */
+        html.force-dark {
+            --base:     #1e1e2e; --mantle:   #181825; --crust:    #11111b;
+            --surface0: #313244; --surface1: #45475a; --surface2: #585b70;
+            --overlay0: #6c7086; --overlay1: #7f849c; --subtext1: #a6adc8;
+            --text:     #cdd6f4; --blue:     #89b4fa; --green:    #a6e3a1;
+            --red:      #f38ba8; --peach:    #fab387; --mauve:    #cba6f7;
+            --teal:     #94e2d5; --pink:     #f5c2e7; --yellow:   #f9e2af; --sky: #89dceb;
+        }
+        html.force-light {
+            --base:     #eff1f5; --mantle:   #e6e9ef; --crust:    #dce0e8;
+            --surface0: #ccd0da; --surface1: #bcc0cc; --surface2: #acb0be;
+            --overlay0: #9ca0b0; --overlay1: #8c8fa1; --subtext1: #6c6f85;
+            --text:     #4c4f69; --blue:     #1e66f5; --green:    #40a02b;
+            --red:      #d20f39; --peach:    #fe640b; --mauve:    #8839ef;
+            --teal:     #179299; --pink:     #ea76cb; --yellow:   #df8e1d; --sky: #04a5e5;
+        }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             margin: 0; padding: 0; overflow: hidden; background: var(--base);
@@ -1267,6 +1284,23 @@
         .settings-btn-primary { background:var(--surface0); color:var(--blue); }
         .settings-btn-export  { background:var(--surface0); color:var(--red); }
         .settings-btn-full:active { background:var(--surface1); }
+        /* Segmented appearance picker */
+        .appearance-picker { display:flex; gap:4px; }
+        .appearance-btn {
+            flex:1; padding:7px 0; border-radius:8px; font-size:12px; font-family:var(--font-mono);
+            background:var(--surface0); color:var(--subtext1); border:none; cursor:pointer;
+            transition:background 120ms, color 120ms;
+        }
+        .appearance-btn.active { background:var(--mauve); color:#fff; }
+        /* Font size range slider */
+        .font-slider {
+            -webkit-appearance:none; appearance:none; width:100%;
+            height:4px; background:var(--surface0); border-radius:2px; outline:none;
+        }
+        .font-slider::-webkit-slider-thumb {
+            -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+            background:var(--blue); cursor:pointer; border:none;
+        }
 
         /* ── Grid skeleton shimmer ───────────────────────────── */
         @keyframes shimmer {
@@ -1924,6 +1958,31 @@
             </div>
         </div>
 
+        <!-- Appearance section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Appearance</div>
+            <div class="settings-row">
+                <span class="settings-label">App theme</span>
+            </div>
+            <div class="appearance-picker" style="margin-top:6px">
+                <button class="appearance-btn" data-theme="system">System</button>
+                <button class="appearance-btn" data-theme="dark">Dark</button>
+                <button class="appearance-btn" data-theme="light">Light</button>
+            </div>
+        </div>
+
+        <!-- Terminal appearance section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Terminal</div>
+            <div class="settings-row">
+                <span class="settings-label">Font size</span>
+                <span class="settings-value" id="settings-font-size-val">100%</span>
+            </div>
+            <input type="range" class="font-slider" id="settings-font-slider"
+                   min="70" max="160" step="5" value="100"
+                   aria-label="Terminal font size">
+        </div>
+
         <!-- Terminal Theme section -->
         <div class="settings-section">
             <div class="settings-section-title">Terminal Theme</div>
@@ -2128,6 +2187,14 @@
         // one-time trackpad hint
         let trackpadHintShown = false;
         let trackpadHintTimer = null;
+
+        // ── App theme (System / Dark / Light) ──────────────────────────────────
+        function applyAppTheme(t) {
+            document.documentElement.classList.remove('force-dark', 'force-light');
+            if (t === 'dark')  document.documentElement.classList.add('force-dark');
+            if (t === 'light') document.documentElement.classList.add('force-light');
+        }
+        applyAppTheme(localStorage.getItem('appTheme') || 'system');
 
         // ── DOM refs ────────────────────────────────────────────────────────────
         const iframe            = document.getElementById('terminal-iframe');
@@ -3312,8 +3379,43 @@
                 refreshGithubSettingsState();
                 // Theme picker
                 renderThemePicker();
+                // Appearance picker — highlight active theme
+                const appTheme = localStorage.getItem('appTheme') || 'system';
+                document.querySelectorAll('.appearance-btn').forEach(function(b) {
+                    b.classList.toggle('active', b.dataset.theme === appTheme);
+                });
+                // Font size slider
+                const slider = document.getElementById('settings-font-slider');
+                const sizeVal = document.getElementById('settings-font-size-val');
+                if (slider) {
+                    slider.value = Math.round(termFontScale * 100);
+                    if (sizeVal) sizeVal.textContent = slider.value + '%';
+                }
             }
             function closeSettings() { overlay.classList.remove('open'); }
+
+            // Appearance theme picker
+            document.querySelectorAll('.appearance-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var t = btn.dataset.theme;
+                    localStorage.setItem('appTheme', t);
+                    applyAppTheme(t);
+                    document.querySelectorAll('.appearance-btn').forEach(function(b) {
+                        b.classList.toggle('active', b.dataset.theme === t);
+                    });
+                });
+            });
+            // Font size slider
+            var fontSlider = document.getElementById('settings-font-slider');
+            if (fontSlider) {
+                fontSlider.addEventListener('input', function() {
+                    var pct = parseInt(fontSlider.value, 10);
+                    var el = document.getElementById('settings-font-size-val');
+                    if (el) el.textContent = pct + '%';
+                    applyTermFontScale(pct / 100);
+                    localStorage.setItem('termFontScale', String(termFontScale));
+                });
+            }
 
             document.getElementById('nav-settings-btn').addEventListener('click', openSettings);
             document.getElementById('nav-settings-btn').addEventListener('touchend', function (e) {
@@ -4376,6 +4478,7 @@
                 ifrm.src = '/ttyd/' + port + '/';
                 startShellPoll(pid);
                 markProjectViewed(pid);
+                if (isSidebarLayout() && typeof renderProjectGrid === 'function') renderProjectGrid();
             } catch (e) {
                 console.warn('switchProject failed', e);
             }
