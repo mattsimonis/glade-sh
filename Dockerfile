@@ -3,7 +3,8 @@ FROM debian:bookworm-slim
 # ── System packages ───────────────────────────────────────────────────────────
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
-        ca-certificates curl git zsh sqlite3 jq wget python3 tmux && \
+        ca-certificates curl git zsh sqlite3 jq wget python3 tmux \
+        procps less iputils-ping iproute2 nano htop && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
