@@ -2251,6 +2251,8 @@
         const trackpadRing      = document.getElementById('trackpad-ring');
         const trackpadHintEl    = document.getElementById('trackpad-hint');
         const arrowPad          = document.getElementById('arrow-pad');
+        const pfEl              = document.getElementById('path-footer');
+        const pfText            = document.getElementById('path-footer-text');
         const AP_KEY_MAP = { ArrowUp:'ap-up', ArrowDown:'ap-down', ArrowLeft:'ap-left', ArrowRight:'ap-right' };
         // clip-path fills from tail toward tip for each direction
         const AP_CLIP = {
@@ -2932,8 +2934,6 @@
         // ── Path footer ─────────────────────────────────────────────────────────
         const appEl = document.getElementById('app');
         function repositionPathFooter() {
-            const pfEl   = document.getElementById('path-footer');
-            const pfText = document.getElementById('path-footer-text');
             if (!pfEl) return;
             const hasContent = pfText && pfText.textContent.trim().length > 0;
             if (!hasContent && !currentProjectId) {
@@ -2966,7 +2966,6 @@
                 tc.style.paddingBottom = '';
                 return;
             }
-            const pfEl = document.getElementById('path-footer');
             const pfVisible = pfEl && pfEl.classList.contains('pf-visible');
             // When keyboard is hidden, path footer stacks above the shortcut bar — add 22px
             const extraPad = (keyboardState === 'hidden' && pfVisible) ? 22 : 0;
@@ -2978,8 +2977,7 @@
 
             if (focusModeActive) {
                 shortcutBar.classList.remove('sb-visible');
-                const pf = document.getElementById('path-footer');
-                if (pf) pf.classList.remove('pf-visible');
+                if (pfEl) pfEl.classList.remove('pf-visible');
                 if (terminalContainer) {
                     terminalContainer.classList.remove('has-shortcut-bar');
                     terminalContainer.style.paddingBottom = '';
@@ -4191,43 +4189,17 @@
                     '<div class="snippet-name">' + escapeHtml(snip.name) + '</div>' +
                     '<div class="snippet-cmd">' + escapeHtml(snip.command) + '</div>';
 
-                let lpTimer = null, longPressed = false, scrolled = false, startX = 0, startY = 0;
-                tile.addEventListener('touchstart', function(e) {
-                    scrolled = false; longPressed = false;
-                    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-                    lpTimer = setTimeout(function() {
-                        if (scrolled) return;
-                        lpTimer = null; longPressed = true;
-                        haptic(15);
-                        tile.classList.add('lp-active');
-                        showSnippetCtx(snip, startX, startY);
-                    }, 500);
-                }, { passive: true });
-                tile.addEventListener('touchmove', function(e) {
-                    if (!e.touches.length) return;
-                    if (Math.abs(e.touches[0].clientX - startX) > 8 || Math.abs(e.touches[0].clientY - startY) > 8) {
-                        scrolled = true;
-                        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+                addLongPress(tile, {
+                    hapticLong: 15,
+                    activeClass: 'lp-active',
+                    onLongPress: function(x, y) { showSnippetCtx(snip, x, y); },
+                    onTap: function() {
+                        tile.classList.add('flash-insert');
+                        setTimeout(function() { tile.classList.remove('flash-insert'); }, 180);
+                        haptic(8); sendSnippetCommand(snip);
                     }
-                }, { passive: true });
-                tile.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-                    if (longPressed) { return; } // leave longPressed=true; click handler clears it
-                    if (scrolled) { return; }    // leave scrolled=true; click handler clears it
-                    tile.classList.add('flash-insert');
-                    setTimeout(function() { tile.classList.remove('flash-insert'); }, 180);
-                    haptic(8); sendSnippetCommand(snip);
-                }, { passive: false });
-                // Desktop: click to run, right-click for context menu.
-                // Also absorbs iOS synthetic click after long-press or scroll touchend.
-                tile.addEventListener('click', function(e) {
-                    if (longPressed) { longPressed = false; return; }
-                    if (scrolled) { scrolled = false; return; }
-                    tile.classList.add('flash-insert');
-                    setTimeout(function() { tile.classList.remove('flash-insert'); }, 180);
-                    haptic(8); sendSnippetCommand(snip);
                 });
+                // Desktop: right-click for context menu
                 tile.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
                     showSnippetCtx(snip, e.clientX, e.clientY);
@@ -4463,36 +4435,10 @@
                         '<span class="session-size">' + formatBytes(log.size) + '</span>' +
                         '<span class="session-time">' + escapeHtml(relativeTime(log.mtime)) + '</span>' +
                     '</div>';
-                // Long-press (touch) or right-click (desktop) → delete menu
-                var lpTimer = null, longPressed = false, scrolled = false, startX = 0, startY = 0;
-                card.addEventListener('touchstart', function(e) {
-                    scrolled = false; longPressed = false;
-                    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-                    lpTimer = setTimeout(function() {
-                        if (scrolled) return;
-                        lpTimer = null; longPressed = true;
-                        haptic(20);
-                        showLogCtx(log, startX, startY);
-                    }, 500);
-                }, { passive: true });
-                card.addEventListener('touchmove', function(e) {
-                    if (!e.touches.length) return;
-                    if (Math.abs(e.touches[0].clientX - startX) > 8 || Math.abs(e.touches[0].clientY - startY) > 8) {
-                        scrolled = true;
-                        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-                    }
-                }, { passive: true });
-                card.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-                    if (longPressed) { return; } // leave longPressed=true; click handler clears it
-                    if (scrolled) { return; }    // leave scrolled=true; click handler clears it
-                    haptic(8); openLogViewer(log.project, log.file, log.display_name, log.active);
-                }, { passive: false });
-                card.addEventListener('click', function() {
-                    if (longPressed) { longPressed = false; return; }
-                    if (scrolled) { scrolled = false; return; }
-                    haptic(8); openLogViewer(log.project, log.file, log.display_name, log.active);
+                addLongPress(card, {
+                    hapticLong: 20,
+                    onLongPress: function(x, y) { showLogCtx(log, x, y); },
+                    onTap: function() { haptic(8); openLogViewer(log.project, log.file, log.display_name, log.active); }
                 });
                 card.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
@@ -4638,8 +4584,6 @@
             window._osc7Wired = false;
             _osc7WiredSocket = null;
             // Clear stale path footer; pre-fill with stored directory so it's visible immediately
-            const pfText = document.getElementById('path-footer-text');
-            const pfEl   = document.getElementById('path-footer');
             const proj   = projects.find(function(p) { return p.id === pid; });
             if (pfText) pfText.textContent = (proj && proj.directory) ? proj.directory : '';
             if (pfEl) pfEl.classList.remove('pf-visible');
@@ -4690,9 +4634,7 @@
         function closeShellCtx() { closeConfirm(); }
 
         function showShellCtx(idx, x, y) {
-            showConfirm('Close this tab?', null, [
-                { label: 'Close Tab', style: 'danger', onConfirm: function() { closeShell(idx); } }
-            ]);
+            confirmCloseShell(idx);
         }
 
         function renderShellTabs(shells) {
@@ -4888,7 +4830,62 @@
             }
         }
 
-        function renderProjectGrid() {
+        function doDeleteProject(pid) {
+            apiJson('/api/projects/' + pid, { method: 'DELETE' })
+                .then(function() {
+                    projects = projects.filter(function(x) { return x.id !== pid; });
+                    afterDeleteProject(pid);
+                    renderProjectGrid();
+                    renderProjectTabs();
+                    toast('Project deleted', 'success');
+                })
+                .catch(function() { toast('Delete failed', 'error'); });
+        }
+
+        function confirmCloseShell(idx) {
+            confirmCloseShell(idx);
+        }
+
+        // ── Long-press helper ─────────────────────────────────────────────────
+        // Attaches touchstart/touchmove/touchend/click handlers with scroll-cancel
+        // and synthetic-click suppression after a long-press.
+        // opts: { onTap, onLongPress, hapticLong=15, activeClass=null }
+        function addLongPress(el, opts) {
+            var hapticLong = opts.hapticLong !== undefined ? opts.hapticLong : 15;
+            var lpTimer = null, longPressed = false, scrolled = false, startX = 0, startY = 0;
+            el.addEventListener('touchstart', function(e) {
+                scrolled = false; longPressed = false;
+                startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+                lpTimer = setTimeout(function() {
+                    if (scrolled) return;
+                    lpTimer = null; longPressed = true;
+                    haptic(hapticLong);
+                    if (opts.activeClass) el.classList.add(opts.activeClass);
+                    opts.onLongPress(startX, startY);
+                }, 500);
+            }, { passive: true });
+            el.addEventListener('touchmove', function(e) {
+                if (!e.touches.length) return;
+                if (Math.abs(e.touches[0].clientX - startX) > 8 || Math.abs(e.touches[0].clientY - startY) > 8) {
+                    scrolled = true;
+                    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+                }
+            }, { passive: true });
+            el.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+                if (longPressed) { return; }
+                if (scrolled) { return; }
+                opts.onTap && opts.onTap();
+            }, { passive: false });
+            el.addEventListener('click', function() {
+                if (longPressed) { longPressed = false; return; }
+                if (scrolled) { scrolled = false; return; }
+                opts.onTap && opts.onTap();
+            });
+        }
+
+
             const grid = document.getElementById('project-grid-cards');
             if (!grid) return;
             grid.innerHTML = '';
@@ -4957,17 +4954,7 @@
                                     if (!isSidebarLayout()) closeProjectGrid();
                                     switchProject(p.id);
                                 }},
-                                { label: 'Delete', style: 'danger', onConfirm: function() {
-                                    apiJson('/api/projects/' + p.id, { method: 'DELETE' })
-                                        .then(function() {
-                                            projects = projects.filter(function(x) { return x.id !== p.id; });
-                                            afterDeleteProject(p.id);
-                                            renderProjectGrid();
-                                            renderProjectTabs();
-                                            toast('Project deleted', 'success');
-                                        })
-                                        .catch(function() { toast('Delete failed', 'error'); });
-                                }}
+                                { label: 'Delete', style: 'danger', onConfirm: function() { doDeleteProject(p.id); } }}
                             ]
                         );
                     }, 500);
@@ -4986,17 +4973,7 @@
                     showConfirm(
                         'Delete \u201c' + p.name + '\u201d?',
                         p.directory || '',
-                        [{ label: 'Delete', style: 'danger', onConfirm: function() {
-                            apiJson('/api/projects/' + p.id, { method: 'DELETE' })
-                                .then(function() {
-                                    projects = projects.filter(function(x) { return x.id !== p.id; });
-                                    afterDeleteProject(p.id);
-                                    renderProjectGrid();
-                                    renderProjectTabs();
-                                    toast('Project deleted', 'success');
-                                })
-                                .catch(function() { toast('Delete failed', 'error'); });
-                        }}]
+                        [{ label: 'Delete', style: 'danger', onConfirm: function() { doDeleteProject(p.id); } }]
                     );
                 });
                 grid.appendChild(card);
@@ -5493,8 +5470,7 @@
                 const inner = m[1].match(/^(?:file:\/\/[^/]*)?(\/.*)/);
                 if (!inner) return;
                 const path = inner[1].replace(/^\/root(?=\/|$)/, '~');
-                const el = document.getElementById('path-footer-text');
-                if (el) el.textContent = path;
+                if (pfText) pfText.textContent = path;
                 repositionPathFooter();
             });
         }
@@ -6786,7 +6762,7 @@
             { id:'close-shell',label:'Close current tab',    desc:'Close the active shell tab',      fn:function(){
                 if(currentShellIdx !== null) {
                     var idx = currentShellIdx;
-                    showConfirm('Close this tab?', null, [{ label:'Close Tab', style:'danger', onConfirm:function(){ closeShell(idx); } }]);
+                    confirmCloseShell(idx);
                 }
             }},
             { id:'next-shell',  label:'Next shell tab',      desc:'Switch to next shell',            fn:function(){
@@ -7253,15 +7229,11 @@
 
             // Path footer tests
             document.getElementById('dbg-path-show').onclick = function () {
-                const pfText = document.getElementById('path-footer-text');
-                const pfEl   = document.getElementById('path-footer');
                 if (pfText) pfText.textContent = '/Users/matt/Dev/glade/web';
                 if (pfEl)   pfEl.classList.add('pf-visible');
                 repositionShortcutBar();
             };
             document.getElementById('dbg-path-hide').onclick = function () {
-                const pfText = document.getElementById('path-footer-text');
-                const pfEl   = document.getElementById('path-footer');
                 if (pfText) pfText.textContent = '';
                 if (pfEl)   pfEl.classList.remove('pf-visible');
                 repositionShortcutBar();
@@ -7376,7 +7348,7 @@
                 e.preventDefault(); e.stopImmediatePropagation();
                 if (currentShellIdx !== null) {
                     var idx = currentShellIdx;
-                    showConfirm('Close this tab?', null, [{ label:'Close Tab', style:'danger', onConfirm:function(){ closeShell(idx); } }]);
+                    confirmCloseShell(idx);
                 }
                 return;
             }
