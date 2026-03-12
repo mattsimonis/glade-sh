@@ -16,6 +16,24 @@ def test_health_returns_ok(client):
     assert_cors(headers)
 
 
+def test_health_includes_build_date_field(client):
+    """GET /api/health must always include build_date (added in 'add build ver' commit)."""
+    _, data, _ = client.get("/api/health")
+    assert "build_date" in data
+
+
+def test_health_build_date_defaults_to_empty_string(client, monkeypatch):
+    monkeypatch.delenv("GLADE_BUILD_DATE", raising=False)
+    _, data, _ = client.get("/api/health")
+    assert data["build_date"] == ""
+
+
+def test_health_build_date_reads_from_env(client, monkeypatch):
+    monkeypatch.setenv("GLADE_BUILD_DATE", "2026-03-12")
+    _, data, _ = client.get("/api/health")
+    assert data["build_date"] == "2026-03-12"
+
+
 def test_health_update_pending_when_flag_exists(client):
     flag = "/tmp/glade-update-pending"
     open(flag, "w").close()

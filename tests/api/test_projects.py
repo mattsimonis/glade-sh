@@ -216,3 +216,28 @@ def test_cors_present_on_503(client, project_id, monkeypatch):
     monkeypatch.setattr(api, "get_free_port", lambda: None)
     _, _, headers = client.post(f"/api/projects/{project_id}/start")
     assert_cors(headers)
+
+
+# ── github_repo field in list and get responses ───────────────────────────────
+
+
+def test_list_projects_includes_github_repo_field(client):
+    """GET /api/projects must return github_repo for every project."""
+    client.post("/api/projects", {"name": "Plain"})
+    _, data, _ = client.get("/api/projects")
+    assert len(data) >= 1
+    for p in data:
+        assert "github_repo" in p
+
+
+def test_list_projects_github_repo_null_for_plain_project(client):
+    _, created, _ = client.post("/api/projects", {"name": "No Repo"})
+    _, data, _ = client.get("/api/projects")
+    entry = next(p for p in data if p["id"] == created["id"])
+    assert entry["github_repo"] is None
+
+
+def test_get_project_includes_github_repo_field(client, project):
+    _, data, _ = client.get(f"/api/projects/{project['id']}")
+    assert "github_repo" in data
+    assert data["github_repo"] is None
