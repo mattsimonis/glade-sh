@@ -771,18 +771,24 @@ class Handler(BaseHTTPRequestHandler):
         user_code = None
         verification_uri = "https://github.com/login/device"
         deadline = time.time() + 20
-        for line in proc.stdout:
-            line = strip_ansi(line).strip()
-            m = re.search(r'one-time code[:\s]+([A-Z0-9]{4}-[A-Z0-9]{4})', line, re.I)
-            if m:
-                user_code = m.group(1)
-            m = re.search(r'(https://github\.com/login/device\S*)', line)
-            if m:
-                verification_uri = m.group(1).rstrip(".")
-            if user_code:
-                break
-            if time.time() > deadline:
-                break
+        try:
+            for line in proc.stdout:
+                line = strip_ansi(line).strip()
+                m = re.search(r'one-time code[:\s]+([A-Z0-9]{4}-[A-Z0-9]{4})', line, re.I)
+                if m:
+                    user_code = m.group(1)
+                m = re.search(r'(https://github\.com/login/device\S*)', line)
+                if m:
+                    verification_uri = m.group(1).rstrip(".")
+                if user_code:
+                    break
+                if time.time() > deadline:
+                    break
+        except Exception:
+            pass
+        finally:
+            if not user_code and proc.poll() is None:
+                proc.terminate()
 
         if not user_code:
             return self.send_json(503, {"error": "Could not start GitHub device flow — check that gh is authenticated or try again"})
@@ -795,10 +801,11 @@ class Handler(BaseHTTPRequestHandler):
     def _gh_auth_disconnect(self):
         if not self._gh_available():
             return self.send_json(503, {"error": "gh CLI not installed"})
-        hosts_file = os.path.expanduser("~/.config/gh/hosts.yml")
         try:
-            if os.path.exists(hosts_file):
-                os.remove(hosts_file)
+            subprocess.run(
+                ["gh", "auth", "logout", "-h", "github.com"],
+                capture_output=True, timeout=10,
+            )
         except Exception as e:
             return self.send_json(500, {"error": str(e)})
         self.send_json(200, {"ok": True})
@@ -876,7 +883,8 @@ class Handler(BaseHTTPRequestHandler):
             has_activity = False
             if running and tmux_session_exists(sname):
                 current = tmux_history_size(sname)
-                baseline = _baselines.get(pid, current)
+                with _lock:
+                    baseline = _baselines.get(pid, current)
                 has_activity = current != baseline
             result.append({"id": pid, "hasActivity": has_activity})
         self.send_json(200, result)
@@ -884,7 +892,8 @@ class Handler(BaseHTTPRequestHandler):
     def _mark_viewed(self, pid):
         sname = session_name(pid)
         if tmux_session_exists(sname):
-            _baselines[pid] = tmux_history_size(sname)
+            with _lock:
+                _baselines[pid] = tmux_history_size(sname)
         self.send_json(200, {"ok": True})
 
     # -- snippets --
@@ -1018,7 +1027,7 @@ class Handler(BaseHTTPRequestHandler):
             row = conn.execute("SELECT name FROM projects WHERE id=?", (pid,)).fetchone()
         if not row:
             return self.send_json(404, {"error": "project not found"})
-        sname = slugify(row["name"])
+        sname = session_name(pid)
         try:
             r = subprocess.run(
                 ["tmux", "display-message", "-pt", f"{sname}:0.0", "#{pane_current_command}"],
@@ -1127,7 +1136,9 @@ class Handler(BaseHTTPRequestHandler):
     def _get_log_file(self, project, filename):
         if ".." in project or ".." in filename:
             return self.send_json(400, {"error": "invalid path"})
-        fpath = os.path.join(LOGS_DIR, project, filename)
+        fpath = os.path.normpath(os.path.join(LOGS_DIR, project, filename))
+        if not fpath.startswith(os.path.normpath(LOGS_DIR) + os.sep):
+            return self.send_json(400, {"error": "invalid path"})
         if not os.path.isfile(fpath):
             return self.send_json(404, {"error": "not found"})
         qs = self.path.split("?", 1)[1] if "?" in self.path else ""
@@ -1156,7 +1167,9 @@ class Handler(BaseHTTPRequestHandler):
     def _tail_current_log(self, project):
         if ".." in project:
             return self.send_json(400, {"error": "invalid path"})
-        slug_dir = os.path.join(LOGS_DIR, project)
+        slug_dir = os.path.normpath(os.path.join(LOGS_DIR, project))
+        if not slug_dir.startswith(os.path.normpath(LOGS_DIR) + os.sep):
+            return self.send_json(400, {"error": "invalid path"})
         if not os.path.isdir(slug_dir):
             return self.send_json(404, {"error": "no logs for project"})
         logs = sorted([f for f in os.listdir(slug_dir) if f.endswith(".log")])

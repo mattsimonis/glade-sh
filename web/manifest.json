@@ -2,6 +2,8 @@
   "name": "Glade.sh",
   "short_name": "Glade.sh",
   "description": "Self-hosted terminal — identical on every device",
+  "id": "/",
+  "scope": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e1e2e",

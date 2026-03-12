@@ -4322,9 +4322,9 @@
                 try {
                     const data = await apiJson('/api/projects/activity');
                     let changed = false;
-                    Object.keys(data).forEach(function(pid) {
-                        if (pid !== currentProjectId && data[pid] && !activityBadges[pid]) {
-                            activityBadges[pid] = true; changed = true;
+                    data.forEach(function(item) {
+                        if (item.id !== currentProjectId && item.hasActivity && !activityBadges[item.id]) {
+                            activityBadges[item.id] = true; changed = true;
                         }
                     });
                     if (changed) renderProjectTabs();
@@ -5838,6 +5838,8 @@
                 // Resume polls
                 startActivityPoll();
                 if (currentProjectId) startShellPoll(currentProjectId);
+                // Re-acquire WakeLock — browser releases it automatically when page hides
+                if (connectionState === 'connected') requestWakeLock();
                 // Always reconnect after meaningful background time, not just when "disconnected"
                 if (wasHiddenMs > 5000 || connectionState !== 'connected') {
                     forceReconnect();
@@ -5849,6 +5851,19 @@
         window.addEventListener('pageshow', function (e) {
             if (e.persisted) { reconnectInProgress = false; forceReconnect(); }
         });
+
+        // ── Wake Lock — keep screen awake during active terminal sessions ────────
+        let _wakeLock = null;
+        async function requestWakeLock() {
+            if (!('wakeLock' in navigator) || _wakeLock) return;
+            try {
+                _wakeLock = await navigator.wakeLock.request('screen');
+                _wakeLock.addEventListener('release', function() { _wakeLock = null; });
+            } catch(e) {}
+        }
+        function releaseWakeLock() {
+            if (_wakeLock) { try { _wakeLock.release(); } catch(e) {} _wakeLock = null; }
+        }
 
         function setConnectionState(state) {
             if (state === connectionState) return;
@@ -5867,6 +5882,7 @@
                     ? (state === 'disconnected' ? 'Tap to reconnect to ' + activeProj.name : 'Reconnecting to ' + activeProj.name + '…')
                     : 'Tap or press Enter to reconnect';
                 if (state === 'disconnected') haptic([50,30,50]);
+                releaseWakeLock();
                 setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
             } else {
                 reconnectOverlay.classList.remove('visible', 'disconnected');
@@ -5874,6 +5890,7 @@
             statusIndicator.classList.remove('fade-out');
             clearTimeout(statusFadeTimer);
             if (state === 'connected') {
+                requestWakeLock();
                 showTrackpadHint();
                 if (termFontScale !== 1.0) applyTermFontScale(termFontScale);
                 if (currentTermTheme && currentTermTheme !== 'mocha') applyTermTheme(currentTermTheme);
@@ -6614,5 +6631,12 @@
         </div>
     </div>
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function() {});
+            });
+        }
+    </script>
 </body>
 </html>

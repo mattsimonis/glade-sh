@@ -154,3 +154,33 @@ def test_shell_idle_response_has_both_fields(client, monkeypatch):
     _, data, _ = client.get(f"/api/projects/{pid}/shell-idle")
     assert "idle" in data
     assert "command" in data
+
+
+# ── Tmux target uses correct session name ─────────────────────────────────────
+
+
+def test_shell_idle_uses_session_name_not_slug(client, monkeypatch):
+    """
+    Regression: _shell_idle must call tmux with 'proj-{id[:8]}:0.0'
+    (the session_name format), NOT slugify(project_name).
+    A project named 'My Project' has tmux session 'proj-{id[:8]}',
+    never 'my-project:0.0'.
+    """
+    pid = _make_project(client, "My Project")
+    captured = {}
+
+    def _capture_tmux(*args, **kwargs):
+        captured["args"] = args[0] if args else []
+        return _tmux_result("bash\n")
+
+    monkeypatch.setattr(api.subprocess, "run", _capture_tmux)
+    client.get(f"/api/projects/{pid}/shell-idle")
+
+    assert "args" in captured, "subprocess.run was never called"
+    cmd = captured["args"]
+    # The target argument must be 'proj-{first 8 hex chars of pid}:0.0'
+    expected_target = f"proj-{pid[:8]}:0.0"
+    assert expected_target in cmd, (
+        f"Expected tmux target '{expected_target}' in command {cmd}; "
+        "got project-name slug instead — session_name() was not used"
+    )

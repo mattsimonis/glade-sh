@@ -28,7 +28,7 @@
 
 	# No-cache for HTML and manifest so iOS always fetches fresh metadata
 	@nocache {
-		path / /index.html /manifest.json
+		path / /index.html /manifest.json /sw.js
 	}
 	header @nocache Cache-Control "no-cache, no-store, must-revalidate"
 	header @nocache Pragma "no-cache"

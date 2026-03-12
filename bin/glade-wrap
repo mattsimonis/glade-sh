@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+# roost/bin/roost-wrap — Shell wrapper that intercepts `gh copilot` calls
+#
+# Usage:
+#   Add this line to your ~/.zshrc or ~/.bashrc:
+#     source ~/.roost/bin/roost-wrap
+#
+#   Then use `gh copilot` as normal. All copilot interactions are transparently
+#   logged to SQLite. If logging fails for any reason, gh copilot still works
+#   normally — the wrapper never blocks the real command.
+#
+# How it works:
+#   - Defines a shell function `gh()` that intercepts `gh copilot *` calls
+#   - All other `gh` subcommands pass through to the real gh binary unchanged
+#   - For copilot calls: captures output, logs to SQLite, returns original exit code
+#   - Interactive sessions use `script` for PTY capture; non-interactive use `tee`
+
+# ---------------------------------------------------------------------------
+# Resolve the real gh binary at source time to avoid infinite recursion.
+# We search PATH excluding any directory that contains this wrapper.
+# ---------------------------------------------------------------------------
+ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
+ROOST_REAL_GH=""
+
+# Find the real gh binary, skipping any function/alias
+_roost_find_real_gh() {
+    local candidate
+    # Use `command -v` in a subshell with the function unset to find the binary
+    # On macOS/Linux, `which -a` or iterating PATH works reliably
+    local IFS=':'
+    for dir in $PATH; do
+        candidate="${dir}/gh"
+        if [[ -x "$candidate" && "$candidate" != */roost/* ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    # Fallback: try common locations
+    for candidate in /usr/local/bin/gh /opt/homebrew/bin/gh /usr/bin/gh; do
+        if [[ -x "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+ROOST_REAL_GH="$(_roost_find_real_gh)"
+
+# If we can't find gh, don't define the wrapper — let the shell find gh normally
+if [[ -z "$ROOST_REAL_GH" ]]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Source the logger library (errors suppressed — logging is optional)
+# ---------------------------------------------------------------------------
+if [[ -f "${ROOST_DIR}/lib/logger.sh" ]]; then
+    # shellcheck source=../lib/logger.sh
+    source "${ROOST_DIR}/lib/logger.sh" 2>/dev/null
+fi
+
+# ---------------------------------------------------------------------------
+# Strip ANSI escape codes from text
+# ---------------------------------------------------------------------------
+_roost_strip_ansi() {
+    # Use sed to remove ANSI escape sequences
+    # Handles CSI sequences, OSC sequences, and simple escape codes
+    sed -E \
+        -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' \
+        -e 's/\x1b\][^\\]*\\//g' \
+        -e 's/\x1b\(B//g' \
+        -e 's/\x1b\[?[0-9;]*[hl]//g' \
+        -e 's/\r//g' \
+        2>/dev/null
+}
+
+# ---------------------------------------------------------------------------
+# Extract a usable prompt string from the arguments
+# ---------------------------------------------------------------------------
+_roost_extract_prompt() {
+    local subcommand="$1"
+    shift
+    local args=("$@")
+    local prompt_parts=()
+
+    for arg in "${args[@]}"; do
+        # Skip flags
+        case "$arg" in
+            -t|--target) continue ;;
+            shell|gh-cli|git) continue ;;  # target values
+            -*) continue ;;
+            *) prompt_parts+=("$arg") ;;
+        esac
+    done
+
+    echo "${prompt_parts[*]}"
+}
+
+# ---------------------------------------------------------------------------
+# gh() — The wrapper function. Intercepts `gh copilot *`, passes all else through.
+#
+# IMPORTANT: This function must NEVER fail or block. All logging is best-effort.
+# We intentionally do NOT use `set -e` here.
+# ---------------------------------------------------------------------------
+gh() {
+    # If not a copilot command, pass through directly
+    if [[ "${1:-}" != "copilot" ]]; then
+        "$ROOST_REAL_GH" "$@"
+        return $?
+    fi
+
+    # --- It's a copilot command. Extract metadata. ---
+    shift  # remove "copilot"
+    local subcommand="${1:-}"
+    local remaining_args=()
+
+    if [[ -n "$subcommand" ]]; then
+        shift
+        remaining_args=("$@")
+    fi
+
+    # If no subcommand (bare `gh copilot`), just pass through
+    if [[ -z "$subcommand" ]]; then
+        "$ROOST_REAL_GH" copilot
+        return $?
+    fi
+
+    # --- Attempt to initialize DB (silent on failure) ---
+    copilot_log_init_db 2>/dev/null || true
+
+    # --- Start a session (silent on failure) ---
+    local session_id=""
+    session_id="$(copilot_log_start_session 2>/dev/null)" || true
+
+    # --- Extract the prompt from arguments ---
+    local prompt=""
+    prompt="$(_roost_extract_prompt "$subcommand" "${remaining_args[@]}" 2>/dev/null)" || true
+
+    # --- Set up capture ---
+    local capture_file=""
+    capture_file="$(mktemp "${TMPDIR:-/tmp}/copilot-capture.XXXXXX" 2>/dev/null)" || true
+
+    local start_time=""
+    # macOS `date` doesn't support %N — use perl for millisecond precision
+    if command -v perl >/dev/null 2>&1; then
+        start_time="$(perl -MTime::HiRes=time -e 'printf "%d\n", time*1000' 2>/dev/null)" || true
+    else
+        start_time="$(( $(date +%s) * 1000 ))" || true
+    fi
+
+    local cmd_exit_code=0
+
+    # --- Run the real command with output capture ---
+    if [[ -t 0 && -t 1 ]]; then
+        # Interactive mode: use `script` to capture PTY output while displaying live
+        # macOS `script` syntax differs from Linux
+        if [[ "$(uname)" == "Darwin" ]]; then
+            script -q "$capture_file" "$ROOST_REAL_GH" copilot "$subcommand" "${remaining_args[@]}"
+            cmd_exit_code=$?
+        else
+            script -q -c "$ROOST_REAL_GH copilot $subcommand ${remaining_args[*]}" "$capture_file"
+            cmd_exit_code=$?
+        fi
+    else
+        # Non-interactive mode: use tee-based capture
+        "$ROOST_REAL_GH" copilot "$subcommand" "${remaining_args[@]}" 2>&1 | tee "$capture_file"
+        cmd_exit_code=${PIPESTATUS[0]}
+    fi
+
+    # --- Calculate duration ---
+    local end_time=""
+    if command -v perl >/dev/null 2>&1; then
+        end_time="$(perl -MTime::HiRes=time -e 'printf "%d\n", time*1000' 2>/dev/null)" || true
+    else
+        end_time="$(( $(date +%s) * 1000 ))" || true
+    fi
+    local duration_ms=0
+    if [[ "$start_time" -gt 0 && "$end_time" -gt 0 ]]; then
+        duration_ms=$(( end_time - start_time ))
+    fi
+
+    # --- Extract response from capture (best-effort, in background) ---
+    {
+        local response=""
+        if [[ -n "$capture_file" && -f "$capture_file" ]]; then
+            response="$(cat "$capture_file" 2>/dev/null | _roost_strip_ansi | head -c 10000)" || true
+        fi
+
+        # Save raw log if content exists
+        local raw_log_path=""
+        if [[ -n "$capture_file" && -s "$capture_file" ]]; then
+            local log_dir="${ROOST_DIR}/logs/raw"
+            mkdir -p "$log_dir" 2>/dev/null
+            local log_name
+            log_name="$(date +%Y%m%d_%H%M%S)_${subcommand}_$$.log"
+            cp "$capture_file" "${log_dir}/${log_name}" 2>/dev/null && \
+                raw_log_path="${log_dir}/${log_name}"
+        fi
+
+        # Log the interaction
+        if [[ -n "$session_id" ]]; then
+            copilot_log_interaction \
+                "$session_id" \
+                "$subcommand" \
+                "$prompt" \
+                "$response" \
+                "$(pwd 2>/dev/null)" \
+                "$cmd_exit_code" \
+                "$duration_ms" \
+                "$raw_log_path" \
+                2>/dev/null || true
+
+            copilot_log_end_session "$session_id" 2>/dev/null || true
+        fi
+
+        # Clean up temp file
+        rm -f "$capture_file" 2>/dev/null
+    } &
+    disown 2>/dev/null
+
+    return "$cmd_exit_code"
+}

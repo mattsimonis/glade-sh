@@ -1,0 +1,405 @@
+#!/usr/bin/env bash
+# roost/bin/roost-history — CLI tool for searching and browsing copilot interaction history
+#
+# Usage:
+#   copilot-history                     Show last 20 interactions
+#   copilot-history list [N]            Show last N interactions (default: 20)
+#   copilot-history search <query>      Full-text search across prompts & responses
+#   copilot-history show <id>           Show full detail of one interaction
+#   copilot-history today               Show today's interactions
+#   copilot-history device <name>       Filter by device name
+#   copilot-history stats               Summary statistics
+#   copilot-history export [--json]     Export all interactions (default: TSV, --json for JSON)
+#   copilot-history help                Show this help text
+
+set -euo pipefail
+
+ROOST_DIR="${ROOST_DIR:-$HOME/.roost}"
+ROOST_DB="${ROOST_DIR}/db/history.db"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_check_db() {
+    if [[ ! -f "$ROOST_DB" ]]; then
+        echo "No history database found at: ${ROOST_DB}"
+        echo "Run a gh copilot command first to initialize the database."
+        exit 0
+    fi
+    if ! command -v sqlite3 >/dev/null 2>&1; then
+        echo "Error: sqlite3 is required but not found in PATH."
+        exit 1
+    fi
+}
+
+_sql() {
+    sqlite3 "$ROOST_DB" "$@"
+}
+
+_sql_formatted() {
+    sqlite3 -header -column "$ROOST_DB" "$@"
+}
+
+_truncate() {
+    local text="$1"
+    local max_len="${2:-60}"
+    if [[ ${#text} -gt $max_len ]]; then
+        echo "${text:0:$((max_len - 3))}..."
+    else
+        echo "$text"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Commands
+# ---------------------------------------------------------------------------
+
+cmd_list() {
+    local limit="${1:-20}"
+    _check_db
+
+    echo "Last ${limit} interactions:"
+    echo ""
+    _sql_formatted "
+        SELECT
+            i.id,
+            strftime('%Y-%m-%d %H:%M', i.timestamp) AS time,
+            i.subcommand AS cmd,
+            CASE
+                WHEN LENGTH(i.prompt) > 60 THEN SUBSTR(i.prompt, 1, 57) || '...'
+                ELSE COALESCE(i.prompt, '(none)')
+            END AS prompt,
+            COALESCE(i.exit_code, '-') AS exit
+        FROM interactions i
+        ORDER BY i.timestamp DESC
+        LIMIT ${limit};
+    "
+}
+
+cmd_search() {
+    local query="$1"
+    _check_db
+
+    if [[ -z "$query" ]]; then
+        echo "Usage: copilot-history search <query>"
+        exit 1
+    fi
+
+    echo "Search results for: \"${query}\""
+    echo ""
+    _sql_formatted "
+        SELECT
+            i.id,
+            strftime('%Y-%m-%d %H:%M', i.timestamp) AS time,
+            i.subcommand AS cmd,
+            CASE
+                WHEN LENGTH(i.prompt) > 60 THEN SUBSTR(i.prompt, 1, 57) || '...'
+                ELSE COALESCE(i.prompt, '(none)')
+            END AS prompt,
+            snippet(interactions_fts, 1, '>>>', '<<<', '...', 40) AS response_match
+        FROM interactions_fts
+        JOIN interactions i ON i.id = interactions_fts.rowid
+        WHERE interactions_fts MATCH '${query//\'/\'\'}'
+        ORDER BY rank
+        LIMIT 50;
+    "
+
+    local count
+    count="$(_sql "SELECT COUNT(*) FROM interactions_fts WHERE interactions_fts MATCH '${query//\'/\'\'}';")"
+    echo ""
+    echo "${count} result(s) found."
+}
+
+cmd_show() {
+    local id="$1"
+    _check_db
+
+    if [[ -z "$id" ]]; then
+        echo "Usage: copilot-history show <id>"
+        exit 1
+    fi
+
+    # Validate id is a number
+    if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+        echo "Error: id must be a positive integer."
+        exit 1
+    fi
+
+    local row_count
+    row_count="$(_sql "SELECT COUNT(*) FROM interactions WHERE id = ${id};")"
+    if [[ "$row_count" -eq 0 ]]; then
+        echo "No interaction found with id: ${id}"
+        exit 1
+    fi
+
+    echo "============================================================"
+    echo "  Interaction #${id}"
+    echo "============================================================"
+    echo ""
+
+    _sql -separator '' "
+        SELECT
+            'Timestamp:    ' || strftime('%Y-%m-%d %H:%M:%S', timestamp) || CHAR(10) ||
+            'Session:      ' || session_id || CHAR(10) ||
+            'Subcommand:   ' || subcommand || CHAR(10) ||
+            'Directory:    ' || COALESCE(cwd, '(unknown)') || CHAR(10) ||
+            'Exit code:    ' || COALESCE(CAST(exit_code AS TEXT), '(unknown)') || CHAR(10) ||
+            'Duration:     ' || COALESCE(CAST(duration_ms AS TEXT) || 'ms', '(unknown)') || CHAR(10) ||
+            'Raw log:      ' || COALESCE(raw_log_path, '(none)') || CHAR(10) ||
+            CHAR(10) ||
+            '--- Prompt ---' || CHAR(10) ||
+            COALESCE(prompt, '(none)') || CHAR(10) ||
+            CHAR(10) ||
+            '--- Response ---' || CHAR(10) ||
+            COALESCE(response, '(none)')
+        FROM interactions
+        WHERE id = ${id};
+    "
+
+    echo ""
+    echo "============================================================"
+}
+
+cmd_today() {
+    _check_db
+
+    echo "Today's interactions ($(date +%Y-%m-%d)):"
+    echo ""
+    _sql_formatted "
+        SELECT
+            i.id,
+            strftime('%H:%M:%S', i.timestamp) AS time,
+            i.subcommand AS cmd,
+            CASE
+                WHEN LENGTH(i.prompt) > 60 THEN SUBSTR(i.prompt, 1, 57) || '...'
+                ELSE COALESCE(i.prompt, '(none)')
+            END AS prompt,
+            COALESCE(i.exit_code, '-') AS exit,
+            COALESCE(CAST(i.duration_ms AS TEXT) || 'ms', '-') AS duration
+        FROM interactions i
+        WHERE DATE(i.timestamp) = DATE('now')
+        ORDER BY i.timestamp ASC;
+    "
+
+    local count
+    count="$(_sql "SELECT COUNT(*) FROM interactions WHERE DATE(timestamp) = DATE('now');")"
+    echo ""
+    echo "${count} interaction(s) today."
+}
+
+cmd_device() {
+    local device_name="$1"
+    _check_db
+
+    if [[ -z "$device_name" ]]; then
+        echo "Usage: copilot-history device <name>"
+        echo ""
+        echo "Known devices:"
+        _sql_formatted "
+            SELECT
+                s.device,
+                COUNT(DISTINCT s.session_id) AS sessions,
+                COUNT(i.id) AS interactions,
+                MAX(strftime('%Y-%m-%d %H:%M', i.timestamp)) AS last_used
+            FROM sessions s
+            LEFT JOIN interactions i ON i.session_id = s.session_id
+            GROUP BY s.device
+            ORDER BY last_used DESC;
+        "
+        exit 0
+    fi
+
+    echo "Interactions from device: \"${device_name}\""
+    echo ""
+    _sql_formatted "
+        SELECT
+            i.id,
+            strftime('%Y-%m-%d %H:%M', i.timestamp) AS time,
+            i.subcommand AS cmd,
+            CASE
+                WHEN LENGTH(i.prompt) > 60 THEN SUBSTR(i.prompt, 1, 57) || '...'
+                ELSE COALESCE(i.prompt, '(none)')
+            END AS prompt
+        FROM interactions i
+        JOIN sessions s ON s.session_id = i.session_id
+        WHERE s.device LIKE '%${device_name//\'/\'\'}%'
+        ORDER BY i.timestamp DESC
+        LIMIT 50;
+    "
+}
+
+cmd_stats() {
+    _check_db
+
+    echo "============================================================"
+    echo "  Copilot History Statistics"
+    echo "============================================================"
+    echo ""
+
+    local total
+    total="$(_sql "SELECT COUNT(*) FROM interactions;")"
+    echo "Total interactions: ${total}"
+
+    local sessions
+    sessions="$(_sql "SELECT COUNT(*) FROM sessions;")"
+    echo "Total sessions:     ${sessions}"
+    echo ""
+
+    local date_range
+    date_range="$(_sql "
+        SELECT
+            COALESCE(MIN(strftime('%Y-%m-%d', timestamp)), '(none)') || ' to ' ||
+            COALESCE(MAX(strftime('%Y-%m-%d', timestamp)), '(none)')
+        FROM interactions;
+    ")"
+    echo "Date range: ${date_range}"
+    echo ""
+
+    echo "--- By Subcommand ---"
+    _sql_formatted "
+        SELECT
+            subcommand,
+            COUNT(*) AS count,
+            ROUND(AVG(duration_ms)) AS avg_ms
+        FROM interactions
+        GROUP BY subcommand
+        ORDER BY count DESC;
+    "
+    echo ""
+
+    echo "--- By Device ---"
+    _sql_formatted "
+        SELECT
+            COALESCE(s.device, '(unknown)') AS device,
+            COUNT(i.id) AS interactions,
+            MAX(strftime('%Y-%m-%d', i.timestamp)) AS last_used
+        FROM interactions i
+        JOIN sessions s ON s.session_id = i.session_id
+        GROUP BY s.device
+        ORDER BY interactions DESC;
+    "
+    echo ""
+
+    echo "--- By Day (last 14 days) ---"
+    _sql_formatted "
+        SELECT
+            strftime('%Y-%m-%d', timestamp) AS date,
+            COUNT(*) AS count
+        FROM interactions
+        WHERE timestamp >= DATE('now', '-14 days')
+        GROUP BY date
+        ORDER BY date DESC;
+    "
+}
+
+cmd_export() {
+    local format="${1:-tsv}"
+    _check_db
+
+    if [[ "$format" == "--json" || "$format" == "json" ]]; then
+        # JSON export
+        _sql -json "
+            SELECT
+                i.id,
+                i.session_id,
+                i.timestamp,
+                i.subcommand,
+                i.prompt,
+                i.response,
+                i.cwd,
+                i.exit_code,
+                i.duration_ms,
+                i.raw_log_path,
+                s.device
+            FROM interactions i
+            JOIN sessions s ON s.session_id = i.session_id
+            ORDER BY i.timestamp ASC;
+        "
+    else
+        # TSV export (with header)
+        _sql -header -separator '	' "
+            SELECT
+                i.id,
+                i.session_id,
+                i.timestamp,
+                i.subcommand,
+                i.prompt,
+                i.response,
+                i.cwd,
+                i.exit_code,
+                i.duration_ms,
+                i.raw_log_path,
+                s.device
+            FROM interactions i
+            JOIN sessions s ON s.session_id = i.session_id
+            ORDER BY i.timestamp ASC;
+        "
+    fi
+}
+
+cmd_help() {
+    cat <<'HELPTEXT'
+copilot-history — Search and browse gh copilot interaction history
+
+Usage:
+  copilot-history                     Show last 20 interactions
+  copilot-history list [N]            Show last N interactions (default: 20)
+  copilot-history search <query>      Full-text search across prompts & responses
+  copilot-history show <id>           Show full detail of one interaction
+  copilot-history today               Show today's interactions
+  copilot-history device [name]       Filter by device (no name = list devices)
+  copilot-history stats               Summary statistics
+  copilot-history export [--json]     Export all interactions (TSV or JSON)
+  copilot-history help                Show this help text
+
+Environment:
+  ROOST_DIR    Base directory (default: ~/.roost)
+
+Database location:
+  ${ROOST_DIR:-~/.roost}/db/history.db
+HELPTEXT
+}
+
+# ---------------------------------------------------------------------------
+# Main dispatch
+# ---------------------------------------------------------------------------
+
+main() {
+    local command="${1:-list}"
+
+    case "$command" in
+        list)
+            cmd_list "${2:-20}"
+            ;;
+        search)
+            cmd_search "${2:-}"
+            ;;
+        show)
+            cmd_show "${2:-}"
+            ;;
+        today)
+            cmd_today
+            ;;
+        device)
+            cmd_device "${2:-}"
+            ;;
+        stats)
+            cmd_stats
+            ;;
+        export)
+            cmd_export "${2:-tsv}"
+            ;;
+        help|--help|-h)
+            cmd_help
+            ;;
+        *)
+            echo "Unknown command: ${command}"
+            echo ""
+            cmd_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
