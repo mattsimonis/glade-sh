@@ -2806,26 +2806,28 @@
         }
 
         document.querySelectorAll('.nav-btn[data-panel]').forEach(function (btn) {
-            btn.addEventListener('click', function () { navPanelAction(btn.dataset.panel); });
+            btn.addEventListener('click', function () { haptic(8); navPanelAction(btn.dataset.panel); });
             btn.addEventListener('touchend', function (e) {
                 e.preventDefault(); e.stopPropagation();
-                navPanelAction(btn.dataset.panel);
+                haptic(8); navPanelAction(btn.dataset.panel);
             }, { passive: false });
         });
         const navProjectsBtn = document.getElementById('nav-projects-btn');
         if (navProjectsBtn) {
-            navProjectsBtn.addEventListener('click', openProjectGrid);
+            navProjectsBtn.addEventListener('click', function () { haptic(8); openProjectGrid(); });
             navProjectsBtn.addEventListener('touchend', function (e) {
                 e.preventDefault(); e.stopPropagation();
-                openProjectGrid();
+                haptic(8); openProjectGrid();
             }, { passive: false });
         }
         navPanelToggleBtn.addEventListener('click', function () {
+            haptic(8);
             if (keyboardState === 'hidden') setKeyboardState('custom');
             else setKeyboardState('hidden');
         });
         navPanelToggleBtn.addEventListener('touchend', function (e) {
             e.preventDefault(); e.stopPropagation();
+            haptic(8);
             if (keyboardState === 'hidden') setKeyboardState('custom');
             else setKeyboardState('hidden');
         }, { passive: false });
@@ -3594,12 +3596,12 @@
                 });
             }
 
-            document.getElementById('nav-settings-btn').addEventListener('click', openSettings);
+            document.getElementById('nav-settings-btn').addEventListener('click', function () { haptic(8); openSettings(); });
             document.getElementById('nav-settings-btn').addEventListener('touchend', function (e) {
-                e.preventDefault(); e.stopPropagation(); openSettings();
+                e.preventDefault(); e.stopPropagation(); haptic(8); openSettings();
             }, { passive: false });
             var deskSettingsBtn = document.getElementById('desktop-settings-btn');
-            if (deskSettingsBtn) deskSettingsBtn.addEventListener('click', openSettings);
+            if (deskSettingsBtn) deskSettingsBtn.addEventListener('click', function () { haptic(8); openSettings(); });
             document.getElementById('settings-close-btn').addEventListener('click', closeSettings);
 
             document.getElementById('settings-edit-full').addEventListener('click', function () {
@@ -4024,6 +4026,7 @@
                 const velocity = delta / elapsed;
                 sheetEl.style.transition = '';
                 if (delta > DISMISS_Y || velocity > DISMISS_VX) {
+                    haptic(8);
                     sheetEl.style.transform = 'translateY(100%)';
                     if (backdropEl) backdropEl.style.opacity = '';
                     setTimeout(function() { sheetEl.style.transform = ''; closeFn(); }, 320);
@@ -4195,6 +4198,7 @@
                     lpTimer = setTimeout(function() {
                         if (scrolled) return;
                         lpTimer = null; longPressed = true;
+                        haptic(15);
                         tile.classList.add('lp-active');
                         showSnippetCtx(snip, startX, startY);
                     }, 500);
@@ -4213,7 +4217,7 @@
                     if (scrolled) { return; }    // leave scrolled=true; click handler clears it
                     tile.classList.add('flash-insert');
                     setTimeout(function() { tile.classList.remove('flash-insert'); }, 180);
-                    sendSnippetCommand(snip);
+                    haptic(8); sendSnippetCommand(snip);
                 }, { passive: false });
                 // Desktop: click to run, right-click for context menu.
                 // Also absorbs iOS synthetic click after long-press or scroll touchend.
@@ -4222,7 +4226,7 @@
                     if (scrolled) { scrolled = false; return; }
                     tile.classList.add('flash-insert');
                     setTimeout(function() { tile.classList.remove('flash-insert'); }, 180);
-                    sendSnippetCommand(snip);
+                    haptic(8); sendSnippetCommand(snip);
                 });
                 tile.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
@@ -4483,12 +4487,12 @@
                     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
                     if (longPressed) { return; } // leave longPressed=true; click handler clears it
                     if (scrolled) { return; }    // leave scrolled=true; click handler clears it
-                    openLogViewer(log.project, log.file, log.display_name, log.active);
+                    haptic(8); openLogViewer(log.project, log.file, log.display_name, log.active);
                 }, { passive: false });
                 card.addEventListener('click', function() {
                     if (longPressed) { longPressed = false; return; }
                     if (scrolled) { scrolled = false; return; }
-                    openLogViewer(log.project, log.file, log.display_name, log.active);
+                    haptic(8); openLogViewer(log.project, log.file, log.display_name, log.active);
                 });
                 card.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
@@ -5205,6 +5209,7 @@
         }
 
         if (ghOpenBtn) ghOpenBtn.addEventListener('click', function() {
+            haptic(8);
             var code = ghUserCodeEl ? ghUserCodeEl.textContent : '';
             if (code && code !== '—') {
                 navigator.clipboard.writeText(code).catch(function(){});
@@ -5221,6 +5226,7 @@
                 if (window.getSelection && window.getSelection().toString()) return; // don't copy on text selection
                 var code = ghUserCodeEl ? ghUserCodeEl.textContent : '';
                 if (!code || code === '—') return;
+                haptic(8);
                 navigator.clipboard.writeText(code).then(function() {
                     if (ghCodeHint) { ghCodeHint.textContent = 'Copied!'; ghCodeHint.style.color = 'var(--green)'; }
                     setTimeout(function() {
@@ -5374,6 +5380,7 @@
                     body: JSON.stringify(body),
                 });
                 projects.push(proj);
+                haptic(20);
                 closeAddProjectSheet();
                 renderProjectTabs();
                 renderProjectGrid();
