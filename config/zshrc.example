@@ -15,6 +15,12 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
+# Redraw the prompt in-place on SIGWINCH (terminal resize) so that reconnects
+# and viewport changes don't leave stray "> " lines in the scrollback.
+TRAPWINCH() {
+  [[ -o zle ]] && zle reset-prompt
+}
+
 _osc7_report() {
   if [[ -n "$TMUX" ]]; then
     printf "\033Ptmux;\033\033]7;file://%s%s\007\033\\" "${HOST:-localhost}" "$PWD"

@@ -4917,7 +4917,8 @@
         function switchShell(idx) {
             if (!currentProjectId) return;
             const shell = currentShells.find(function(s) { return s.index === idx; });
-            if (!shell || !shell.port) return;
+            if (!shell) return;
+            if (currentShellIdx === idx) return; // already on this shell
             hideNoShells();
             currentShellIdx = idx;
             _saveShellChoice(currentProjectId, idx);
@@ -4927,9 +4928,10 @@
                     t.classList.toggle('active', currentShells[i] && currentShells[i].index === idx);
                 });
             }
-            const url = '/ttyd/' + shell.port + '/';
-            if (iframe.src.endsWith(url)) return; // same shell, no reload needed
-            loadShellUrl(url);
+            // Switch tmux window via API — no iframe reload needed since all shell tabs
+            // in a project share one ttyd process attached to the whole session.
+            fetch('/api/projects/' + currentProjectId + '/shells/' + idx + '/select', { method: 'PUT' })
+                .catch(function(e) { console.warn('selectShell failed', e); });
         }
 
         async function addShell() {
@@ -4961,9 +4963,8 @@
                 }
                 hideNoShells();
                 await refreshShells();
-                if (result && result.port) {
-                    loadShellUrl('/ttyd/' + result.port + '/');
-                }
+                // No iframe reload needed — tmux auto-selects the new window and the
+                // shared project ttyd immediately reflects it in the live connection.
             } catch (e) { console.warn('addShell failed', e); }
         }
 
