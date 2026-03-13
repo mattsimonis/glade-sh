@@ -4646,6 +4646,7 @@
                 const port = (active && active.port) || data.port;
                 if (active) currentShellIdx = active.index;
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
+                hideNoShells();
                 loadShellUrl('/ttyd/' + port + '/');
                 startShellPoll(pid);
                 markProjectViewed(pid);
@@ -4780,11 +4781,22 @@
                 try {
                     result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
                 } catch (e) {
-                    // 409 = session not running — auto-start then retry once
-                    await apiJson('/api/projects/' + currentProjectId + '/start', { method: 'POST' });
+                    // Session not running — /start creates window 0, use it directly
+                    const data = await apiJson('/api/projects/' + currentProjectId + '/start', { method: 'POST' });
+                    const existing = data.shells && data.shells.length > 0 ? data.shells[0] : null;
+                    if (existing && existing.port) {
+                        currentShellIdx = existing.index;
+                        _saveShellChoice(currentProjectId, existing.index);
+                        currentShells = data.shells;
+                        renderShellTabs(data.shells);
+                        hideNoShells();
+                        loadShellUrl('/ttyd/' + existing.port + '/');
+                        startShellPoll(currentProjectId);
+                        return;
+                    }
+                    // Fallback: retry creating a shell
                     result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
                 }
-                // Set tracking before refreshShells so the new tab renders as active
                 if (result && result.index !== undefined) {
                     currentShellIdx = result.index;
                     _saveShellChoice(currentProjectId, result.index);
