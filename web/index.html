@@ -1197,7 +1197,7 @@
          */
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
-            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;
+            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:0; pointer-events:none;
         }
         /* Base pill — column flex so content anchors to bottom */
         .toast {
@@ -1210,6 +1210,8 @@
             display:flex; flex-direction:column;
             align-items:center; justify-content:flex-end;
             padding:0 0 10px;
+            /* spacing between stacked toasts — on margin so it can animate to 0 on exit */
+            margin-bottom:8px;
             pointer-events:auto;
             /* GPU layer — matches reference will-change promotion */
             will-change:width, height;
@@ -1231,9 +1233,9 @@
             transition: transform 360ms cubic-bezier(0.34,1.12,0.64,1),
                         opacity   160ms ease;
         }
-        /* Mobile expanded — grows down AND wide enough to clear widest DI state (music/ATV ~340px) */
+        /* Mobile expanded — 11px each side matches the 11px top gap (equidistant) */
         body:not(.is-desktop) .toast.t-expanded {
-            width:min(340px, calc(100vw - 32px));
+            width:min(440px, calc(100vw - 22px));
             height:78px;
             opacity:1;
         }
@@ -1280,13 +1282,18 @@
             0%, 100% { opacity:1; transform:scale(1); }
             50%       { opacity:0.3; transform:scale(0.65); }
         }
-        /* Exit: clean ease-in collapse (no spring — return is always direct) */
+        /* Exit: fade immediately, then collapse height + spacing so stacked toasts glide up smoothly.
+         * No intermediate stop at 37px — one continuous height animation prevents choppiness. */
         body:not(.is-desktop) .toast.t-collapsing {
-            width:126px; height:37px; opacity:0;
+            opacity:0;
+            height:0;
+            padding:0;
+            margin-bottom:0;
             transition:
-                width   220ms cubic-bezier(0.55,0,0.45,1),
-                height  220ms cubic-bezier(0.55,0,0.45,1),
-                opacity 60ms  ease 180ms;
+                opacity       80ms  ease,
+                height        220ms ease-in 70ms,
+                padding       220ms ease-in 70ms,
+                margin-bottom 220ms ease-in 70ms;
         }
         body.is-desktop .toast.t-collapsing {
             transform:translateY(-52px) translateZ(0); opacity:0;
@@ -3862,19 +3869,12 @@
             function dismissToast() {
                 if (dismissed) return;
                 dismissed = true;
-                // 1. Content out (180ms ease)
+                // Content fades out, then CSS handles everything: opacity→0, height→0, margin→0
                 el.classList.remove('t-content-in');
                 setTimeout(function() {
-                    // 2. Pill collapses (220ms ease-in, see .t-collapsing CSS)
                     el.classList.add('t-collapsing');
-                    setTimeout(function() {
-                        // 3. Gap closes, then remove from DOM
-                        el.style.transition = 'height 160ms ease, margin-bottom 160ms ease, opacity 160ms ease';
-                        el.style.height = '0';
-                        el.style.marginBottom = '0';
-                        el.style.opacity = '0';
-                        setTimeout(function() { el.remove(); }, 170);
-                    }, 280);
+                    // 70ms delay + 220ms collapse + 30ms buffer
+                    setTimeout(function() { el.remove(); }, 320);
                 }, 80);
             }
 
