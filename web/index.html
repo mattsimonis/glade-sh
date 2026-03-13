@@ -1281,55 +1281,79 @@
         #dbg-conn-live { display:flex; align-items:center; gap:7px; padding:4px 0 12px; font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--text); }
 
         /* ── Toast / Dynamic Island notification ─────────────────────────── */
+        /*
+         * Spring physics from junhoyeo/dynamic-island (physics.ts):
+         *   stiffness: 400, damping: 30  →  ζ ≈ 0.75, ~3% overshoot, settles ~350ms
+         * CSS cubic-bezier approximation: (0.34, 1.12, 0.64, 1)
+         *   — subtle spring, snappy, matches native iOS DI feel.
+         *
+         * Geometry: pill starts at 126×37 (hardware footprint, collapsed).
+         * Expands to 340×78 — top 37px is the notch zone (empty black, blends with
+         * hardware at any width). Content lives in bottom ~41px, always below cutout.
+         */
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
-            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;
+            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:0; pointer-events:none;
         }
-        /* Base pill — starts collapsed, springs open on mobile */
+        /* Base pill — column flex so content anchors to bottom */
         .toast {
             position:relative;
             width:126px; height:37px;
             background:#000;
-            border-radius:20px;
+            border-radius:46px;
             overflow:hidden;
             opacity:0;
-            display:flex; align-items:center; justify-content:flex-start;
-            padding:0 14px; gap:9px;
+            display:flex; flex-direction:column;
+            align-items:center; justify-content:flex-end;
+            padding:0 0 10px;
+            /* spacing between stacked toasts — on margin so it can animate to 0 on exit */
+            margin-bottom:8px;
             pointer-events:auto;
-            /* spring expand */
+            /* GPU layer — matches reference will-change promotion */
+            will-change:width, height;
+            transform:translateZ(0);
+            /* Entry: opacity first (120ms), then spring grows — mirrors exit (shrink then fade) */
             transition:
-                width  480ms cubic-bezier(0.34,1.56,0.64,1),
-                height 480ms cubic-bezier(0.34,1.56,0.64,1),
-                opacity 180ms ease;
+                opacity 120ms ease,
+                width   360ms cubic-bezier(0.34,1.12,0.64,1) 120ms,
+                height  360ms cubic-bezier(0.34,1.12,0.64,1) 120ms;
         }
-        /* Desktop: compact, slide down only — no morphing */
+        /* Desktop: compact slide-down only — no morphing */
         body.is-desktop .toast {
+            flex-direction:row;
             width:auto; max-width:calc(100vw - 32px); min-width:200px;
-            height:40px; padding:0 18px; gap:10px;
-            opacity:0; transform:translateY(-52px);
-            transition: transform 400ms cubic-bezier(0.34,1.56,0.64,1),
-                        opacity 200ms ease;
+            height:40px; padding:0 18px;
+            align-items:center; justify-content:flex-start; gap:10px;
+            opacity:0; transform:translateY(-52px) translateZ(0);
+            will-change:transform, opacity;
+            transition: transform 360ms cubic-bezier(0.34,1.12,0.64,1),
+                        opacity   160ms ease;
         }
-        /* Mobile expanded */
+        /* Mobile expanded — 14px each side (slightly inside screen edge, visually balanced) */
         body:not(.is-desktop) .toast.t-expanded {
-            width:min(340px, calc(100vw - 32px));
-            height:52px;
+            width:min(440px, calc(100vw - 28px));
+            height:78px;
             opacity:1;
         }
         /* Desktop visible */
         body.is-desktop .toast.t-expanded {
-            transform:translateY(0);
+            transform:translateY(0) translateZ(0);
             opacity:1;
+        }
+        /* Inner row: dot + text, anchored to bottom content zone */
+        .toast-inner {
+            display:flex; align-items:center; gap:9px;
+            opacity:0; transform:translateY(6px);
+            transition: opacity 180ms ease, transform 220ms cubic-bezier(0.34,1.12,0.64,1);
         }
         /* Dot indicator */
         .toast-dot {
             flex-shrink:0;
             width:7px; height:7px;
             border-radius:50%;
-            background:#89b4fa; /* default: blue */
-            opacity:0;
-            transform:scale(0.3);
-            transition: opacity 200ms ease, transform 280ms cubic-bezier(0.34,1.56,0.64,1);
+            background:#89b4fa;
+            transform:scale(0.4);
+            transition: transform 280ms cubic-bezier(0.34,1.12,0.64,1);
         }
         .toast.t-success .toast-dot  { background:#a6e3a1; }
         .toast.t-error   .toast-dot  { background:#f38ba8; }
@@ -1338,16 +1362,13 @@
         .toast-msg {
             font-size:11px; font-family:var(--font-mono); font-weight:500;
             color:var(--text); white-space:nowrap;
-            opacity:0; transform:translateX(-6px);
-            transition: opacity 200ms ease, transform 240ms ease;
         }
-        /* Content reveal — staggered after shape settles */
+        /* Content reveal — fires after shape is ~70% expanded */
+        .toast.t-content-in .toast-inner {
+            opacity:1; transform:translateY(0);
+        }
         .toast.t-content-in .toast-dot {
-            opacity:1; transform:scale(1);
-        }
-        .toast.t-content-in .toast-msg {
-            opacity:1; transform:translateX(0);
-            transition: opacity 200ms ease 40ms, transform 240ms ease 40ms;
+            transform:scale(1);
         }
         /* Reconnecting: pulse the dot */
         .toast.t-warning.t-content-in .toast-dot {
@@ -1357,18 +1378,22 @@
             0%, 100% { opacity:1; transform:scale(1); }
             50%       { opacity:0.3; transform:scale(0.65); }
         }
-        /* Exit: collapse back to pill, then fade */
+        /* Exit: shrink first, then fade — geometry collapses, then opacity goes last. */
         body:not(.is-desktop) .toast.t-collapsing {
-            width:126px; height:37px; opacity:0;
+            opacity:0;
+            height:0;
+            padding:0;
+            margin-bottom:0;
             transition:
-                width   260ms cubic-bezier(0.32,0,0.67,0),
-                height  260ms cubic-bezier(0.32,0,0.67,0),
-                opacity 80ms  ease 220ms;
+                height        220ms cubic-bezier(0.55,0,0.45,1),
+                padding       220ms cubic-bezier(0.55,0,0.45,1),
+                margin-bottom 220ms cubic-bezier(0.55,0,0.45,1),
+                opacity       140ms ease-out 220ms;
         }
         body.is-desktop .toast.t-collapsing {
-            transform:translateY(-52px); opacity:0;
-            transition: transform 260ms cubic-bezier(0.32,0,0.67,0),
-                        opacity   180ms ease;
+            transform:translateY(-52px) translateZ(0); opacity:0;
+            transition: transform 220ms cubic-bezier(0.55,0,0.45,1),
+                        opacity   160ms ease;
         }
         /* Suppress transitions during swipe */
         .toast.t-swiping { transition:none !important; }
@@ -3988,8 +4013,11 @@
             msgEl.className = 'toast-msg';
             msgEl.textContent = msg;
 
-            el.appendChild(dotEl);
-            el.appendChild(msgEl);
+            const innerEl = document.createElement('div');
+            innerEl.className = 'toast-inner';
+            innerEl.appendChild(dotEl);
+            innerEl.appendChild(msgEl);
+            el.appendChild(innerEl);
             c.appendChild(el);
 
             // Swipe-up to dismiss
@@ -4016,27 +4044,20 @@
             function dismissToast() {
                 if (dismissed) return;
                 dismissed = true;
-                // 1. Content out
+                // Content fades out, then t-collapsing handles opacity+height+margin simultaneously
                 el.classList.remove('t-content-in');
                 setTimeout(function() {
-                    // 2. Pill collapses
                     el.classList.add('t-collapsing');
-                    setTimeout(function() {
-                        // 3. Gap closes, then remove
-                        el.style.transition = 'height 180ms ease, margin-bottom 180ms ease, opacity 180ms ease';
-                        el.style.height = '0';
-                        el.style.marginBottom = '0';
-                        el.style.opacity = '0';
-                        setTimeout(function() { el.remove(); }, 190);
-                    }, 340);
-                }, 100);
+                    setTimeout(function() { el.remove(); }, 380); // 220ms shrink + 140ms fade + 20ms buffer
+                }, 80);
             }
 
             // Enter: start invisible at pill size → spring-expand → content fades in
+            // Content fires at 220ms — ~60% through the 360ms spring, shape is clearly expanded
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
                     el.classList.add('t-expanded');
-                    setTimeout(function() { el.classList.add('t-content-in'); }, 240);
+                    setTimeout(function() { el.classList.add('t-content-in'); }, 340);
                 });
             });
 
