@@ -298,7 +298,7 @@ touch "\$LOCK"
 echo "=== Rebuild started \$(date) ===" >> "\$LOG"
 git -C "\$REPO_DIR" fetch origin 2>&1 | tee -a "\$LOG" && \
     git -C "\$REPO_DIR" reset --hard origin/HEAD 2>&1 | tee -a "\$LOG" && \
-    docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" build ttyd 2>&1 | tee -a "\$LOG" && \
+    docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" build --build-arg BUILD_DATE=\$(date +%Y%m%d%H%M%S) ttyd 2>&1 | tee -a "\$LOG" && \
     docker compose -f "\$REPO_DIR/docker-compose.yml" --project-directory "\$REPO_DIR" up -d 2>&1 | tee -a "\$LOG" && \
     docker exec glade-ttyd git -C /app/glade fetch origin -q 2>&1 | tee -a "\$LOG" && \
     docker exec glade-ttyd git -C /app/glade reset --hard origin/HEAD 2>&1 | tee -a "\$LOG"

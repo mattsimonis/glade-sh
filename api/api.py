@@ -93,6 +93,18 @@ _ttyd_procs = {}   # shell_key (sname:widx) -> {"process": Popen|None, "port": i
 _baselines  = {}   # project_id -> int (tmux history_size at last view)
 
 
+def _git_commit_date():
+    """Return the HEAD commit date as YYYYmmddHHMMSS, or '' on failure."""
+    try:
+        r = subprocess.run(
+            ["git", "-C", "/app/glade", "log", "-1", "--format=%cd", "--date=format:%Y%m%d%H%M%S"],
+            capture_output=True, text=True, timeout=3
+        )
+        return r.stdout.strip() if r.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
 @contextmanager
 def open_db():
     conn = sqlite3.connect(DB_PATH)
@@ -491,7 +503,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": True,
                 "update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/glade-update-pending"),
                 "image_update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/glade-image-update-pending"),
-                "build_date": os.environ.get("GLADE_BUILD_DATE", ""),
+                "build_date": os.environ.get("GLADE_BUILD_DATE") or _git_commit_date(),
             })
         if p == ["api", "projects", "activity"]:
             return self._get_activity()
