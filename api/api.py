@@ -489,6 +489,9 @@ def ensure_project_running(project_id, directory, project_name=""):
 def stop_project_proc(project_id):
     """Kill all ttyd processes belonging to this project."""
     sname = session_name(project_id)
+    # Recover any orphaned procs from /proc first (e.g. after API restart)
+    # so we don't miss ttyd processes that weren't registered in this run.
+    _recover_shell_procs()
     with _lock:
         keys = [k for k in list(_ttyd_procs.keys())
                 if k == sname or k.startswith(sname + ":")]
@@ -963,13 +966,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def _kill_shell(self, pid, index):
         sname = session_name(pid)
-        try:
-            subprocess.run(["tmux", "kill-window", "-t", f"{sname}:{index}"],
-                           capture_output=True)
-        except Exception:
-            pass
-        # If the session was destroyed (last window killed), clean up the ttyd too
+        subprocess.run(["tmux", "kill-window", "-t", f"{sname}:{index}"],
+                       capture_output=True)
+        # If the session was destroyed (last window killed), clean up the ttyd too.
+        # Recover from /proc first in case the API restarted since this ttyd started.
         if not tmux_session_exists(sname):
+            _recover_shell_procs()
             _kill_shell_ttyd(sname)
         self.send_json(200, {"ok": True})
 
