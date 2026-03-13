@@ -3,9 +3,13 @@
 # Mounted into the glade-web container at /etc/caddy/Caddyfile.
 
 :7682 {
+	encode zstd gzip
+
 	# API proxy — routes to ttyd container (API runs there now)
 	handle /api/* {
-		reverse_proxy glade-ttyd:7683
+		reverse_proxy glade-ttyd:7683 {
+			flush_interval -1
+		}
 	}
 
 	# Assets (fonts, etc.) — long cache, they never change
@@ -23,6 +27,7 @@
 
 	header {
 		-X-Frame-Options
+		-Server
 		X-Content-Type-Options nosniff
 	}
 
@@ -30,13 +35,12 @@
 	@nocache {
 		path / /index.html /manifest.json /sw.js
 	}
-	header @nocache Cache-Control "no-cache, no-store, must-revalidate"
-	header @nocache Pragma "no-cache"
+	header @nocache Cache-Control "no-cache, must-revalidate"
 
 	# No-cache for icons too — rebrand/icon updates should be immediate
 	@icons {
 		path /icons/*
 	}
-	header @icons Cache-Control "no-cache, no-store, must-revalidate"
+	header @icons Cache-Control "no-cache, must-revalidate"
 }
 
