@@ -4729,12 +4729,14 @@
         function showNoShells() {
             iframe.style.display = 'none';
             if (noShellsState) noShellsState.classList.add('visible');
+            if (gestureOverlay) gestureOverlay.style.pointerEvents = 'none';
             clearInterval(termPollTimer);
             setConnectionState('connected'); // clear any reconnect overlay
         }
         function hideNoShells() {
             iframe.style.display = '';
             if (noShellsState) noShellsState.classList.remove('visible');
+            if (gestureOverlay) gestureOverlay.style.pointerEvents = '';
         }
 
         async function closeAllShells() {
