@@ -1223,9 +1223,9 @@
             transition: transform 400ms cubic-bezier(0.34,1.56,0.64,1),
                         opacity 200ms ease;
         }
-        /* Mobile expanded — grows downward, content clears the notch zone */
+        /* Mobile expanded — grows down AND wide enough to clear widest DI state (music/ATV ~340px) */
         body:not(.is-desktop) .toast.t-expanded {
-            width:min(200px, calc(100vw - 32px));
+            width:min(340px, calc(100vw - 32px));
             height:78px;
             opacity:1;
         }
