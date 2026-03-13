@@ -1401,10 +1401,11 @@
         .gh-code-hint  { font-size:10px; color:var(--overlay0); margin-top:6px; }
         .gh-open-btn {
             display:block; width:100%; padding:10px; border:none; border-radius:8px; font-size:13px;
-            cursor:pointer; background:var(--surface0); color:var(--text); margin-bottom:8px;
-            transition:background 120ms; text-decoration:none; text-align:center; box-sizing:border-box;
+            cursor:pointer; background:var(--blue); color:var(--base); margin-bottom:8px;
+            transition:opacity 120ms; text-decoration:none; text-align:center; box-sizing:border-box;
+            font-weight:600;
         }
-        .gh-open-btn:active { background:var(--surface1); }
+        .gh-open-btn:active { opacity:0.75; }
         .gh-cancel-btn {
             width:100%; padding:8px; border:1px solid var(--surface0); border-radius:8px; font-size:12px;
             cursor:pointer; background:transparent; color:var(--overlay0); transition:background 120ms;
@@ -1884,7 +1885,7 @@
             <div class="gh-spinner-icon"></div>
             <span>Waiting for authorization…</span>
         </div>
-        <a class="gh-open-btn" id="gh-open-btn" href="https://github.com/login/device" target="_blank" rel="noopener noreferrer">Open github.com/login/device</a>
+        <a class="gh-open-btn" id="gh-open-btn" href="https://github.com/login/device" target="_blank" rel="noopener noreferrer">Copy code &amp; open GitHub →</a>
         <button class="gh-cancel-btn" id="gh-cancel-btn">Cancel</button>
     </div>
 
