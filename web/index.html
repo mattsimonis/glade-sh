@@ -159,7 +159,7 @@
         #terminal-iframe { flex: 1; min-height: 0; width: 100%; border: none; display: block; background: var(--base); }
         #no-shells-state, #no-project-state {
             display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
-            gap: 12px; background: var(--base); text-align: center; padding: 24px;
+            gap: 12px; background: var(--base); text-align: center; padding: 24px; padding-top: 96px;
         }
         #no-shells-state.visible, #no-project-state.visible { display: flex; z-index: 25; position: relative; }
         .no-shells-icon { font-size: 48px; line-height: 1; margin-bottom: 4px; opacity: 0.5; }
@@ -4698,16 +4698,15 @@
             const saved = localStorage.getItem('lastProjectId');
             if (saved && projects.find(function(p){ return p.id === saved; })) {
                 if (currentProjectId !== saved) switchProject(saved);
-                // On wide screens, show the sidebar alongside the terminal
-                if (isSidebarLayout()) {
-                    openProjectGrid();
-                }
             } else if (!currentProjectId && projects.length > 0) {
                 switchProject(projects[0].id);
-                if (isSidebarLayout()) openProjectGrid();
             } else if (!currentProjectId) {
                 setConnectionState('connected'); // nothing to reconnect to — clear any stale overlay
                 showNoShells();
+            }
+
+            // On wide screens, show the sidebar alongside the terminal
+            if (isSidebarLayout()) {
                 openProjectGrid();
             }
         }
