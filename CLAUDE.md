@@ -54,7 +54,7 @@ Two Docker services defined in `docker-compose.yml`:
 - ttyd instances on ports 7681 (main) and 7690–7699 (per-project)
 - tmux for session management and pipe-pane recording
 - gh CLI (official Debian apt repo, architecture-aware: amd64/arm64/armhf)
-- Zsh + Oh My Zsh + Spaceship prompt
+- Zsh + Oh My Zsh (`ZSH_THEME=""` — no theme; prompt set in `config/zshrc`, personalised via `zshrc.local`)
 - `gh-config` named Docker volume for persistent, host-isolated GitHub auth
 
 **glade-web** — Caddy file server:
@@ -164,6 +164,7 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 | `projects/{slug}/` | GitHub-cloned repos (created on project creation from GitHub source) |
 | `uploads/` | Pasted images (temporary storage) |
 | `assets/fonts/` | Custom font uploads (user-supplied via Settings UI) |
+| `config/zshrc.local` | User shell overrides: `PROMPT`, `RPROMPT`, aliases, extra sources. Sourced last in container `.zshrc`. Edit on host — no rebuild needed. |
 
 ---
 
@@ -217,3 +218,18 @@ Both handle: CSI sequences (including `?` intermediates like bracketed paste), O
 - Container restarts don't re-attach pipe-pane to existing sessions
 - `_main/` log directory exists but main shell recording is not wired up
 - The `sessions` and `interactions` tables in schema.sql are legacy (from the copilot-focused era); not used by current code
+
+## Shell Customisation
+
+The container's `.zshrc` sets `ZSH_THEME=""` (no theme) to prevent any Oh My Zsh `precmd` hook from silently overriding `PROMPT` after startup. The prompt is set once, cleanly.
+
+User overrides belong in `~/.glade/config/zshrc.local` on the host — sourced last, no rebuild needed:
+
+```zsh
+PROMPT='%(?.%F{#89b4fa}.%F{#f38ba8})❯%f '
+RPROMPT=''
+source ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+```
+
+> **Dockerfile ordering trap:** `packages.sh` installs Oh My Zsh, which overwrites `/root/.zshrc`. The `COPY config/zshrc /root/.zshrc` line must appear *after* the `RUN packages.sh` step — otherwise every build silently discards your config.

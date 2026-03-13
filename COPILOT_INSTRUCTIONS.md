@@ -76,6 +76,8 @@ assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 - `POST /api/font` — upload font file → `{family, url}`
 - `DELETE /api/font` — remove custom font + DB entry
 
+> All settings `GET` endpoints return `200` with `null` body when no preference has been saved — not `404`. Callers guard with `if (cfg && cfg.url)` / `if (serverLayout)`. Do not regress this to 404.
+
 ### Session Logs
 - `GET /api/logs` — list all log files (newest first)
 - `GET /api/logs/:project/:file` — raw log content (`?tail=N`)
@@ -101,6 +103,8 @@ assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 ### Other
 - `GET /api/health` — `{"ok": true, "build_date": "YYYYMMDDHHmmss"}`
 - `GET /api/export` — export all interactions as JSON
+- `POST /api/rebuild` — write `~/.glade/.rebuild-requested` trigger file → `{ok}`; host launchd watcher picks it up and runs `docker compose build`
+- `GET /api/rebuild/log` — `{log, running}` — rebuild output log + running state
 
 ---
 
@@ -271,3 +275,13 @@ make shell
 21. **Paste guard on multiline input** — pasting text with newlines shows a confirm dialog with line count before sending. Smart paste also detects secrets (PAT, OpenAI key, AWS AKIA, JWT, PEM, Slack token) and offers bracketed paste (concealed mode) via `looksLikeSecret()`.
 
 22. **Shell-idle polling uses `pane_current_command`** — `GET /api/projects/:id/shell-idle` queries tmux `#{pane_current_command}`. Returns `{idle: true}` when the command is one of the known shell names (bash, zsh, sh, fish, -bash, -zsh). Used by the "Notify when done" feature.
+
+23. **`config/zshrc` COPY must come _after_ the `packages.sh` RUN step in the Dockerfile** — `packages.sh` installs Oh My Zsh, which unconditionally writes a fresh default `.zshrc` (via `install.sh --unattended`). A `COPY config/zshrc` placed _before_ the `RUN packages.sh` step gets silently overwritten every build. The COPY must be the last config step. This bit us once — don't reorder it.
+
+24. **`~/.glade/config/zshrc.local` is the right place for shell customisation** — sourced at the end of the container's `.zshrc` (on the host volume, so no rebuild needed). Use it for `PROMPT`, `RPROMPT`, `alias`, extra `source` lines. Changes take effect in the next new shell. `config/zshrc` sets `ZSH_THEME=""` — no theme — so no `precmd` hook will silently override `PROMPT`. If you reinstate a theme, make sure it doesn't register a precmd that resets PROMPT after `zshrc.local` runs.
+
+25. **New shell double-prompt is architectural, not a bug — and is hidden** — ttyd connects at 80×24 (default pty size). FitAddon detects the real viewport and sends a resize → SIGWINCH → tmux redraws → zsh redraws → stray prompt line. Fix: hide the terminal iframe at `opacity:0` on load (preserves layout so FitAddon measures correctly), send Ctrl+L via `terminalInstance.input('\x0c', true)` once xterm.js is ready, then fade in (`opacity:1` with a 150ms CSS transition). If retries are exhausted, reveal unconditionally. This is wired in the `iframe load` handler — do not simplify it away.
+
+26. **iOS cross-frame `instanceof WebSocket` always fails — use `terminalInstance.input()`** — WebKit enforces strict realm separation: a WebSocket created inside an iframe has a different constructor than `window.WebSocket` in the parent frame. Duck-typing also fails because ttyd bundles its WebSocket in webpack module scope, never on `window`. The only reliable path to inject input from the parent frame is `terminalInstance.input(str, true)` (found via `findTerminal()`). This is the same path used by the iOS keyboard relay. Never go back to `findWebSockets()` for this purpose.
+
+27. **Rebuild button: poll immediately, POST is fire-and-forget** — `POST /api/rebuild` writes the trigger file and returns 200. Start `setInterval(pollRebuildLog, 2000)` immediately when the button is clicked — do not wait for the POST to resolve. Add an `AbortController` with an 8s timeout to the POST so a stale connection (common on iOS Safari) can't leave the button stuck on "Triggered…". When the poll's `catch` fires with `wasBuilding=true`, the container is restarting after `docker compose up -d` — show "Restarting…" and re-queue the poll after 4s rather than stopping it.
