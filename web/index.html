@@ -2936,6 +2936,7 @@
             function nudgeFit() {
                 clearTimeout(fitDebounce);
                 fitDebounce = setTimeout(function () {
+                    console.log('[glade] nudgeFit: resize dispatched t=' + Date.now());
                     try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
                 }, 60);
             }
@@ -6713,6 +6714,7 @@
             setTimeout(function () { consecutiveFailures = 0; setConnectionState('connected'); findTerminal();
                 // Nudge FitAddon after ttyd is fully initialized — ResizeObserver fires too
                 // early (before xterm is ready) on first load, especially on mobile.
+                console.log('[glade] iframe load: dispatching resize t=' + Date.now());
                 try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
                 // Every attach triggers a pty resize (80×24 → actual size), which causes tmux
                 // to redraw AND zsh SIGWINCH to fire — both print the prompt, leaving a stray
@@ -6720,14 +6722,37 @@
                 // Retry until the WebSocket is open — new shells may not be connected yet.
                 var ctrlLAttempts = 0;
                 function tryClearScreen() {
+                    var sockets, ws;
                     try {
-                        var sockets = findWebSockets(iframe.contentWindow);
-                        var ws = sockets.find(function (s) { return s.readyState === WebSocket.OPEN; });
-                        if (ws) { ws.send('0\x0c'); return; }
-                    } catch (e) {}
+                        sockets = findWebSockets(iframe.contentWindow);
+                        ws = sockets.find(function (s) { return s.readyState === WebSocket.OPEN; });
+                        if (ws) {
+                            ws.send('0\x0c');
+                            console.log('[glade] Ctrl+L sent (wave 1, attempt ' + ctrlLAttempts + ') t=' + Date.now());
+                            return;
+                        }
+                    } catch (e) { console.log('[glade] tryClearScreen error:', e); }
+                    console.log('[glade] tryClearScreen deferred: sockets=' + (sockets ? sockets.length : 'err') + ' wsState=' + (ws ? ws.readyState : 'none') + ' attempt=' + ctrlLAttempts + ' t=' + Date.now());
                     if (++ctrlLAttempts < 6) setTimeout(tryClearScreen, 200);
                 }
                 setTimeout(tryClearScreen, 300);
+                // iOS: after the initial load, the visualViewport settles (toolbar animation,
+                // safe-area insets) causing a late ResizeObserver → nudgeFit → FitAddon resize
+                // → SIGWINCH → a second stray prompt line that the wave-1 Ctrl+L never sees.
+                // Fire a second cleanup wave at ~2 s to catch that late redraw.
+                if (isIOS) {
+                    setTimeout(function () {
+                        var iosAttempts = 0;
+                        function iosLateClr() {
+                            try {
+                                var ws = findWebSockets(iframe.contentWindow).find(function (s) { return s.readyState === WebSocket.OPEN; });
+                                if (ws) { ws.send('0\x0c'); console.log('[glade] Ctrl+L sent (iOS wave 2, attempt ' + iosAttempts + ') t=' + Date.now()); return; }
+                            } catch (e) {}
+                            if (++iosAttempts < 3) setTimeout(iosLateClr, 300);
+                        }
+                        iosLateClr();
+                    }, 2000);
+                }
             }, 500);
             // Retry wireOsc7 — WebSocket may not be open immediately after iframe load
             let osc7Attempts = 0;
