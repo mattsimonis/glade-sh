@@ -1282,19 +1282,17 @@
             0%, 100% { opacity:1; transform:scale(1); }
             50%       { opacity:0.3; transform:scale(0.65); }
         }
-        /* Exit: opacity and height collapse simultaneously — no delay phase means no "invisible gap"
-         * half-step. Content is already hidden when this fires, so the pill shrinks while fading:
-         * one fluid motion rather than vanish-then-layout-shift. */
+        /* Exit: shrink first, then fade — geometry collapses, then opacity goes last. */
         body:not(.is-desktop) .toast.t-collapsing {
             opacity:0;
             height:0;
             padding:0;
             margin-bottom:0;
             transition:
-                opacity       200ms ease-in,
-                height        280ms cubic-bezier(0.55,0,0.45,1),
-                padding       280ms cubic-bezier(0.55,0,0.45,1),
-                margin-bottom 280ms cubic-bezier(0.55,0,0.45,1);
+                height        220ms cubic-bezier(0.55,0,0.45,1),
+                padding       220ms cubic-bezier(0.55,0,0.45,1),
+                margin-bottom 220ms cubic-bezier(0.55,0,0.45,1),
+                opacity       140ms ease-out 220ms;
         }
         body.is-desktop .toast.t-collapsing {
             transform:translateY(-52px) translateZ(0); opacity:0;
@@ -3874,7 +3872,7 @@
                 el.classList.remove('t-content-in');
                 setTimeout(function() {
                     el.classList.add('t-collapsing');
-                    setTimeout(function() { el.remove(); }, 310); // 280ms collapse + 30ms buffer
+                    setTimeout(function() { el.remove(); }, 380); // 220ms shrink + 140ms fade + 20ms buffer
                 }, 80);
             }
 
