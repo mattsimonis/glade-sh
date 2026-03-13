@@ -243,6 +243,13 @@
             #shell-tabs-bar { height: 36px; }
         }
 
+        /* iPhone landscape: compact mobile layout */
+        @media (max-height: 500px) and (pointer: coarse) {
+            #panel { height: 25dvh; }
+            #bottom-nav { padding-bottom: 0; }
+            #bottom-nav .nav-btn { height: 26px; min-height: 26px; }
+        }
+
         /* ── Project grid overlay ─────────────────────────────── */
         #project-grid-overlay {
             position: fixed; inset: 0; z-index: 200;
@@ -255,7 +262,7 @@
         #sidebar-toggle-btn {
             display: none; /* hidden on mobile, shown via media query below */
         }
-        @media (min-width: 1024px) {
+        @media (min-width: 1024px) and (min-height: 600px) {
             #sidebar-toggle-btn {
                 display: flex; align-items: center; justify-content: center;
                 position: absolute; left: 0; top: 0; z-index: 23;
@@ -575,6 +582,8 @@
         }
         #panel-slider { display:flex; width:300%; height:100%; will-change:transform; }
         .panel-view { width:calc(100%/3); flex-shrink:0; display:flex; flex-direction:column; height:100%; overflow-y:auto; overflow-x:hidden; touch-action: pan-y; }
+        #panel-sidebar-tabs { display: none; }
+        .sidebar-tab-btn { display: none; }
 
         /* ── Keyboard toolbar ─────────────────────────────────── */
         #kb-toolbar { display:flex; align-items:center; padding:3px 6px 2px; flex-shrink:0; min-height:28px;
@@ -1066,7 +1075,7 @@
         }
 
         /* ── Desktop ──────────────────────────────────────────── */
-        @media (min-width: 768px) {
+        @media (min-width: 768px) and (min-height: 600px) {
             #panel, #bottom-nav, #shortcut-bar { display:none; }
             /* Center vertically within the 38px project-tabs-bar; clear the settings gear */
             #status-indicator { top:5px; right:52px; }
@@ -1108,11 +1117,98 @@
             body.desktop-panel-open #pv-history { flex:1; width:auto; }
             body.desktop-panel-open #pv-snippets { border-right:1px solid var(--surface0); }
         }
-        @media (max-width: 767px) {
+        @media (max-width: 767px), (max-height: 599px) {
             #desktop-panel-btn, #desktop-settings-btn { display:none; }
         }
 
-        /* ── Image paste overlay ──────────────────────────────── */
+        /* ── iPad / tablet sidebar layout ─────────────────────────────────────────── */
+        @media (min-width: 768px) and (pointer: coarse) and (min-height: 600px) {
+            #app {
+                flex-direction: row;
+            }
+            #terminal-container {
+                min-width: 0;
+            }
+            #panel {
+                display: flex !important;
+                order: -1;
+                width: 280px;
+                min-width: 280px;
+                height: 100dvh !important;
+                flex-direction: column;
+                border-top: none;
+                border-right: 1px solid var(--surface0);
+                transform: none !important;
+                transition: none !important;
+                background: var(--mantle);
+            }
+            #panel-sidebar-tabs {
+                display: flex;
+                align-items: center;
+                background: var(--mantle);
+                border-bottom: 1px solid var(--surface0);
+                padding-top: env(safe-area-inset-top);
+                height: calc(48px + env(safe-area-inset-top));
+                flex-shrink: 0;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .sidebar-tab-btn {
+                flex: 0 0 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 48px;
+                background: transparent;
+                border: none;
+                color: var(--overlay0);
+                cursor: pointer;
+                transition: color 200ms ease;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .sidebar-tab-btn:active { background: var(--surface0); }
+            .sidebar-tab-btn.active { color: var(--blue); }
+            #panel-slider {
+                width: 100% !important;
+                transform: none !important;
+                transition: none !important;
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                min-height: 0;
+            }
+            .panel-view {
+                display: none !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            .panel-view.sidebar-active {
+                display: flex !important;
+                flex: 1;
+                min-height: 0;
+            }
+            #bottom-nav {
+                display: none !important;
+            }
+            /* Shortcut bar: offset to clear sidebar */
+            #shortcut-bar {
+                left: 280px !important;
+                width: calc(100% - 280px) !important;
+            }
+            /* Path footer: offset to clear sidebar */
+            #path-footer {
+                left: 280px !important;
+            }
+            /* Desktop panel toggle: hide on tablet (sidebar is always shown) */
+            #desktop-panel-btn {
+                display: none !important;
+            }
+            /* Safe area: pad the bottom of the sidebar content */
+            #panel .panel-view.sidebar-active {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+
+
         #img-overlay {
             position:fixed; inset:0; z-index:200; display:flex; align-items:flex-end; justify-content:center;
             background:color-mix(in srgb, var(--crust) 70%, transparent); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
@@ -1574,6 +1670,21 @@
 
         <!-- Panel -->
         <div id="panel">
+          <div id="panel-sidebar-tabs">
+              <button class="sidebar-tab-btn active" data-panel="keyboard" aria-label="Keyboard">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></svg>
+              </button>
+              <button class="sidebar-tab-btn" data-panel="snippets" aria-label="Snippets">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></svg>
+              </button>
+              <button class="sidebar-tab-btn" data-panel="history" aria-label="History">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+              </button>
+              <div style="flex:1"></div>
+              <button class="sidebar-tab-btn" id="sidebar-projects-btn" aria-label="Projects" title="Switch project">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+              </button>
+          </div>
           <div id="panel-slider">
             <div id="pv-keyboard" class="panel-view">
                 <div id="kb-toolbar">
@@ -2744,24 +2855,55 @@
         }
 
         // ── Panel navigation ────────────────────────────────────────────────────
+        function isTabletMode() {
+            return window.matchMedia('(min-width: 768px) and (pointer: coarse) and (min-height: 600px)').matches;
+        }
+
+        function isPhoneLandscape() {
+            return window.matchMedia('(max-height: 500px) and (pointer: coarse)').matches;
+        }
+
         function switchPanel(name, skipAnim) {
             currentPanel = name;
             const idx = panelOrder.indexOf(name);
-            const W   = panel.offsetWidth || document.getElementById('app').offsetWidth || window.innerWidth;
-            if (skipAnim) {
-                panelSlider.style.transition = 'none';
+
+            if (isTabletMode()) {
+                // Sidebar mode: show/hide panel views directly
+                document.querySelectorAll('.panel-view').forEach(function(v) {
+                    v.classList.remove('sidebar-active');
+                });
+                var activeView = document.getElementById('pv-' + name);
+                if (activeView) activeView.classList.add('sidebar-active');
             } else {
-                panelSlider.style.transition = 'transform 300ms cubic-bezier(0.32,0.72,0,1)';
+                // Mobile slider mode
+                const W = panel.offsetWidth || document.getElementById('app').offsetWidth || window.innerWidth;
+                if (skipAnim) {
+                    panelSlider.style.transition = 'none';
+                } else {
+                    panelSlider.style.transition = 'transform 300ms cubic-bezier(0.32,0.72,0,1)';
+                }
+                panelSlider.style.transform = 'translateX(' + (-idx * W) + 'px)';
             }
-            panelSlider.style.transform = 'translateX(' + (-idx * W) + 'px)';
-            document.querySelectorAll('.nav-btn[data-panel]').forEach(function (b) {
+
+            // Update nav buttons (bottom-nav)
+            document.querySelectorAll('.nav-btn[data-panel]').forEach(function(b) {
                 b.classList.toggle('active', b.dataset.panel === name);
             });
+            // Update sidebar tab buttons
+            document.querySelectorAll('.sidebar-tab-btn[data-panel]').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.panel === name);
+            });
+
             updateNavIndicator(!skipAnim);
             if (name === 'snippets') renderSnippets();
             if (name === 'history')  renderHistory();
         }
         function navPanelAction(name) {
+            // On tablet the panel is always visible as a sidebar — just switch view directly.
+            if (isTabletMode()) {
+                switchPanel(name);
+                return;
+            }
             if (keyboardState !== 'custom') {
                 currentPanel = name;
                 setKeyboardState('custom');
@@ -2783,6 +2925,24 @@
                 haptic(8); navPanelAction(btn.dataset.panel);
             }, { passive: false });
         });
+
+        // Sidebar tab button handlers (iPad/tablet mode)
+        document.querySelectorAll('.sidebar-tab-btn[data-panel]').forEach(function(btn) {
+            btn.addEventListener('click', function() { haptic(8); navPanelAction(btn.dataset.panel); });
+            btn.addEventListener('touchend', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                haptic(8); navPanelAction(btn.dataset.panel);
+            }, { passive: false });
+        });
+        var sidebarProjectsBtn = document.getElementById('sidebar-projects-btn');
+        if (sidebarProjectsBtn) {
+            sidebarProjectsBtn.addEventListener('click', function() { haptic(8); openProjectGrid(); });
+            sidebarProjectsBtn.addEventListener('touchend', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                haptic(8); openProjectGrid();
+            }, { passive: false });
+        }
+
         const navProjectsBtn = document.getElementById('nav-projects-btn');
         if (navProjectsBtn) {
             navProjectsBtn.addEventListener('click', function () { haptic(8); openProjectGrid(); });
@@ -2871,6 +3031,22 @@
             }
             updateNavIndicator(false);
             repositionShortcutBar();
+        });
+
+        // Collapse panel when phone rotates to landscape
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                if (isPhoneLandscape()) {
+                    // Auto-collapse panel in iPhone landscape
+                    if (keyboardState === 'custom') {
+                        setKeyboardState('native');
+                    }
+                }
+                // Fix slider position after rotation (width may have changed)
+                if (!isTabletMode()) {
+                    switchPanel(currentPanel, true);
+                }
+            }, 300); // Wait for rotation animation to complete
         });
 
         // Nudge ttyd's FitAddon whenever the terminal container changes size
@@ -4523,6 +4699,11 @@
         }
 
         async function switchProject(pid) {
+            // Re-baseline the outgoing project before we leave so any programmatic
+            // activity (Ctrl+L clears sent on load) doesn't trigger a false orange dot.
+            if (currentProjectId && currentProjectId !== pid) {
+                markProjectViewed(currentProjectId);
+            }
             currentProjectId = pid;
             currentShellIdx = null;  // reset — belongs to new project
             localStorage.setItem('lastProjectId', pid);
@@ -7179,6 +7360,13 @@
             setKeyboardState('hidden', true);
         } else {
             setKeyboardState('custom', true);
+        }
+
+        // Initialize sidebar-active class for tablet mode
+        if (isTabletMode()) {
+            document.querySelectorAll('.panel-view').forEach(function(v) { v.classList.remove('sidebar-active'); });
+            var initView = document.getElementById('pv-' + (currentPanel || 'keyboard'));
+            if (initView) initView.classList.add('sidebar-active');
         }
 
         // Shortcut bar needs panel height settled — call after first paint

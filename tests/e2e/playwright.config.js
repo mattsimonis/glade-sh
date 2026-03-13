@@ -19,5 +19,17 @@ module.exports = defineConfig({
       name: 'Mobile Safari',
       use: { ...devices['iPhone 13'] },
     },
+    {
+      name: 'iPhone landscape',
+      use: { ...devices['iPhone 13 landscape'] },
+    },
+    {
+      name: 'iPad portrait',
+      use: { ...devices['iPad (gen 7)'] },
+    },
+    {
+      name: 'iPad landscape',
+      use: { ...devices['iPad (gen 7) landscape'] },
+    },
   ],
 });
