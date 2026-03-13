@@ -4772,6 +4772,16 @@
             } catch (e) { console.warn('addShell failed', e); }
         }
 
+        async function closeAllShells() {
+            if (!currentProjectId || !currentShells.length) return;
+            const indices = currentShells.map(function(s) { return s.index; });
+            currentShellIdx = null;
+            await Promise.all(indices.map(function(idx) {
+                return fetch('/api/projects/' + currentProjectId + '/shells/' + idx, { method: 'DELETE' }).catch(function(){});
+            }));
+            await refreshShells();
+        }
+
         async function closeShell(index) {
             if (!currentProjectId) return;
             try {
@@ -4874,9 +4884,18 @@
         }
 
         function confirmCloseShell(idx) {
-            showConfirm('Close tab', 'Close this shell tab?', [
-                { label: 'Close', style: 'danger', onConfirm: function() { closeShell(idx); } }
-            ]);
+            var allCount = currentShells ? currentShells.length : 0;
+            var actions = [
+                { label: 'Close tab', style: 'danger', onConfirm: function() { closeShell(idx); } }
+            ];
+            if (allCount > 1) {
+                actions.push({ label: 'Close all tabs', style: 'neutral', onConfirm: function() {
+                    showConfirm('Close all tabs', 'Close all ' + allCount + ' shell tabs?', [
+                        { label: 'Close all', style: 'danger', onConfirm: closeAllShells }
+                    ]);
+                }});
+            }
+            showConfirm('Close tab', 'Close this shell tab?', actions);
         }
 
         // ── Long-press helper ─────────────────────────────────────────────────
