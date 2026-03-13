@@ -3658,8 +3658,20 @@
                             }
                         }
                     }).catch(function () {
-                        clearInterval(rebuildPoll);
-                        rebuildPoll = null;
+                        if (wasBuilding) {
+                            // API went down — container is restarting after rebuild.
+                            // Keep retrying; when it comes back d.running=false triggers setRefreshMode.
+                            clearInterval(rebuildPoll);
+                            rebuildPoll = null;
+                            rebuildVal.textContent = 'Restarting…';
+                            rebuildVal.style.color = '#fab387';
+                            setTimeout(function () {
+                                if (!rebuildPoll) rebuildPoll = setInterval(pollRebuildLog, 2000);
+                            }, 4000);
+                        } else {
+                            clearInterval(rebuildPoll);
+                            rebuildPoll = null;
+                        }
                     });
                 }
 
