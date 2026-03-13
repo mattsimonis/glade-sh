@@ -2936,7 +2936,6 @@
             function nudgeFit() {
                 clearTimeout(fitDebounce);
                 fitDebounce = setTimeout(function () {
-                    console.log('[glade] nudgeFit: resize dispatched t=' + Date.now());
                     try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
                 }, 60);
             }
@@ -6757,7 +6756,6 @@
             setTimeout(function () { consecutiveFailures = 0; setConnectionState('connected'); findTerminal();
                 // Nudge FitAddon after ttyd is fully initialized — ResizeObserver fires too
                 // early (before xterm is ready) on first load, especially on mobile.
-                console.log('[glade] iframe load: dispatching resize t=' + Date.now());
                 try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
                 // Every attach triggers a pty resize (80×24 → actual size), which causes tmux
                 // to redraw AND zsh SIGWINCH to fire — both print the prompt, leaving a stray
@@ -6771,7 +6769,6 @@
                     findTerminal();
                     if (terminalInstance && typeof terminalInstance.input === 'function') {
                         terminalInstance.input('\x0c', true);
-                        console.log('[glade] Ctrl+L sent via terminal.input (attempt ' + ctrlLAttempts + ') t=' + Date.now());
                         return;
                     }
                     if (xtermTextarea) {
@@ -6781,11 +6778,9 @@
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keyup',   { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             if (wasDisabled) xtermTextarea.disabled = true;
-                            console.log('[glade] Ctrl+L sent via xtermTextarea (attempt ' + ctrlLAttempts + ') t=' + Date.now());
                             return;
                         } catch (e) {}
                     }
-                    console.log('[glade] tryClearScreen deferred: no terminal yet, attempt=' + ctrlLAttempts + ' t=' + Date.now());
                     if (++ctrlLAttempts < 6) setTimeout(tryClearScreen, 200);
                 }
                 setTimeout(tryClearScreen, 300);
@@ -6798,7 +6793,6 @@
                         findTerminal();
                         if (terminalInstance && typeof terminalInstance.input === 'function') {
                             terminalInstance.input('\x0c', true);
-                            console.log('[glade] Ctrl+L sent iOS wave 2 t=' + Date.now());
                         }
                     }, 2000);
                 }
