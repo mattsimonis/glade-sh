@@ -1292,7 +1292,7 @@
          * hardware at any width). Content lives in bottom ~41px, always below cutout.
          */
         #toast-container {
-            position:fixed; top:11px; left:50%; transform:translateX(-50%);
+            position:fixed; top:14px; left:50%; transform:translateX(-50%);
             z-index:9999; display:flex; flex-direction:column; align-items:center; gap:0; pointer-events:none;
         }
         /* Base pill — column flex so content anchors to bottom */
@@ -1387,12 +1387,19 @@
             height:37px;      /* step 1: rise back to DI pill height */
             width:126px;      /* step 2: collapse inward to DI pill width */
             opacity:0;        /* step 3: fade out behind DI */
-            margin-bottom:0;
+            /* margin-bottom intentionally untouched here — stays at 8px
+               so stacked toasts don't shift during the visible animation */
             transition:
                 height        200ms cubic-bezier(0.55,0,0.45,1),
                 width         240ms cubic-bezier(0.55,0,0.45,1) 200ms,
-                opacity       100ms ease 440ms,
-                margin-bottom 100ms ease 540ms;
+                opacity       100ms ease 440ms;
+        }
+        /* After the toast is invisible, collapse its layout footprint so any
+           stacked toasts slide up smoothly rather than snapping on el.remove() */
+        body:not(.is-desktop) .toast.t-layout-collapse {
+            height:0;
+            margin-bottom:0;
+            transition: height 100ms ease, margin-bottom 100ms ease;
         }
         body.is-desktop .toast.t-collapsing {
             transform:translateY(-52px) translateZ(0); opacity:0;
@@ -4016,8 +4023,12 @@
                 // Content fades out simultaneously with height rising (both ~180-200ms)
                 el.classList.remove('t-content-in');
                 el.classList.add('t-collapsing');
-                // height(200) + width(240) + opacity(100) + margin(100) + buffer
-                setTimeout(function() { el.remove(); }, 660);
+                // Once invisible (540ms), collapse layout footprint so stacked toasts
+                // slide up smoothly instead of snapping when el.remove() fires
+                setTimeout(function() {
+                    el.classList.add('t-layout-collapse');
+                    setTimeout(function() { el.remove(); }, 120);
+                }, 560);
             }
 
             // Enter: fade → width → height (sequential)
