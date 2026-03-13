@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/glade_logo.png" width="140" alt="Glade.sh">
   <h1>Glade.sh</h1>
-  <p>A self-hosted terminal that lives on your server and runs on every device.</p>
+  <p>A self-hosted terminal that lives on your server and runs on every device.<br>Run AI agents in isolation. Close the laptop — the session keeps going.</p>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-cba6f7.svg?style=flat-square&labelColor=313244)](LICENSE)
   [![Docker](https://img.shields.io/badge/Docker-ready-89b4fa.svg?style=flat-square&labelColor=313244&logo=docker&logoColor=89b4fa)](docker-compose.yml)
@@ -14,6 +14,8 @@
 Your terminal is open on your phone. The session is alive on your server. Close the browser — it keeps running. Open it on your laptop — same session, same history, same scrollback. That's Glade.
 
 It runs on any always-on host inside Docker — a Mac Mini, Raspberry Pi, Linux server, or Windows machine. Reach it from anywhere: on LAN through Caddy, remotely through Tailscale. No subscriptions. No cloud. Nothing leaves your machine.
+
+Good place for AI tools, too. Run Claude Code, Aider, or any agentic CLI on your server — the agent only reaches what's there, not your local files or personal data. Start a long job, close the lid. It keeps working. Check in from your phone when it's done.
 
 ---
 
@@ -49,6 +51,7 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 ## Features
 
 - **Persistent sessions** — tmux keeps every session alive on the server; close and reopen from any device
+- **AI-ready** — run Claude Code, Aider, or any agentic tool on your server; isolated from your local machine and its files; jobs survive laptop shutdowns and keep running while you sleep
 - **Installable PWA** — Add to Home Screen on iOS or Android; full-screen, no browser chrome
 - **Custom mobile keyboard** — Esc, Tab, Ctrl, arrows, combos; long-press to repeat; drag to reorder
 - **Project isolation** — each project gets its own tmux session and ttyd instance; multiple shell tabs per project
@@ -67,6 +70,8 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 ## Why Glade?
 
 Most mobile terminal apps drop your session, cost money, or only work on one platform. Glade runs *on your server* — the session lives there, and any browser is just a window into it.
+
+It's also a natural home for AI agents. They run on your server, away from your personal files. You close the lid — the job keeps going. Pick it back up from any device.
 
 ---
 
