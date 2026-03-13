@@ -33,13 +33,15 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY config/zshrc /root/.zshrc
 COPY config/bashrc /root/.bashrc
 COPY config/tmux.conf /root/.tmux.conf
 
 # ── User packages (edit config/packages.sh to add your own) ──────────────────
 COPY config/packages.sh /tmp/packages.sh
 RUN chmod +x /tmp/packages.sh && /tmp/packages.sh && rm /tmp/packages.sh
+
+# Copy after packages.sh — OMZ installer overwrites .zshrc, so this must come last
+COPY config/zshrc /root/.zshrc
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
