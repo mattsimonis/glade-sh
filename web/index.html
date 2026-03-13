@@ -7082,26 +7082,31 @@
         document.getElementById('bottom-nav').addEventListener('touchend',  function (e) { e.preventDefault(); }, { passive: false });
         document.getElementById('bottom-nav').addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
 
-        // ── Shortcut bar manual horizontal scroll ────────────────────────────────
+        // ── Manual horizontal scroll for tab bars + shortcut bar ─────────────────
         // body has touch-action:none so native overflow scroll is disabled;
         // we implement it in JS by tracking touch and updating scrollLeft.
-        let sbDragStartX = null, sbScrollBase = 0, sbDragging = false;
-        shortcutBar.addEventListener('touchstart', function (e) {
-            if (e.touches.length !== 1) return;
-            sbDragStartX = e.touches[0].clientX;
-            sbScrollBase = shortcutBar.scrollLeft;
-            sbDragging = false;
-        }, { passive: true });
-        shortcutBar.addEventListener('touchmove', function (e) {
-            if (sbDragStartX === null || e.touches.length !== 1) return;
-            const dx = sbDragStartX - e.touches[0].clientX;
-            if (!sbDragging && Math.abs(dx) > 4) sbDragging = true;
-            if (sbDragging) shortcutBar.scrollLeft = sbScrollBase + dx;
-        }, { passive: true });
-        shortcutBar.addEventListener('touchend', function (e) {
-            if (sbDragging) e.preventDefault(); // suppress click when dragging
-            sbDragStartX = null; sbDragging = false;
-        }, { passive: false });
+        function makeHorizScroll(el) {
+            let dragStartX = null, scrollBase = 0, dragging = false;
+            el.addEventListener('touchstart', function (e) {
+                if (e.touches.length !== 1) return;
+                dragStartX = e.touches[0].clientX;
+                scrollBase = el.scrollLeft;
+                dragging = false;
+            }, { passive: true });
+            el.addEventListener('touchmove', function (e) {
+                if (dragStartX === null || e.touches.length !== 1) return;
+                const dx = dragStartX - e.touches[0].clientX;
+                if (!dragging && Math.abs(dx) > 4) dragging = true;
+                if (dragging) el.scrollLeft = scrollBase + dx;
+            }, { passive: true });
+            el.addEventListener('touchend', function (e) {
+                if (dragging) e.preventDefault(); // suppress click when dragging
+                dragStartX = null; dragging = false;
+            }, { passive: false });
+        }
+        makeHorizScroll(shortcutBar);
+        makeHorizScroll(document.getElementById('project-tabs-bar'));
+        makeHorizScroll(document.getElementById('shell-tabs-bar'));
 
         // ── Focus Mode ───────────────────────────────────────────────────────────
         // iOS 18+ haptic via hidden checkbox[switch] + label trick
