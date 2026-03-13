@@ -1,0 +1,53 @@
+export ZSH="$HOME/.oh-my-zsh"
+
+# No theme — prompt set explicitly below after OMZ loads
+ZSH_THEME=""
+
+plugins=(
+  git
+  extract
+  z
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+
+source $ZSH/oh-my-zsh.sh
+
+# ── SIGWINCH handler ──────────────────────────────────────────────────────────
+# Redraw the prompt in-place on terminal resize so reconnects and viewport
+# changes don't leave stray prompt lines in the visible area.
+TRAPWINCH() {
+  [[ -o zle ]] && zle reset-prompt
+}
+
+# ── OSC 7 — report CWD to the web UI footer on every prompt ──────────────────
+# Consumed by xterm.js parser.registerOscHandler(7, ...) in index.html
+_osc7_report() {
+  if [[ -n "$TMUX" ]]; then
+    # DCS passthrough: tmux unwraps this and forwards the inner OSC 7 to the terminal
+    printf "\033Ptmux;\033\033]7;file://%s%s\007\033\\" "${HOST:-localhost}" "$PWD"
+  else
+    printf "\033]7;file://%s%s\033\\" "${HOST:-localhost}" "$PWD"
+  fi
+}
+
+# ── Hooks ─────────────────────────────────────────────────────────────────────
+precmd() {
+  _osc7_report
+  if [[ -n "$TMUX" ]]; then
+    tmux rename-window "$(basename "$PWD")" 2>/dev/null
+  fi
+}
+preexec() {
+  if [[ -n "$TMUX" ]]; then
+    tmux rename-window "${${1%% *}##*/}" 2>/dev/null
+  fi
+}
+
+# glade wrapper — intercepts gh copilot calls and logs to SQLite
+[ -f /root/.glade/bin/glade-wrap ] && source /root/.glade/bin/glade-wrap
+
+# ── User config ───────────────────────────────────────────────────────────────
+# Edit ~/.glade/config/zshrc.local for aliases, exports, extra plugins, etc.
+# This file lives on the host volume — no rebuild needed.
+[ -f /root/.glade/config/zshrc.local ] && source /root/.glade/config/zshrc.local
