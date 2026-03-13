@@ -1184,129 +1184,98 @@
         #debug-state-dump { font-size:11px; font-family:var(--font-mono); color:var(--subtext1); background:var(--crust); border-radius:10px; padding:10px 12px; margin:0 16px 16px; line-height:1.6; white-space:pre-wrap; }
         #dbg-conn-live { display:flex; align-items:center; gap:7px; padding:4px 0 12px; font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--text); }
 
-        /* ── Toast — rotating conic border glow ──────────────── */
-        /* Technique from Ana Tudor: two pseudo-elements share a rotating
-           conic gradient. ::before = the border strip (masked to border-box
-           minus padding-box). ::after = same, blurred = the glow.
-           Only height animates (42px → 76px). No width animation. */
-        /* ── Dynamic island glow — mobile only, tied to connection state ── */
-        #di-glow {
-            position:fixed; top:11px; left:50%; transform:translateX(-50%);
-            width:min(132px,calc(100vw - 32px)); height:42px;
-            background:#000; border:2px solid transparent; border-radius:21px;
-            pointer-events:none; z-index:9997;
-            opacity:0; transition:opacity 300ms ease; display:none;
-        }
-        @media (max-width:767px) { #di-glow { display:block; } }
-        #di-glow::after {
-            --_full: conic-gradient(red 0 0);
-            content:''; position:absolute; inset:-2px;
-            border:2px solid transparent; border-radius:inherit;
-            mask: var(--_full) no-clip subtract, var(--_full) padding-box;
-            pointer-events:none; opacity:0; transition:opacity 300ms ease;
-            filter:blur(7px);
-        }
-        #di-glow.glow-connected::after    { background: conic-gradient(from var(--toast-angle), var(--teal), var(--green), #d4f0d2, var(--green), var(--teal), #76c7b8) border-box; }
-        #di-glow.glow-reconnecting::after { background: conic-gradient(from var(--toast-angle), var(--yellow), var(--peach), var(--pink), var(--peach), var(--yellow), #e0a060) border-box; }
-        #di-glow.glow-disconnected::after { background: conic-gradient(from var(--toast-angle), var(--red), var(--peach), var(--pink), var(--peach), var(--red), #e07090) border-box; }
-        #di-glow.glow-active { opacity:1; }
-        #di-glow.glow-active::after { opacity:1; animation: toast-spin 3s linear infinite; }
-
-        @property --toast-angle {
-            syntax: '<angle>';
-            initial-value: 0deg;
-            inherits: false;
-        }
-        @keyframes toast-spin { to { --toast-angle: 1turn; } }
+        /* ── Toast / Dynamic Island notification ─────────────────────────── */
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
-            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:0; pointer-events:none;
+            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;
         }
+        /* Base pill — starts collapsed, springs open on mobile */
         .toast {
-            --glow-color: var(--blue);  /* default: blue */
             position:relative;
-            width:calc(100vw - 32px); height:44px;
-            background:#000000;
-            transform: translateZ(0);
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            border:2px solid transparent;
-            border-radius:21px;
+            width:126px; height:37px;
+            background:#000;
+            border-radius:20px;
+            overflow:hidden;
             opacity:0;
-            margin-bottom:10px;
-            transition: height 400ms cubic-bezier(0.34,1.56,0.64,1) 160ms, opacity 220ms ease, margin-bottom 200ms ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display:flex; align-items:center; justify-content:flex-start;
+            padding:0 14px; gap:9px;
+            pointer-events:auto;
+            /* spring expand */
+            transition:
+                width  480ms cubic-bezier(0.34,1.56,0.64,1),
+                height 480ms cubic-bezier(0.34,1.56,0.64,1),
+                opacity 180ms ease;
         }
-        .toast.t-success { --glow-color: var(--green); }
-        .toast.t-error   { --glow-color: var(--red); }
-        /* Shared pseudo setup */
-        .toast::before, .toast::after {
-            --_full: conic-gradient(red 0 0);
-            content: '';
-            position:absolute; inset:-2px;
-            border:2px solid transparent;
-            border-radius:inherit;
-            /* default: blue shades */
-            background:
-                conic-gradient(from var(--toast-angle),
-                    #74c7ec, var(--blue), #b4befe, var(--mauve), var(--blue), #74c7ec) border-box;
-            mask: var(--_full) no-clip subtract, var(--_full) padding-box;
-            pointer-events:none;
+        /* Desktop: compact, slide down only — no morphing */
+        body.is-desktop .toast {
+            width:auto; max-width:calc(100vw - 32px); min-width:200px;
+            height:40px; padding:0 18px; gap:10px;
+            opacity:0; transform:translateY(-52px);
+            transition: transform 400ms cubic-bezier(0.34,1.56,0.64,1),
+                        opacity 200ms ease;
+        }
+        /* Mobile expanded */
+        body:not(.is-desktop) .toast.t-expanded {
+            width:min(340px, calc(100vw - 32px));
+            height:52px;
+            opacity:1;
+        }
+        /* Desktop visible */
+        body.is-desktop .toast.t-expanded {
+            transform:translateY(0);
+            opacity:1;
+        }
+        /* Dot indicator */
+        .toast-dot {
+            flex-shrink:0;
+            width:7px; height:7px;
+            border-radius:50%;
+            background:#89b4fa; /* default: blue */
             opacity:0;
-            transition: opacity 300ms ease;  /* fades in with the pill */
+            transform:scale(0.3);
+            transition: opacity 200ms ease, transform 280ms cubic-bezier(0.34,1.56,0.64,1);
         }
-        /* success: green → teal → mint shades */
-        .toast.t-success::before, .toast.t-success::after {
-            background:
-                conic-gradient(from var(--toast-angle),
-                    var(--teal), var(--green), #d4f0d2, var(--green), var(--teal), #76c7b8) border-box;
-        }
-        /* error: red → peach → pink shades */
-        .toast.t-error::before, .toast.t-error::after {
-            background:
-                conic-gradient(from var(--toast-angle),
-                    var(--red), var(--peach), var(--pink), var(--peach), var(--red), #e07090) border-box;
-        }
-        /* Glow layer = blurred copy */
-        body.is-desktop .toast::after { display: none; }
-        .toast::after { filter:blur(7px); }
+        .toast.t-success .toast-dot  { background:#a6e3a1; }
+        .toast.t-error   .toast-dot  { background:#f38ba8; }
+        .toast.t-warning .toast-dot  { background:#fab387; }
+        /* Message text */
         .toast-msg {
-            text-align:center;
-            font-size:10px; font-family:var(--font-mono); font-weight:500;
-            color:transparent; white-space:nowrap;
-            opacity:0; transform:translateY(5px);
-            transition: color 150ms ease 500ms, opacity 200ms ease 480ms, transform 220ms ease 470ms;
+            font-size:11px; font-family:var(--font-mono); font-weight:500;
+            color:var(--text); white-space:nowrap;
+            opacity:0; transform:translateX(-6px);
+            transition: opacity 200ms ease, transform 240ms ease;
         }
-        body:not(.is-desktop) .toast-msg {
-            position:absolute; bottom:6px; left:0; right:0;
+        /* Content reveal — staggered after shape settles */
+        .toast.t-content-in .toast-dot {
+            opacity:1; transform:scale(1);
         }
-        /* === visible: glow spins in, height drops, text fades up === */
-        .toast.t-visible {
-            opacity:1;
+        .toast.t-content-in .toast-msg {
+            opacity:1; transform:translateX(0);
+            transition: opacity 200ms ease 40ms, transform 240ms ease 40ms;
         }
-        body:not(.is-desktop) .toast.t-visible {
-            height:72px;
+        /* Reconnecting: pulse the dot */
+        .toast.t-warning.t-content-in .toast-dot {
+            animation:di-dot-pulse 1.4s ease-in-out infinite;
         }
-        .toast.t-visible::before,
-        .toast.t-visible::after {
-            opacity:1;
-            animation: toast-spin 3s linear infinite;
+        @keyframes di-dot-pulse {
+            0%, 100% { opacity:1; transform:scale(1); }
+            50%       { opacity:0.3; transform:scale(0.65); }
         }
-        .toast.t-visible .toast-msg { color:var(--text); opacity:1; transform:translateY(0); }
-        /* === exit: text out → height collapses → JS fades === */
-        body:not(.is-desktop) .toast.t-visible.t-exit {
-            height: 42px;
-            transition: height 240ms ease-in;
+        /* Exit: collapse back to pill, then fade */
+        body:not(.is-desktop) .toast.t-collapsing {
+            width:126px; height:37px; opacity:0;
+            transition:
+                width   260ms cubic-bezier(0.32,0,0.67,0),
+                height  260ms cubic-bezier(0.32,0,0.67,0),
+                opacity 80ms  ease 220ms;
         }
-        .toast.t-exit.t-fading {
-            opacity:0;
-            transition: opacity 140ms ease;
+        body.is-desktop .toast.t-collapsing {
+            transform:translateY(-52px); opacity:0;
+            transition: transform 260ms cubic-bezier(0.32,0,0.67,0),
+                        opacity   180ms ease;
         }
-        .toast.t-exit .toast-msg {
-            transition: opacity 80ms ease, color 60ms ease, transform 100ms ease;
-        }
+        /* Suppress transitions during swipe */
+        .toast.t-swiping { transition:none !important; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid var(--surface0); }
@@ -2062,7 +2031,6 @@
     </div>
 
     <!-- Toast container -->
-    <div id="di-glow"></div>
     <div id="toast-container"></div>
 
     <!-- Debug panel — open via long-press on status indicator or Ctrl+Shift+D -->
@@ -2165,7 +2133,7 @@
         let selListenerAdded = false;          // xterm selection listener guard
         let connectionState = 'connected';
         let statusFadeTimer = null;
-        let diGlowTimer     = null;
+        let connToastDismiss = null; // dismiss fn for the current connection-state toast
         let xtermTextarea = null, terminalInstance = null;
         let editMode = false, editorTargetRow = null, editorTargetIndex = null;
         let currentPanel = 'keyboard';
@@ -3829,8 +3797,6 @@
         }
 
         // ── Toast ───────────────────────────────────────────────────────────────
-        const CHECK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-        const X_SVG     = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
         function toast(msg, type, duration) {
             duration = (duration === undefined) ? 2500 : duration;
             const c = document.getElementById('toast-container');
@@ -3839,18 +3805,23 @@
             const el = document.createElement('div');
             el.className = 'toast' + (type ? ' t-' + type : '');
 
+            const dotEl = document.createElement('div');
+            dotEl.className = 'toast-dot';
+
             const msgEl = document.createElement('div');
             msgEl.className = 'toast-msg';
             msgEl.textContent = msg;
+
+            el.appendChild(dotEl);
             el.appendChild(msgEl);
             c.appendChild(el);
 
-            // Swipe-up to dismiss (iOS native gesture)
+            // Swipe-up to dismiss
             var _swipeStartY = 0, _swipeDragging = false;
             el.addEventListener('touchstart', function(e) {
                 _swipeStartY = e.touches[0].clientY;
                 _swipeDragging = true;
-                el.style.transition = 'none';
+                el.classList.add('t-swiping');
             }, { passive: true });
             el.addEventListener('touchmove', function(e) {
                 if (!_swipeDragging) return;
@@ -3859,37 +3830,48 @@
             }, { passive: true });
             el.addEventListener('touchend', function(e) {
                 _swipeDragging = false;
+                el.classList.remove('t-swiping');
                 var endY = e.changedTouches[0].clientY;
-                el.style.transition = '';
                 el.style.transform = '';
                 if ((_swipeStartY - endY) > 40) dismissToast();
             }, { passive: true });
 
+            var dismissed = false;
             function dismissToast() {
-                el.classList.add('t-exit');
-                setTimeout(function () {
-                    el.classList.add('t-fading');
-                    setTimeout(function () {
-                        // Slide siblings up smoothly before removing
-                        el.style.transition = 'height 180ms ease, margin-bottom 180ms ease';
+                if (dismissed) return;
+                dismissed = true;
+                // 1. Content out
+                el.classList.remove('t-content-in');
+                setTimeout(function() {
+                    // 2. Pill collapses
+                    el.classList.add('t-collapsing');
+                    setTimeout(function() {
+                        // 3. Gap closes, then remove
+                        el.style.transition = 'height 180ms ease, margin-bottom 180ms ease, opacity 180ms ease';
                         el.style.height = '0';
                         el.style.marginBottom = '0';
-                        setTimeout(function () { el.remove(); }, 190);
-                    }, 140);
-                }, 320);
+                        el.style.opacity = '0';
+                        setTimeout(function() { el.remove(); }, 190);
+                    }, 340);
+                }, 100);
             }
 
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () { el.classList.add('t-visible'); });
+            // Enter: start invisible at pill size → spring-expand → content fades in
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    el.classList.add('t-expanded');
+                    setTimeout(function() { el.classList.add('t-content-in'); }, 240);
+                });
             });
 
             if (duration === 0) {
-                el.style.pointerEvents = 'auto';
                 el.style.cursor = 'pointer';
                 el.addEventListener('click', dismissToast, { once: true });
             } else {
                 setTimeout(dismissToast, duration);
             }
+
+            return dismissToast;
         }
 
         // ── Terminal text injection ─────────────────────────────────────────────
@@ -6657,17 +6639,12 @@
             var dbgText = document.getElementById('dbg-conn-text');
             if (dbgDot)  { dbgDot.className = 'status-dot ' + state; }
             if (dbgText) { dbgText.textContent = labels[state] || state; }
-            // Dynamic island glow (mobile only — CSS display:none on desktop)
-            var diGlow = document.getElementById('di-glow');
-            if (!isDesktop && diGlow) {
-                clearTimeout(diGlowTimer);
-                diGlow.classList.remove('glow-connected', 'glow-reconnecting', 'glow-disconnected', 'glow-active');
-                void diGlow.offsetWidth; // force reflow so re-adding classes re-triggers transition
-                diGlow.classList.add('glow-' + state, 'glow-active');
-                if (state === 'connected') {
-                    diGlowTimer = setTimeout(function () { diGlow.classList.remove('glow-active'); }, 4000);
-                }
-            }
+            // Connection-state toast (dismiss any previous before showing next)
+            if (connToastDismiss) { connToastDismiss(); connToastDismiss = null; }
+            var connMsgs = { connected: 'Connected', reconnecting: 'Reconnecting…', disconnected: 'Disconnected' };
+            var connTypes = { connected: 'success', reconnecting: 'warning', disconnected: 'error' };
+            var connDurations = { connected: 3000, reconnecting: 2200, disconnected: 2200 };
+            connToastDismiss = toast(connMsgs[state], connTypes[state], connDurations[state]);
         }
         let consecutiveFailures = 0;
         let reconnectInProgress = false;
