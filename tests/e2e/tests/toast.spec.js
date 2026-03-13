@@ -86,12 +86,13 @@ test.describe('Toast / Dynamic Island notification', () => {
 
   // ── Toast structure ──────────────────────────────────────────────────────────
 
-  test('toast contains a dot and a message element', async ({ page }) => {
+  test('toast contains a toast-inner wrapper with dot and message', async ({ page }) => {
     await page.evaluate(() => window.__triggerState('disconnected'));
     const toast = page.locator('#toast-container .toast').first();
     await expect(toast).toBeAttached({ timeout: 3000 });
-    await expect(toast.locator('.toast-dot')).toBeAttached();
-    await expect(toast.locator('.toast-msg')).toBeAttached();
+    await expect(toast.locator('.toast-inner')).toBeAttached();
+    await expect(toast.locator('.toast-inner .toast-dot')).toBeAttached();
+    await expect(toast.locator('.toast-inner .toast-msg')).toBeAttached();
   });
 
   test('toast message text matches connection state', async ({ page }) => {
@@ -107,7 +108,28 @@ test.describe('Toast / Dynamic Island notification', () => {
     await expect(msg).toHaveText('Reconnecting…', { timeout: 3000 });
   });
 
-  // ── Animation classes ────────────────────────────────────────────────────────
+  // ── Notch-safe layout ───────────────────────────────────────────────────────
+
+  test('expanded toast content sits below the notch zone (bottom 41px)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => window.__triggerState('disconnected'));
+    const toast = page.locator('#toast-container .toast').first();
+    await expect(toast).toHaveClass(/t-content-in/, { timeout: 2000 });
+
+    // The inner row must be positioned in the bottom half of the expanded pill.
+    // Toast top is ~11px, total height 78px → bottom zone starts at y=48 (11+37).
+    // .toast-inner bottom edge should be above y=89 (11+78) and below y=48.
+    const innerBox = await toast.locator('.toast-inner').boundingBox();
+    const toastBox = await toast.boundingBox();
+    expect(innerBox).not.toBeNull();
+    expect(toastBox).not.toBeNull();
+    const notchBottomY = toastBox.y + 37; // top of toast + notch height
+    const innerTopY = innerBox.y;
+    // Inner row must start at or below the notch boundary
+    expect(innerTopY).toBeGreaterThanOrEqual(notchBottomY - 2); // 2px tolerance
+  });
+
+
 
   test('toast gains t-expanded class after insertion', async ({ page }) => {
     await page.evaluate(() => window.__triggerState('disconnected'));

@@ -1185,11 +1185,17 @@
         #dbg-conn-live { display:flex; align-items:center; gap:7px; padding:4px 0 12px; font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--text); }
 
         /* ── Toast / Dynamic Island notification ─────────────────────────── */
+        /*
+         * Geometry: the pill starts at 126×37 — matching the DI hardware footprint.
+         * On expand it grows DOWN to 78px. The top 37px is the "notch zone" — empty
+         * black that blends with the hardware. Content lives in the bottom ~41px,
+         * safely below the camera/sensor cutout regardless of DI expansion state.
+         */
         #toast-container {
             position:fixed; top:11px; left:50%; transform:translateX(-50%);
             z-index:9999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;
         }
-        /* Base pill — starts collapsed, springs open on mobile */
+        /* Base pill — column flex so content anchors to bottom */
         .toast {
             position:relative;
             width:126px; height:37px;
@@ -1197,8 +1203,9 @@
             border-radius:20px;
             overflow:hidden;
             opacity:0;
-            display:flex; align-items:center; justify-content:flex-start;
-            padding:0 14px; gap:9px;
+            display:flex; flex-direction:column;
+            align-items:center; justify-content:flex-end;
+            padding:0 0 10px;
             pointer-events:auto;
             /* spring expand */
             transition:
@@ -1206,18 +1213,20 @@
                 height 480ms cubic-bezier(0.34,1.56,0.64,1),
                 opacity 180ms ease;
         }
-        /* Desktop: compact, slide down only — no morphing */
+        /* Desktop: compact, slide down only — no morphing, horizontal layout */
         body.is-desktop .toast {
+            flex-direction:row;
             width:auto; max-width:calc(100vw - 32px); min-width:200px;
-            height:40px; padding:0 18px; gap:10px;
+            height:40px; padding:0 18px;
+            align-items:center; justify-content:flex-start; gap:10px;
             opacity:0; transform:translateY(-52px);
             transition: transform 400ms cubic-bezier(0.34,1.56,0.64,1),
                         opacity 200ms ease;
         }
-        /* Mobile expanded */
+        /* Mobile expanded — grows downward, content clears the notch zone */
         body:not(.is-desktop) .toast.t-expanded {
-            width:min(340px, calc(100vw - 32px));
-            height:52px;
+            width:min(200px, calc(100vw - 32px));
+            height:78px;
             opacity:1;
         }
         /* Desktop visible */
@@ -1225,15 +1234,20 @@
             transform:translateY(0);
             opacity:1;
         }
+        /* Inner row: dot + text, sits in the bottom content zone */
+        .toast-inner {
+            display:flex; align-items:center; gap:9px;
+            opacity:0; transform:translateY(5px);
+            transition: opacity 200ms ease, transform 240ms ease;
+        }
         /* Dot indicator */
         .toast-dot {
             flex-shrink:0;
             width:7px; height:7px;
             border-radius:50%;
             background:#89b4fa; /* default: blue */
-            opacity:0;
             transform:scale(0.3);
-            transition: opacity 200ms ease, transform 280ms cubic-bezier(0.34,1.56,0.64,1);
+            transition: transform 280ms cubic-bezier(0.34,1.56,0.64,1);
         }
         .toast.t-success .toast-dot  { background:#a6e3a1; }
         .toast.t-error   .toast-dot  { background:#f38ba8; }
@@ -1242,16 +1256,13 @@
         .toast-msg {
             font-size:11px; font-family:var(--font-mono); font-weight:500;
             color:var(--text); white-space:nowrap;
-            opacity:0; transform:translateX(-6px);
-            transition: opacity 200ms ease, transform 240ms ease;
         }
-        /* Content reveal — staggered after shape settles */
+        /* Content reveal — inner slides up after shape settles */
+        .toast.t-content-in .toast-inner {
+            opacity:1; transform:translateY(0);
+        }
         .toast.t-content-in .toast-dot {
-            opacity:1; transform:scale(1);
-        }
-        .toast.t-content-in .toast-msg {
-            opacity:1; transform:translateX(0);
-            transition: opacity 200ms ease 40ms, transform 240ms ease 40ms;
+            transform:scale(1);
         }
         /* Reconnecting: pulse the dot */
         .toast.t-warning.t-content-in .toast-dot {
@@ -3812,8 +3823,11 @@
             msgEl.className = 'toast-msg';
             msgEl.textContent = msg;
 
-            el.appendChild(dotEl);
-            el.appendChild(msgEl);
+            const innerEl = document.createElement('div');
+            innerEl.className = 'toast-inner';
+            innerEl.appendChild(dotEl);
+            innerEl.appendChild(msgEl);
+            el.appendChild(innerEl);
             c.appendChild(el);
 
             // Swipe-up to dismiss
