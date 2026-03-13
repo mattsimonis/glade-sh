@@ -1389,14 +1389,6 @@
         #github-modal.visible { opacity:1; pointer-events:auto; transform:translate(-50%,-50%); }
         .gh-modal-title { font-size:15px; font-weight:600; color:var(--text); margin-bottom:4px; font-family:var(--font-mono); }
         .gh-modal-sub { font-size:12px; color:var(--overlay0); margin-bottom:20px; line-height:1.5; }
-        .gh-copied-pill {
-            position:absolute; left:50%; transform:translateX(-50%) translateY(0);
-            background:var(--green); color:var(--base); font-size:12px; font-weight:700;
-            padding:5px 14px; border-radius:20px; pointer-events:none; white-space:nowrap;
-            opacity:0; transition:opacity 200ms, transform 300ms;
-            top: -28px;
-        }
-        .gh-copied-pill.show { opacity:1; transform:translateX(-50%) translateY(-4px); }
         .gh-code-block { position:relative;
             background:var(--crust); border:1px solid var(--surface0); border-radius:8px;
             padding:14px; text-align:center; margin-bottom:16px;
@@ -1885,7 +1877,6 @@
         <div class="gh-modal-title" id="gh-modal-title">Connect GitHub</div>
         <div class="gh-modal-sub">Open the link below and enter the code to authorize Glade.</div>
         <div class="gh-code-block" id="gh-code-block">
-            <div class="gh-copied-pill" id="gh-copied-pill">✓ Copied</div>
             <div class="gh-code-label">One-time code</div>
             <div class="gh-code-value" id="gh-user-code">—</div>
             <div class="gh-code-hint" id="gh-code-hint">Tap to copy</div>
@@ -5256,16 +5247,13 @@
 
         var ghCodeBlock = document.getElementById('gh-code-block');
         var ghCodeHint  = document.getElementById('gh-code-hint');
-        var ghCopiedPill = document.getElementById('gh-copied-pill');
         var ghCopiedTimer = null;
         function showGhCopied() {
             haptic([10, 40, 10]);
             if (ghCodeHint) { ghCodeHint.textContent = 'Copied!'; ghCodeHint.style.color = 'var(--green)'; }
-            if (ghCopiedPill) { ghCopiedPill.classList.add('show'); }
             if (ghCopiedTimer) clearTimeout(ghCopiedTimer);
             ghCopiedTimer = setTimeout(function() {
                 if (ghCodeHint) { ghCodeHint.textContent = 'Tap to copy'; ghCodeHint.style.color = ''; }
-                if (ghCopiedPill) { ghCopiedPill.classList.remove('show'); }
             }, 2000);
         }
         if (ghCodeBlock) {
