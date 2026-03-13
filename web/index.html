@@ -31,8 +31,15 @@
         @font-face {
             font-family: 'Commit Mono';
             src: url('/assets/fonts/CommitMonoV143-VF.woff2') format('woff2');
-            font-weight: 100 900;
+            font-weight: 200 700;
             font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Commit Mono';
+            src: url('/assets/fonts/CommitMonoV143-VF.woff2') format('woff2');
+            font-weight: 200 700;
+            font-style: italic;
             font-display: swap;
         }
         :root {
@@ -2115,7 +2122,7 @@
             <input type="file" id="settings-font-file" accept=".woff2,.ttf,.otf" style="display:none">
             <div class="font-upload-zone" id="settings-font-zone">
                 <span class="font-upload-zone-label" id="settings-font-zone-label">↑ Upload font file</span>
-                <span class="font-upload-zone-hint">.woff2 recommended · .ttf and .otf accepted</span>
+                <span class="font-upload-zone-hint">Variable .woff2 recommended — covers all weights &amp; italic</span>
             </div>
             <button class="settings-btn-full settings-btn-danger" id="settings-font-remove-btn" style="display:none;margin-top:8px">Remove custom font</button>
         </div>
@@ -3630,7 +3637,11 @@
                 var fmt    = fmtMap[ext] || 'truetype';
                 var style  = document.createElement('style');
                 style.id   = 'custom-font-face';
-                style.textContent = '@font-face{font-family:"' + cfg.family + '";src:url("' + cfg.url + '") format("' + fmt + '");font-weight:100 900;font-style:normal;font-display:swap;}';
+                // Two @font-face rules — same file covers normal + italic on a variable font;
+                // on a static font the browser synthesises italic from the normal file.
+                style.textContent =
+                    '@font-face{font-family:"' + cfg.family + '";src:url("' + cfg.url + '") format("' + fmt + '");font-weight:100 900;font-style:normal;font-display:swap;}' +
+                    '@font-face{font-family:"' + cfg.family + '";src:url("' + cfg.url + '") format("' + fmt + '");font-weight:100 900;font-style:italic;font-display:swap;}';
                 document.head.appendChild(style);
                 document.documentElement.style.setProperty('--font-mono', '"' + cfg.family + '","Commit Mono",ui-monospace,"Menlo",monospace');
                 if (nameEl)    nameEl.textContent    = cfg.name || cfg.family;
