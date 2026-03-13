@@ -3780,13 +3780,18 @@
                 var rebuildVal   = document.getElementById('rebuild-status-val');
                 var rebuildPoll  = null;
                 var wasBuilding  = false;
+                var inRefreshMode = false;
 
                 function setRefreshMode(success) {
+                    inRefreshMode = true;
                     rebuildBtn.disabled = false;
                     rebuildBtn.textContent = '↺ Refresh App';
                     rebuildBtn.style.background = success ? 'var(--green)' : 'var(--peach)';
                     rebuildBtn.style.color = 'var(--base)';
-                    rebuildBtn.onclick = function () { location.reload(); };
+                    rebuildBtn.onclick = function () {
+                        rebuildBtn.textContent = 'Refreshing…';
+                        location.reload();
+                    };
                 }
 
                 function pollRebuildLog() {
@@ -3836,6 +3841,7 @@
                 }
 
                 rebuildBtn.addEventListener('click', function () {
+                    if (inRefreshMode) return; // handled by onclick set in setRefreshMode
                     rebuildPre.style.display = 'none';
                     rebuildPre.textContent = '';
                     rebuildVal.textContent = 'Triggered…';
