@@ -4678,6 +4678,11 @@
         }
 
         async function switchProject(pid) {
+            // Re-baseline the outgoing project before we leave so any programmatic
+            // activity (Ctrl+L clears sent on load) doesn't trigger a false orange dot.
+            if (currentProjectId && currentProjectId !== pid) {
+                markProjectViewed(currentProjectId);
+            }
             currentProjectId = pid;
             currentShellIdx = null;  // reset — belongs to new project
             localStorage.setItem('lastProjectId', pid);
