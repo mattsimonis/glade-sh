@@ -134,6 +134,20 @@
         }
         #terminal-spacer { flex-shrink: 0; background: var(--crust); position: relative; z-index: 21; }
         #terminal-iframe { flex: 1; min-height: 0; width: 100%; border: none; display: block; background: var(--base); }
+        #no-shells-state {
+            display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
+            gap: 12px; background: var(--base); text-align: center; padding: 24px;
+        }
+        #no-shells-state.visible { display: flex; }
+        .no-shells-icon { font-size: 48px; line-height: 1; margin-bottom: 4px; opacity: 0.5; }
+        .no-shells-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+        .no-shells-body  { font-size: 13px; color: var(--overlay0); line-height: 1.6; }
+        .no-shells-btn {
+            margin-top: 8px; padding: 10px 24px; border: none; border-radius: 10px;
+            background: var(--blue); color: var(--base); font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: opacity 120ms;
+        }
+        .no-shells-btn:active { opacity: 0.75; }
 
         /* ── Project tab strip ────────────────────────────────── */
         #project-tabs-bar {
@@ -1519,6 +1533,12 @@
                 </button>
             </div>
             <iframe id="terminal-iframe" src="about:blank" title="Terminal"></iframe>
+            <div id="no-shells-state">
+                <div class="no-shells-icon">⌨️</div>
+                <div class="no-shells-title">No open shells</div>
+                <div class="no-shells-body">Tap below to start a new session.</div>
+                <button class="no-shells-btn" id="no-shells-add-btn">+ New Shell</button>
+            </div>
             <div id="status-indicator" role="status" aria-live="polite" aria-label="Connection status">
                 <span class="status-dot connected" id="status-dot"></span>
                 <span id="status-text">Connected</span>
@@ -2244,6 +2264,7 @@
 
         // ── DOM refs ────────────────────────────────────────────────────────────
         const iframe            = document.getElementById('terminal-iframe');
+        const noShellsState     = document.getElementById('no-shells-state');
         const reconnectOverlay  = document.getElementById('reconnect-overlay');
         const statusIndicator   = document.getElementById('status-indicator');
         const statusDot         = document.getElementById('status-dot');
@@ -2255,6 +2276,7 @@
         const pfEl              = document.getElementById('path-footer');
         const pfText            = document.getElementById('path-footer-text');
         const AP_KEY_MAP = { ArrowUp:'ap-up', ArrowDown:'ap-down', ArrowLeft:'ap-left', ArrowRight:'ap-right' };
+        document.getElementById('no-shells-add-btn').addEventListener('click', function() { addShell(); });
         // clip-path fills from tail toward tip for each direction
         const AP_CLIP = {
             ArrowUp:    function(p) { return 'inset('+pct(1-p)+'% 0 0 0)'; },   // tail=bottom, fill upward
@@ -4736,6 +4758,7 @@
             if (!currentProjectId) return;
             const shell = currentShells.find(function(s) { return s.index === idx; });
             if (!shell || !shell.port) return;
+            hideNoShells();
             currentShellIdx = idx;
             _saveShellChoice(currentProjectId, idx);
             const bar = document.getElementById('shell-tabs-bar');
@@ -4765,11 +4788,23 @@
                     currentShellIdx = result.index;
                     _saveShellChoice(currentProjectId, result.index);
                 }
+                hideNoShells();
                 await refreshShells();
                 if (result && result.port) {
                     loadShellUrl('/ttyd/' + result.port + '/');
                 }
             } catch (e) { console.warn('addShell failed', e); }
+        }
+
+        function showNoShells() {
+            iframe.style.display = 'none';
+            if (noShellsState) noShellsState.classList.add('visible');
+            clearInterval(termPollTimer);
+            setConnectionState('connected'); // clear any reconnect overlay
+        }
+        function hideNoShells() {
+            iframe.style.display = '';
+            if (noShellsState) noShellsState.classList.remove('visible');
         }
 
         async function closeAllShells() {
@@ -4780,6 +4815,7 @@
                 return fetch('/api/projects/' + currentProjectId + '/shells/' + idx, { method: 'DELETE' }).catch(function(){});
             }));
             await refreshShells();
+            if (currentShells.length === 0) showNoShells();
         }
 
         async function closeShell(index) {
@@ -4789,8 +4825,9 @@
                 await fetch('/api/projects/' + currentProjectId + '/shells/' + index, { method: 'DELETE' });
                 if (wasDisplayed) currentShellIdx = null;
                 await refreshShells(); // updates currentShells
-                // If we just closed the visible shell, navigate the iframe to the next one
-                if (wasDisplayed && currentShells.length > 0) {
+                if (currentShells.length === 0) {
+                    showNoShells();
+                } else if (wasDisplayed) {
                     const next = currentShells.find(function(s) { return s.active; }) || currentShells[0];
                     switchShell(next.index);
                 }
