@@ -179,6 +179,7 @@
             border-bottom: 1px solid var(--surface0); gap: 2px; padding: 0 6px;
             scrollbar-width: none; padding-top: env(safe-area-inset-top);
             height: calc(38px + env(safe-area-inset-top));
+            touch-action: pan-x;
         }
         #project-tabs-bar::-webkit-scrollbar { display: none; }
         .proj-tab {
@@ -2301,6 +2302,7 @@
         let shellPollTimer = null;
         let currentShells = [];    // [{index, name, active, port}] — last fetched shell list
         let currentShellIdx = null; // index of shell currently displayed in the iframe
+        const _ctrlLDone = new Set(); // project:shell combos that have had their initial clear
         let activityPollTimer = null;
         let selectedProjectColor = '#89b4fa';
         const PROJECT_COLORS = [
@@ -6918,13 +6920,17 @@
                 try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
                 // Every attach triggers a pty resize (80×24 → actual size), which causes tmux
                 // to redraw AND zsh SIGWINCH to fire — both print the prompt, leaving a stray
-                // extra line. Ctrl+L clears the artifact, then we fade in so the user never
-                // sees the flash.
+                // extra line. On the *first* connect for each shell, Ctrl+L clears the artifact
+                // and we fade in so the user never sees the flash. On return visits (switching
+                // projects and back) we skip the Ctrl+L so existing terminal content is preserved.
+                var _ctrlLKey = (currentProjectId || '') + ':' + (currentShellIdx !== null ? currentShellIdx : 0);
+                var _isFirstVisit = !_ctrlLDone.has(_ctrlLKey);
                 var ctrlLAttempts = 0;
                 function tryClearScreen() {
                     findTerminal();
                     if (terminalInstance && typeof terminalInstance.input === 'function') {
                         terminalInstance.input('\x0c', true);
+                        _ctrlLDone.add(_ctrlLKey);
                         setTimeout(function () {
                             iframe.style.transition = 'opacity 0.15s ease';
                             iframe.style.opacity = '1';
@@ -6938,6 +6944,7 @@
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keyup',   { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             if (wasDisabled) xtermTextarea.disabled = true;
+                            _ctrlLDone.add(_ctrlLKey);
                             setTimeout(function () {
                                 iframe.style.transition = 'opacity 0.15s ease';
                                 iframe.style.opacity = '1';
@@ -6953,12 +6960,20 @@
                         iframe.style.opacity = '1';
                     }
                 }
-                setTimeout(tryClearScreen, 300);
+                if (_isFirstVisit) {
+                    setTimeout(tryClearScreen, 300);
+                } else {
+                    // Return visit — skip Ctrl+L to preserve terminal content, just fade in.
+                    setTimeout(function () {
+                        iframe.style.transition = 'opacity 0.15s ease';
+                        iframe.style.opacity = '1';
+                    }, 50);
+                }
                 // iOS: after the initial load, the visualViewport settles (toolbar animation,
                 // safe-area insets) causing a late ResizeObserver → nudgeFit → FitAddon resize
                 // → SIGWINCH → a second stray prompt line that the wave-1 Ctrl+L never sees.
-                // Fire a second cleanup wave at ~2 s to catch that late redraw.
-                if (isIOS) {
+                // Fire a second cleanup wave at ~2 s — first visit only.
+                if (isIOS && _isFirstVisit) {
                     setTimeout(function () {
                         findTerminal();
                         if (terminalInstance && typeof terminalInstance.input === 'function') {
