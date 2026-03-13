@@ -5928,6 +5928,14 @@
             if (terminalInstance && typeof terminalInstance.options === 'object') {
                 try { terminalInstance.options.theme = def.theme; } catch(e) {}
             }
+            // Persist to server so new ttyd processes start with the correct theme (no flash)
+            if (syncApp) {
+                fetch('/api/settings/term-theme', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(themeId),
+                }).catch(function() {});
+            }
             // Catppuccin flavors drive the full app theme — only on explicit user selection
             if (syncApp && ['mocha', 'frappe', 'macchiato', 'latte'].indexOf(themeId) !== -1) {
                 localStorage.setItem('appTheme', themeId);

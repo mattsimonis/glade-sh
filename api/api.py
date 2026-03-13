@@ -78,22 +78,71 @@ _gh_auth_lock = threading.Lock()
 # Shell key format: f"{sname}:{window_index}"  e.g. "proj-abc12345:0"
 SHELL_KEY_RE = re.compile(r'^proj-[0-9a-f]{8}:\d+$')
 
-TTYD_THEME = (
-    '{"background":"#1e1e2e","foreground":"#cdd6f4","cursor":"#f5e0dc",'
-    '"cursorAccent":"#1e1e2e","selectionBackground":"#585b70","selectionForeground":"#cdd6f4",'
-    '"black":"#45475a","red":"#f38ba8","green":"#a6e3a1","yellow":"#f9e2af",'
-    '"blue":"#89b4fa","magenta":"#f5c2e7","cyan":"#94e2d5","white":"#7f849c",'
-    '"brightBlack":"#585b70","brightRed":"#f38ba8","brightGreen":"#a6e3a1",'
-    '"brightYellow":"#f9e2af","brightBlue":"#89b4fa","brightMagenta":"#f5c2e7",'
-    '"brightCyan":"#94e2d5","brightWhite":"#a6adc8"}'
-)
+TTYD_THEMES = {
+    "mocha":        ('{"background":"#1e1e2e","foreground":"#cdd6f4","cursor":"#f5e0dc",'
+                     '"cursorAccent":"#1e1e2e","selectionBackground":"#585b70","selectionForeground":"#cdd6f4",'
+                     '"black":"#45475a","red":"#f38ba8","green":"#a6e3a1","yellow":"#f9e2af",'
+                     '"blue":"#89b4fa","magenta":"#f5c2e7","cyan":"#94e2d5","white":"#bac2de",'
+                     '"brightBlack":"#585b70","brightRed":"#f38ba8","brightGreen":"#a6e3a1",'
+                     '"brightYellow":"#f9e2af","brightBlue":"#89b4fa","brightMagenta":"#f5c2e7",'
+                     '"brightCyan":"#94e2d5","brightWhite":"#a6adc8"}'),
+    "frappe":       ('{"background":"#303446","foreground":"#c6d0f5","cursor":"#f2d5cf",'
+                     '"cursorAccent":"#303446","selectionBackground":"#626880","selectionForeground":"#c6d0f5",'
+                     '"black":"#51576d","red":"#e78284","green":"#a6d189","yellow":"#e5c890",'
+                     '"blue":"#8caaee","magenta":"#f4b8e4","cyan":"#81c8be","white":"#b5bfe2",'
+                     '"brightBlack":"#626880","brightRed":"#e78284","brightGreen":"#a6d189",'
+                     '"brightYellow":"#e5c890","brightBlue":"#8caaee","brightMagenta":"#f4b8e4",'
+                     '"brightCyan":"#81c8be","brightWhite":"#a5adce"}'),
+    "macchiato":    ('{"background":"#24273a","foreground":"#cad3f5","cursor":"#f4dbd6",'
+                     '"cursorAccent":"#24273a","selectionBackground":"#5b6078","selectionForeground":"#cad3f5",'
+                     '"black":"#494d64","red":"#ed8796","green":"#a6da95","yellow":"#eed49f",'
+                     '"blue":"#8aadf4","magenta":"#f5bde6","cyan":"#8bd5ca","white":"#b8c0e0",'
+                     '"brightBlack":"#5b6078","brightRed":"#ed8796","brightGreen":"#a6da95",'
+                     '"brightYellow":"#eed49f","brightBlue":"#8aadf4","brightMagenta":"#f5bde6",'
+                     '"brightCyan":"#8bd5ca","brightWhite":"#a5adcb"}'),
+    "latte":        ('{"background":"#eff1f5","foreground":"#4c4f69","cursor":"#dc8a78",'
+                     '"cursorAccent":"#eff1f5","selectionBackground":"#acb0be","selectionForeground":"#4c4f69",'
+                     '"black":"#5c5f77","red":"#d20f39","green":"#40a02b","yellow":"#df8e1d",'
+                     '"blue":"#1e66f5","magenta":"#ea76cb","cyan":"#179299","white":"#acb0be",'
+                     '"brightBlack":"#6c6f85","brightRed":"#d20f39","brightGreen":"#40a02b",'
+                     '"brightYellow":"#df8e1d","brightBlue":"#1e66f5","brightMagenta":"#ea76cb",'
+                     '"brightCyan":"#179299","brightWhite":"#bcc0cc"}'),
+    "solarized-dark": ('{"background":"#002b36","foreground":"#839496","cursor":"#839496",'
+                        '"cursorAccent":"#002b36","selectionBackground":"#073642","selectionForeground":"#839496",'
+                        '"black":"#073642","red":"#dc322f","green":"#859900","yellow":"#b58900",'
+                        '"blue":"#268bd2","magenta":"#d33682","cyan":"#2aa198","white":"#eee8d5",'
+                        '"brightBlack":"#002b36","brightRed":"#cb4b16","brightGreen":"#586e75",'
+                        '"brightYellow":"#657b83","brightBlue":"#839496","brightMagenta":"#6c71c4",'
+                        '"brightCyan":"#93a1a1","brightWhite":"#fdf6e3"}'),
+    "one-dark":     ('{"background":"#282c34","foreground":"#abb2bf","cursor":"#528bff",'
+                     '"cursorAccent":"#282c34","selectionBackground":"#3f4451","selectionForeground":"#abb2bf",'
+                     '"black":"#3f4451","red":"#e06c75","green":"#98c379","yellow":"#e5c07b",'
+                     '"blue":"#61afef","magenta":"#c678dd","cyan":"#56b6c2","white":"#abb2bf",'
+                     '"brightBlack":"#4f5666","brightRed":"#be5046","brightGreen":"#98c379",'
+                     '"brightYellow":"#d19a66","brightBlue":"#61afef","brightMagenta":"#c678dd",'
+                     '"brightCyan":"#56b6c2","brightWhite":"#ffffff"}'),
+}
 
 _lock       = threading.Lock()
 _ttyd_procs = {}   # shell_key (sname:widx) -> {"process": Popen|None, "port": int}
 _baselines  = {}   # project_id -> int (tmux history_size at last view)
 
 
-def _git_commit_date():
+def _get_term_theme():
+    """Return the ttyd theme JSON for the user's saved preference, defaulting to mocha."""
+    try:
+        with open_db() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key='term_theme'").fetchone()
+        if row:
+            name = json.loads(row["value"])
+            if isinstance(name, str) and name in TTYD_THEMES:
+                return TTYD_THEMES[name]
+    except Exception:
+        pass
+    return TTYD_THEMES["mocha"]
+
+
+
     """Return the HEAD commit date as YYYYmmddHHMMSS, or '' on failure."""
     try:
         r = subprocess.run(
@@ -351,7 +400,7 @@ def _start_shell_ttyd(sname, window_idx, port):
     target = f"{sname}:{window_idx}"
     proc = subprocess.Popen([
         "ttyd", "-p", str(port), "--writable", "--max-clients", "5",
-        "-t", "theme=" + TTYD_THEME,
+        "-t", "theme=" + _get_term_theme(),
         "-t", "fontSize=14",
         "-t", "fontFamily=Commit Mono,JetBrains Mono,Fira Code,monospace",
         "-t", "cursorStyle=block",
@@ -517,6 +566,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._list_snippets()
         if p == ["api", "settings", "font"]:
             return self._get_setting("font")
+        if p == ["api", "settings", "term-theme"]:
+            return self._get_setting("term_theme")
         if p == ["api", "settings", "layout"]:
             return self._get_layout()
         if p == ["api", "settings", "compact-layout"]:
@@ -579,6 +630,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._select_shell(p[2], p[4])
         if p == ["api", "settings", "font"]:
             return self._put_setting("font")
+        if p == ["api", "settings", "term-theme"]:
+            return self._put_setting("term_theme")
         if p == ["api", "settings", "layout"]:
             return self._save_layout()
         if p == ["api", "settings", "compact-layout"]:
