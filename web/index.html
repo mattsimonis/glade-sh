@@ -1400,8 +1400,9 @@
         .gh-code-value { font-size:22px; font-weight:700; color:var(--blue); font-family:var(--font-mono); letter-spacing:0.1em; user-select:text; cursor:text; }
         .gh-code-hint  { font-size:10px; color:var(--overlay0); margin-top:6px; }
         .gh-open-btn {
-            width:100%; padding:10px; border:none; border-radius:8px; font-size:13px;
-            cursor:pointer; background:var(--surface0); color:var(--text); margin-bottom:8px; transition:background 120ms;
+            display:block; width:100%; padding:10px; border:none; border-radius:8px; font-size:13px;
+            cursor:pointer; background:var(--surface0); color:var(--text); margin-bottom:8px;
+            transition:background 120ms; text-decoration:none; text-align:center; box-sizing:border-box;
         }
         .gh-open-btn:active { background:var(--surface1); }
         .gh-cancel-btn {
@@ -1883,7 +1884,7 @@
             <div class="gh-spinner-icon"></div>
             <span>Waiting for authorization…</span>
         </div>
-        <button class="gh-open-btn" id="gh-open-btn">Open github.com/login/device</button>
+        <a class="gh-open-btn" id="gh-open-btn" href="https://github.com/login/device" target="_blank" rel="noopener noreferrer">Open github.com/login/device</a>
         <button class="gh-cancel-btn" id="gh-cancel-btn">Cancel</button>
     </div>
 
@@ -5185,6 +5186,8 @@
         function openGhModal(userCode, verUri) {
             ghVerificationUri = verUri || 'https://github.com/login/device';
             if (ghUserCodeEl) ghUserCodeEl.textContent = userCode || '—';
+            // Keep the link href in sync so the native <a> navigation always uses the latest URI
+            if (ghOpenBtn) ghOpenBtn.href = ghVerificationUri;
             ghModalBackdrop.classList.add('visible');
             ghModal.classList.add('visible');
             // Poll for auth completion
@@ -5224,9 +5227,7 @@
             if (code && code !== '—') {
                 navigator.clipboard.writeText(code).catch(function(){});
             }
-            // window.open is silently blocked in iOS PWA standalone mode — use location.href
-            var opened = window.open(ghVerificationUri, '_blank');
-            if (!opened) window.location.href = ghVerificationUri;
+            // Navigation is handled natively by the <a> tag — no window.open needed
         });
         if (ghCancelBtn) ghCancelBtn.addEventListener('click', closeGhModal);
         if (ghModalBackdrop) ghModalBackdrop.addEventListener('click', closeGhModal);
@@ -6644,14 +6645,17 @@
                 // Every attach triggers a pty resize (80×24 → actual size), which causes tmux
                 // to redraw AND zsh SIGWINCH to fire — both print the prompt, leaving a stray
                 // extra line. Ctrl+L clears the artifact and leaves a single clean prompt.
-                // scrollback=0 means any pre-existing visible output is gone on resize anyway.
-                setTimeout(function () {
+                // Retry until the WebSocket is open — new shells may not be connected yet.
+                var ctrlLAttempts = 0;
+                function tryClearScreen() {
                     try {
-                        const sockets = findWebSockets(iframe.contentWindow);
-                        const ws = sockets.find(function (s) { return s.readyState === WebSocket.OPEN; });
-                        if (ws) ws.send('0\x0c');
+                        var sockets = findWebSockets(iframe.contentWindow);
+                        var ws = sockets.find(function (s) { return s.readyState === WebSocket.OPEN; });
+                        if (ws) { ws.send('0\x0c'); return; }
                     } catch (e) {}
-                }, 300);
+                    if (++ctrlLAttempts < 6) setTimeout(tryClearScreen, 200);
+                }
+                setTimeout(tryClearScreen, 300);
             }, 500);
             // Retry wireOsc7 — WebSocket may not be open immediately after iframe load
             let osc7Attempts = 0;
