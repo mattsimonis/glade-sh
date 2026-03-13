@@ -120,7 +120,20 @@ atexit.register(_server.shutdown)
 
 
 def _make_subprocess_run_mock():
-    """Return a MagicMock for subprocess.run that gives sensible tmux outputs."""
+    """Return a MagicMock for subprocess.run that gives sensible tmux outputs.
+
+    Tracks session lifecycle: new-session adds to active set; kill-window and
+    kill-session remove from it; has-session returns returncode=1 for unknown
+    sessions so _kill_shell correctly detects last-window destruction.
+    """
+    _active_sessions: set = set()
+
+    def _target_session(cmd):
+        """Extract the -t value from a tmux command (strip :window suffix)."""
+        for i, arg in enumerate(cmd):
+            if arg == "-t" and i + 1 < len(cmd):
+                return cmd[i + 1].split(":")[0]
+        return None
 
     def _run(cmd, **kwargs):
         r = MagicMock()
@@ -131,7 +144,19 @@ def _make_subprocess_run_mock():
             return r
         if cmd[0] == "tmux":
             sub = cmd[1]
-            if sub == "list-windows":
+            if sub == "new-session":
+                for i, arg in enumerate(cmd):
+                    if arg == "-s" and i + 1 < len(cmd):
+                        _active_sessions.add(cmd[i + 1])
+                        break
+            elif sub == "has-session":
+                sname = _target_session(cmd)
+                r.returncode = 0 if sname in _active_sessions else 1
+            elif sub in ("kill-window", "kill-session"):
+                sname = _target_session(cmd)
+                if sname:
+                    _active_sessions.discard(sname)
+            elif sub == "list-windows":
                 r.stdout = "0:main:1\n"
             elif sub == "display-message":
                 r.stdout = "0\n"

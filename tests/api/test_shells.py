@@ -54,7 +54,7 @@ def test_new_shell_returns_index_and_port(client, started_project):
     assert status == 201
     assert data["index"] == 1  # mock new-window returns "1"
     assert isinstance(data["port"], int)
-    assert data["port"] == 7691  # second port (7690 taken by window 0)
+    assert data["port"] == 7690  # all windows share the single project-level ttyd port
     assert_cors(headers)
 
 
@@ -87,16 +87,6 @@ def test_new_shell_project_not_running_returns_409(client, project_id, monkeypat
 
     status, data, headers = client.post(f"/api/projects/{project_id}/shells")
     assert status == 409
-    assert "error" in data
-    assert_cors(headers)
-
-
-def test_new_shell_port_exhausted_returns_503(client, started_project, monkeypatch):
-    """POST /shells returns 503 when port pool is exhausted."""
-    monkeypatch.setattr(api, "get_free_port", lambda: None)
-    pid = started_project["id"]
-    status, data, headers = client.post(f"/api/projects/{pid}/shells")
-    assert status == 503
     assert "error" in data
     assert_cors(headers)
 
