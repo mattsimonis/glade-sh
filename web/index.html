@@ -4637,7 +4637,40 @@
             terminalInstance = null; xtermTextarea = null;
             window._osc7Wired = false; _osc7WiredSocket = null;
             iframe.src = 'about:blank';
-            setTimeout(function() { iframe.src = url; startTerminalPoll(); }, 50);
+            setTimeout(function() {
+                // Hook load event to apply theme BEFORE the first xterm canvas render.
+                // ttyd initialises window.term synchronously (DOMContentLoaded / inline
+                // script), so by iframe `load` the Terminal object exists but RAF hasn't
+                // fired yet — setting options.theme here means the first paint is correct.
+                function _onThemeLoad() {
+                    iframe.removeEventListener('load', _onThemeLoad);
+                    if (!iframe.src || !iframe.src.includes('/ttyd/')) return;
+                    try {
+                        var _w   = iframe.contentWindow;
+                        var _def = TERM_THEMES && TERM_THEMES[currentTermTheme];
+                        if (!_w || !_def) return;
+                        var _ti = _w.term || _w.terminal || (_w.tty && _w.tty.term);
+                        if (!_ti) for (var _k of Object.keys(_w)) {
+                            if (_w[_k] && typeof _w[_k] === 'object' && typeof _w[_k].onData === 'function') { _ti = _w[_k]; break; }
+                        }
+                        if (_ti && typeof _ti.options === 'object') {
+                            _ti.options.theme = _def.theme;
+                            if (!terminalInstance) terminalInstance = _ti;
+                        }
+                        // CSS fallback: override background before canvas paints
+                        var _iDoc = _w.document;
+                        if (_iDoc && _iDoc.head && !_iDoc.getElementById('glade-theme-bg')) {
+                            var _s = _iDoc.createElement('style');
+                            _s.id = 'glade-theme-bg';
+                            _s.textContent = '.xterm-viewport,.xterm-screen{background:' + _def.theme.background + '!important}';
+                            _iDoc.head.appendChild(_s);
+                        }
+                    } catch(e) {}
+                }
+                iframe.addEventListener('load', _onThemeLoad);
+                iframe.src = url;
+                startTerminalPoll();
+            }, 50);
         }
 
         function switchShell(idx) {
