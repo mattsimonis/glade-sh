@@ -3701,6 +3701,19 @@
         function onBtn(e, action) { e.preventDefault(); if (tapMoved) return; action(); }
 
         // ── Clipboard ───────────────────────────────────────────────────────────
+        function copyText(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text);
+            }
+            // Fallback for HTTP contexts (casper.local is plain HTTP)
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            try { document.execCommand('copy'); document.body.removeChild(ta); return Promise.resolve(); }
+            catch(e) { document.body.removeChild(ta); return Promise.reject(e); }
+        }
         function flashButton(btn, cls) {
             if (!btn) return; btn.classList.add(cls);
             setTimeout(function () { btn.classList.remove(cls); }, 300);
@@ -3711,7 +3724,7 @@
                 if (terminalInstance && typeof terminalInstance.getSelection === 'function') text = terminalInstance.getSelection();
                 if (!text) { try { text = iframe.contentWindow.getSelection().toString(); } catch (e) {} }
                 if (!text) { const s = window.getSelection(); if (s) text = s.toString(); }
-                if (text) { await navigator.clipboard.writeText(text); flashButton(copyBtn, 'flash-green'); toast('Copied', 'success'); }
+                if (text) { await copyText(text); flashButton(copyBtn, 'flash-green'); toast('Copied', 'success'); }
             } catch (err) { console.warn('Copy failed:', err); }
         }
         // ── Paste guard helpers ──────────────────────────────────────────────────
@@ -3978,7 +3991,7 @@
             };
             document.getElementById('img-overlay-copy-path').onclick = function() {
                 if (!injectPath) return;
-                navigator.clipboard.writeText(injectPath).catch(function(){});
+                copyText(injectPath).catch(function(){});
                 statusEl.textContent = 'Path copied!';
                 toast('Path copied', 'success');
                 setTimeout(function() { statusEl.textContent = ''; }, 2000);
@@ -5225,7 +5238,7 @@
             haptic(8);
             var code = ghUserCodeEl ? ghUserCodeEl.textContent : '';
             if (code && code !== '—') {
-                navigator.clipboard.writeText(code).catch(function(){});
+                copyText(code).catch(function(){});
             }
             // Navigation is handled natively by the <a> tag — no window.open needed
         });
@@ -5240,7 +5253,7 @@
                 var code = ghUserCodeEl ? ghUserCodeEl.textContent : '';
                 if (!code || code === '—') return;
                 haptic(8);
-                navigator.clipboard.writeText(code).then(function() {
+                copyText(code).then(function() {
                     if (ghCodeHint) { ghCodeHint.textContent = 'Copied!'; ghCodeHint.style.color = 'var(--green)'; }
                     setTimeout(function() {
                         if (ghCodeHint) { ghCodeHint.textContent = 'Tap to copy'; ghCodeHint.style.color = ''; }
@@ -5558,7 +5571,7 @@
                 [
                     { label: 'Open in Safari', style: 'primary', onConfirm: function() { window.open(url, '_blank'); } },
                     { label: 'Copy URL',        style: '',        onConfirm: function() {
-                        navigator.clipboard.writeText(url).catch(function(){});
+                        copyText(url).catch(function(){});
                         toast('URL copied', 'success');
                     }},
                     { label: 'Insert into terminal', style: '', onConfirm: function() { sendTextToTerminal(url); } },
@@ -5729,7 +5742,7 @@
                 }
                 const sel = terminalInstance.getSelection().trim();
                 if (sel) {
-                    navigator.clipboard.writeText(sel).catch(function(){});
+                    copyText(sel).catch(function(){});
                     haptic([20, 15, 20]);
                     showCopyToast(sel);
                 }
@@ -6383,7 +6396,7 @@
             document.getElementById('sel-copy-btn').addEventListener('click', function () {
                 if (!terminalInstance) return;
                 const text = terminalInstance.getSelection();
-                if (text) { navigator.clipboard.writeText(text).catch(function () {}); haptic(10); }
+                if (text) { copyText(text).catch(function () {}); haptic(10); }
                 terminalInstance.clearSelection();
                 hideSelHandles();
             });
