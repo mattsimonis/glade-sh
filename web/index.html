@@ -5413,6 +5413,17 @@
                         terminalInstance.options.cursorStyle = 'block';
                         terminalInstance.options.cursorInactiveStyle = 'block';
                     } catch(e) {}
+                    // Apply saved theme as soon as the instance is found — don't wait for
+                    // setConnectionState, which fires after a settle delay during which the
+                    // xterm default (ttyd's hardcoded Mocha) may still be in effect.
+                    if (terminalInstance && currentTermTheme && currentTermTheme !== 'mocha') {
+                        try {
+                            const _def = TERM_THEMES && TERM_THEMES[currentTermTheme];
+                            if (_def && typeof terminalInstance.options === 'object') {
+                                terminalInstance.options.theme = _def.theme;
+                            }
+                        } catch(e) {}
+                    }
                     // OSC 7 — intercept raw WebSocket messages from ttyd.
                     // More reliable than terminal.parser.registerOscHandler (avoids xterm.js version issues).
                     if (!window._osc7Wired) wireOsc7();
@@ -6567,7 +6578,16 @@
                 requestWakeLock();
                 showTrackpadHint();
                 if (termFontScale !== 1.0) applyTermFontScale(termFontScale);
-                if (currentTermTheme) applyTermTheme(currentTermTheme);
+                if (currentTermTheme) {
+                    if (!terminalInstance) findTerminal();
+                    applyTermTheme(currentTermTheme);
+                    // Retry after tmux finishes repainting — xterm may re-apply its default theme
+                    // after the first buffer flush from tmux, so we need a second pass.
+                    setTimeout(function() {
+                        if (!terminalInstance) findTerminal();
+                        applyTermTheme(currentTermTheme);
+                    }, 600);
+                }
                 // Don't fade the indicator while the debug panel is open
                 var dbgPanelOpen = document.getElementById('debug-panel').classList.contains('open');
                 if (!dbgPanelOpen)
