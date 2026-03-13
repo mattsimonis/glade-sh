@@ -435,9 +435,9 @@
             border:1px solid color-mix(in srgb, var(--blue) 18%, transparent); border-radius:14px;
             padding:12px 20px; z-index:27; white-space:nowrap;
             display:flex; align-items:center; gap:10px;
-            opacity:0; transition:opacity 320ms ease; pointer-events:auto;
+            opacity:0; transition:opacity 320ms ease; pointer-events:none;
         }
-        #trackpad-hint.th-visible { opacity:1; }
+        #trackpad-hint.th-visible { opacity:1; pointer-events:auto; }
         #trackpad-hint-icon {
             width:22px; height:22px; border-radius:50%;
             border:1.5px solid var(--blue); flex-shrink:0;
