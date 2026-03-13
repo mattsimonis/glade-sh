@@ -157,11 +157,11 @@
         }
         #terminal-spacer { flex-shrink: 0; background: var(--crust); position: relative; z-index: 21; }
         #terminal-iframe { flex: 1; min-height: 0; width: 100%; border: none; display: block; background: var(--base); }
-        #no-shells-state {
+        #no-shells-state, #no-project-state {
             display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
             gap: 12px; background: var(--base); text-align: center; padding: 24px;
         }
-        #no-shells-state.visible { display: flex; z-index: 25; position: relative; }
+        #no-shells-state.visible, #no-project-state.visible { display: flex; z-index: 25; position: relative; }
         .no-shells-icon { font-size: 48px; line-height: 1; margin-bottom: 4px; opacity: 0.5; }
         .no-shells-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
         .no-shells-body  { font-size: 13px; color: var(--overlay0); line-height: 1.6; }
@@ -171,6 +171,15 @@
             cursor: pointer; transition: opacity 120ms;
         }
         .no-shells-btn:active { opacity: 0.75; }
+        .no-project-icon { width: 72px; height: 72px; border-radius: 18px; opacity: 0.7; margin-bottom: 4px; }
+        .no-project-wordmark { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+        .no-project-tagline { font-size: 13px; color: var(--overlay0); line-height: 1.6; }
+        .no-project-btn {
+            margin-top: 8px; padding: 10px 24px; border: none; border-radius: 10px;
+            background: var(--blue); color: var(--base); font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: opacity 120ms;
+        }
+        .no-project-btn:active { opacity: 0.75; }
 
         /* ── Project tab strip ────────────────────────────────── */
         #project-tabs-bar {
@@ -1637,6 +1646,12 @@
                 <div class="no-shells-body">Tap below to start a new session.</div>
                 <button class="no-shells-btn" id="no-shells-add-btn">+ New Shell</button>
             </div>
+            <div id="no-project-state">
+                <img class="no-project-icon" src="/icons/icon-180.png" alt="Glade">
+                <div class="no-project-wordmark">Glade</div>
+                <div class="no-project-tagline">Your terminal, everywhere.</div>
+                <button class="no-project-btn" id="no-project-open-btn">Open Projects →</button>
+            </div>
             <div id="status-indicator" role="status" aria-live="polite" aria-label="Connection status">
                 <span class="status-dot connected" id="status-dot"></span>
                 <span id="status-text">Connected</span>
@@ -2350,6 +2365,7 @@
         // ── DOM refs ────────────────────────────────────────────────────────────
         const iframe            = document.getElementById('terminal-iframe');
         const noShellsState     = document.getElementById('no-shells-state');
+        const noProjectState    = document.getElementById('no-project-state');
         const reconnectOverlay  = document.getElementById('reconnect-overlay');
         const statusIndicator   = document.getElementById('status-indicator');
         const statusDot         = document.getElementById('status-dot');
@@ -2362,6 +2378,7 @@
         const pfText            = document.getElementById('path-footer-text');
         const AP_KEY_MAP = { ArrowUp:'ap-up', ArrowDown:'ap-down', ArrowLeft:'ap-left', ArrowRight:'ap-right' };
         document.getElementById('no-shells-add-btn').addEventListener('click', function() { addShell(); });
+        document.getElementById('no-project-open-btn').addEventListener('click', function() { openProjectGrid(); });
         // clip-path fills from tail toward tip for each direction
         const AP_CLIP = {
             ArrowUp:    function(p) { return 'inset('+pct(1-p)+'% 0 0 0)'; },   // tail=bottom, fill upward
@@ -4976,14 +4993,22 @@
 
         function showNoShells() {
             iframe.style.display = 'none';
-            if (noShellsState) noShellsState.classList.add('visible');
             if (gestureOverlay) gestureOverlay.style.pointerEvents = 'none';
             clearInterval(termPollTimer);
             setConnectionState('connected'); // clear any reconnect overlay
+            // Show the right empty state depending on whether a project is open
+            if (!currentProjectId) {
+                if (noProjectState) noProjectState.classList.add('visible');
+                if (noShellsState)  noShellsState.classList.remove('visible');
+            } else {
+                if (noShellsState)   noShellsState.classList.add('visible');
+                if (noProjectState) noProjectState.classList.remove('visible');
+            }
         }
         function hideNoShells() {
             iframe.style.display = '';
-            if (noShellsState) noShellsState.classList.remove('visible');
+            if (noShellsState)  noShellsState.classList.remove('visible');
+            if (noProjectState) noProjectState.classList.remove('visible');
             if (gestureOverlay) gestureOverlay.style.pointerEvents = '';
         }
 
