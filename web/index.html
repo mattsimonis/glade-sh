@@ -3681,18 +3681,22 @@
                     rebuildVal.textContent = 'Triggered…';
                     rebuildVal.style.color = '#fab387';
                     rebuildBtn.disabled = true;
-                    rebuildBtn.textContent = 'Triggered…';
+                    rebuildBtn.textContent = 'Building…';
                     rebuildBtn.style.background = '';
                     rebuildBtn.style.color = '';
                     wasBuilding = false;
-                    fetch('/api/rebuild', { method: 'POST' }).then(function () {
-                        if (!rebuildPoll) rebuildPoll = setInterval(pollRebuildLog, 2000);
-                    }).catch(function () {
-                        rebuildVal.textContent = 'Error';
-                        rebuildVal.style.color = '#f38ba8';
-                        rebuildBtn.disabled = false;
-                        rebuildBtn.textContent = 'Rebuild Container';
-                    });
+                    // Start polling immediately — don't wait for POST to resolve.
+                    // The watcher fires as soon as the trigger file lands.
+                    if (!rebuildPoll) rebuildPoll = setInterval(pollRebuildLog, 2000);
+                    // Abort POST after 8s — stale connections hang indefinitely on iOS Safari.
+                    var ctrl = new AbortController();
+                    var postTimeout = setTimeout(function () { ctrl.abort(); }, 8000);
+                    fetch('/api/rebuild', { method: 'POST', signal: ctrl.signal })
+                        .then(function () { clearTimeout(postTimeout); })
+                        .catch(function () {
+                            clearTimeout(postTimeout);
+                            // POST failed or timed out — poll is already running and will recover.
+                        });
                 });
             })();
         })();
