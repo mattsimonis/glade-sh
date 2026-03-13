@@ -19,6 +19,26 @@ It's also a practical fit for AI coding tools. Running Claude Code, GitHub Copil
 
 ---
 
+### Sessions that stick
+
+Close the browser. Switch devices. Kill the WiFi. Come back — your session, history, and scrollback are all still there.
+
+<div align="center"><img src="assets/demos/demo-persistence.gif" width="280" alt="Session persistence demo"></div>
+
+### A real terminal
+
+Full shell on your server, not a browser mock. Run anything — it's just tmux under the hood.
+
+<div align="center"><img src="assets/demos/demo-terminal.gif" width="280" alt="Terminal demo"></div>
+
+### GitHub projects in seconds
+
+Connect GitHub in Settings. Search a repo, tap Create — you're already inside it. No manual cloning.
+
+<div align="center"><img src="assets/demos/demo-github.gif" width="280" alt="GitHub project demo"></div>
+
+---
+
 ## Quick Start
 
 ```bash
