@@ -2366,6 +2366,7 @@
         const iframe            = document.getElementById('terminal-iframe');
         const noShellsState     = document.getElementById('no-shells-state');
         const noProjectState    = document.getElementById('no-project-state');
+        const terminalSpacer    = document.getElementById('terminal-spacer');
         const reconnectOverlay  = document.getElementById('reconnect-overlay');
         const statusIndicator   = document.getElementById('status-indicator');
         const statusDot         = document.getElementById('status-dot');
@@ -4998,15 +4999,20 @@
             setConnectionState('connected'); // clear any reconnect overlay
             // Show the right empty state depending on whether a project is open
             if (!currentProjectId) {
+                if (terminalSpacer) terminalSpacer.style.display = 'none';
+                if (pfText) pfText.textContent = '';
+                if (pfEl)   pfEl.classList.remove('pf-visible');
                 if (noProjectState) noProjectState.classList.add('visible');
                 if (noShellsState)  noShellsState.classList.remove('visible');
             } else {
+                if (terminalSpacer) terminalSpacer.style.display = '';
                 if (noShellsState)   noShellsState.classList.add('visible');
                 if (noProjectState) noProjectState.classList.remove('visible');
             }
         }
         function hideNoShells() {
             iframe.style.display = '';
+            if (terminalSpacer) terminalSpacer.style.display = '';
             if (noShellsState)  noShellsState.classList.remove('visible');
             if (noProjectState) noProjectState.classList.remove('visible');
             if (gestureOverlay) gestureOverlay.style.pointerEvents = '';
