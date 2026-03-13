@@ -154,6 +154,33 @@ To avoid cert warnings on iOS: import the mkcert root CA profile → Settings �
 
 ---
 
+## Optional: Attach Directly via tmux
+
+If you prefer using your own terminal app instead of the browser UI, you can attach directly to any Glade session. Sessions run inside the `glade-ttyd` container and are named `proj-{id}`, where `{id}` is the first 8 characters of the project's UUID.
+
+From the host machine, list all active sessions:
+
+```bash
+docker exec -it glade-ttyd tmux list-sessions
+```
+
+Then attach to the one you want:
+
+```bash
+docker exec -it glade-ttyd tmux attach -t proj-<id>
+```
+
+If you're on another machine on the network, SSH to the host first:
+
+```bash
+ssh user@your-host
+docker exec -it glade-ttyd tmux attach -t proj-<id>
+```
+
+Detach with the standard tmux keybinding (`Ctrl+b d`) — the session stays running and is still accessible from the Glade PWA.
+
+---
+
 ## Step 11: Make It Survive Reboots
 
 `docker-compose.yml` uses `restart: unless-stopped`, so containers restart automatically as long as Docker starts at boot.

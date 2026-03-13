@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/glade_logo.png" width="140" alt="Glade.sh">
   <h1>Glade.sh</h1>
-  <p>A self-hosted terminal that lives on your server and runs on every device.<br>Run AI agents in isolation. Close the laptop — the session keeps going.</p>
+  <p>A self-hosted terminal that runs on your server and is accessible from any device.<br>Sessions persist through browser closes and laptop shutdowns — useful for long-running AI agents and background work.</p>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-cba6f7.svg?style=flat-square&labelColor=313244)](LICENSE)
   [![Docker](https://img.shields.io/badge/Docker-ready-89b4fa.svg?style=flat-square&labelColor=313244&logo=docker&logoColor=89b4fa)](docker-compose.yml)
@@ -11,11 +11,11 @@
 
 ---
 
-Your terminal is open on your phone. The session is alive on your server. Close the browser — it keeps running. Open it on your laptop — same session, same history, same scrollback. That's Glade.
+Glade is a self-hosted terminal that runs inside Docker on an always-on host. Sessions are managed by tmux on the server, so they persist across browser closes and device switches — close the browser on your laptop, reopen on your phone, and the session, history, and scrollback are all still there.
 
-It runs on any always-on host inside Docker — a Mac Mini, Raspberry Pi, Linux server, or Windows machine. Reach it from anywhere: on LAN through Caddy, remotely through Tailscale. No subscriptions. No cloud. Nothing leaves your machine.
+It runs on any always-on host — a Mac Mini, Raspberry Pi, Linux server, or Windows machine. Access it over LAN via Caddy or remotely via Tailscale. No subscriptions, no cloud, nothing leaves your machine.
 
-Good place for AI tools, too. Run Claude Code, Aider, or any agentic CLI on your server — the agent only reaches what's there, not your local files or personal data. Start a long job, close the lid. It keeps working. Check in from your phone when it's done.
+It's also a practical fit for AI coding tools. Running Claude Code, GitHub Copilot, or similar directly on the server means the agent is isolated inside Docker — it only has access to what's in the container, not your local files or personal data. Long-running jobs keep going after you close the laptop; check back from any device when they're done.
 
 ---
 
@@ -34,8 +34,6 @@ mkcert glade.local
 # move cert files into your Caddy certs directory, restart caddy-proxy
 ```
 
-Then:
-
 ```bash
 make setup   # builds image (~2 min) and starts containers
 ```
@@ -51,7 +49,7 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 ## Features
 
 - **Persistent sessions** — tmux keeps every session alive on the server; close and reopen from any device
-- **AI-ready** — run Claude Code, Aider, or any agentic tool on your server; isolated from your local machine and its files; jobs survive laptop shutdowns and keep running while you sleep
+- **AI-ready** — run Claude Code, GitHub Copilot, or any agentic tool directly on your server; isolated inside Docker from your local machine and files; sessions keep running after you close the laptop
 - **Installable PWA** — Add to Home Screen on iOS or Android; full-screen, no browser chrome
 - **Custom mobile keyboard** — Esc, Tab, Ctrl, arrows, combos; long-press to repeat; drag to reorder
 - **Project isolation** — each project gets its own tmux session and ttyd instance; multiple shell tabs per project
@@ -63,15 +61,16 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 - **In-app rebuild** — queue a `git pull && docker compose build` from the UI; no SSH needed
 - **Commit Mono font (bundled)** — ships as the default; upload a custom font via Settings → Font for a personalized look
 - **Haptic feedback** — iOS 18+ light haptic on key presses and interactions via the WebKit `switch` input trick; falls back to `navigator.vibrate` on Android
+- **Direct tmux access** — sessions run inside the container and can be attached from any terminal with `docker exec -it glade-ttyd tmux attach -t <session>`; the PWA and a local terminal can share the same session simultaneously
 - **Catppuccin Mocha** — consistent theme across terminal, UI, and toolbar
 
 ---
 
 ## Why Glade?
 
-Most mobile terminal apps drop your session, cost money, or only work on one platform. Glade runs *on your server* — the session lives there, and any browser is just a window into it.
+Most terminal apps for mobile drop your session, cost money, or only work on one platform. With Glade, the session lives on your server — any browser is just a window into it.
 
-It's also a natural home for AI agents. They run on your server, away from your personal files. You close the lid — the job keeps going. Pick it back up from any device.
+It's also a practical choice for AI coding tools. The agent runs in Docker on your server, isolated from your local files, and keeps working after you close the laptop.
 
 ---
 
