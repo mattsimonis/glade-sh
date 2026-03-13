@@ -4866,6 +4866,10 @@
             try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
             terminalInstance = null; xtermTextarea = null;
             window._osc7Wired = false; _osc7WiredSocket = null;
+            // Hide immediately so the new page never renders into a visible iframe.
+            // The load handler fades back in after the optional Ctrl+L.
+            iframe.style.transition = '';
+            iframe.style.opacity = '0';
             iframe.src = 'about:blank';
             setTimeout(function() {
                 // Hook load event to apply theme BEFORE the first xterm canvas render.
