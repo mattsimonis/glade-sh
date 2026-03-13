@@ -5531,15 +5531,24 @@
         }
         function findWebSockets(win) {
             const sockets = [];
+            // Use the iframe's own WebSocket constructor for instanceof checks.
+            // On iOS/WebKit, cross-frame instanceof (parent's WebSocket vs iframe's WebSocket)
+            // always returns false — the iframe's constructor is a distinct object.
+            // Duck-type fallback catches any remaining edge cases.
+            const WS = (win && win.WebSocket) || WebSocket;
+            function isWS(o) {
+                return o instanceof WS ||
+                    (o && typeof o.send === 'function' && typeof o.readyState === 'number' && typeof o.close === 'function');
+            }
             try {
                 for (const k of Object.keys(win)) {
                     try {
                         const o = win[k];
-                        if (o instanceof WebSocket) sockets.push(o);
+                        if (isWS(o)) sockets.push(o);
                         else if (o && typeof o === 'object') {
-                            if (o.socket instanceof WebSocket) sockets.push(o.socket);
-                            if (o.ws    instanceof WebSocket) sockets.push(o.ws);
-                            if (o._socket instanceof WebSocket) sockets.push(o._socket);
+                            if (isWS(o.socket))  sockets.push(o.socket);
+                            if (isWS(o.ws))      sockets.push(o.ws);
+                            if (isWS(o._socket)) sockets.push(o._socket);
                         }
                     } catch (e) {}
                 }
