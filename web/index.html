@@ -1309,14 +1309,18 @@
             /* spacing between stacked toasts — on margin so it can animate to 0 on exit */
             margin-bottom:8px;
             pointer-events:auto;
-            /* GPU layer — matches reference will-change promotion */
-            will-change:width, height;
+            will-change:width, height, opacity;
             transform:translateZ(0);
-            /* Entry: opacity first (120ms), then spring grows — mirrors exit (shrink then fade) */
+            /*
+             * IN — three sequential steps:
+             *   1. fade in behind DI           opacity  80ms
+             *   2. expand width outward        width   260ms  delay 80ms
+             *   3. expand height downward      height  220ms  delay 340ms
+             */
             transition:
-                opacity 120ms ease,
-                width   360ms cubic-bezier(0.34,1.12,0.64,1) 120ms,
-                height  360ms cubic-bezier(0.34,1.12,0.64,1) 120ms;
+                opacity 80ms  ease,
+                width   260ms cubic-bezier(0.34,1.12,0.64,1) 80ms,
+                height  220ms cubic-bezier(0.34,1.12,0.64,1) 340ms;
         }
         /* Desktop: compact slide-down only — no morphing */
         body.is-desktop .toast {
@@ -1378,17 +1382,17 @@
             0%, 100% { opacity:1; transform:scale(1); }
             50%       { opacity:0.3; transform:scale(0.65); }
         }
-        /* Exit: shrink first, then fade — geometry collapses, then opacity goes last. */
+        /* Exit: height → width → fade (reverse of entry, three sequential steps) */
         body:not(.is-desktop) .toast.t-collapsing {
-            opacity:0;
-            height:0;
-            padding:0;
+            height:37px;      /* step 1: rise back to DI pill height */
+            width:126px;      /* step 2: collapse inward to DI pill width */
+            opacity:0;        /* step 3: fade out behind DI */
             margin-bottom:0;
             transition:
-                height        220ms cubic-bezier(0.55,0,0.45,1),
-                padding       220ms cubic-bezier(0.55,0,0.45,1),
-                margin-bottom 220ms cubic-bezier(0.55,0,0.45,1),
-                opacity       140ms ease-out 220ms;
+                height        200ms cubic-bezier(0.55,0,0.45,1),
+                width         240ms cubic-bezier(0.55,0,0.45,1) 200ms,
+                opacity       100ms ease 440ms,
+                margin-bottom 100ms ease 540ms;
         }
         body.is-desktop .toast.t-collapsing {
             transform:translateY(-52px) translateZ(0); opacity:0;
@@ -4009,20 +4013,19 @@
             function dismissToast() {
                 if (dismissed) return;
                 dismissed = true;
-                // Content fades out, then t-collapsing handles opacity+height+margin simultaneously
+                // Content fades out simultaneously with height rising (both ~180-200ms)
                 el.classList.remove('t-content-in');
-                setTimeout(function() {
-                    el.classList.add('t-collapsing');
-                    setTimeout(function() { el.remove(); }, 380); // 220ms shrink + 140ms fade + 20ms buffer
-                }, 80);
+                el.classList.add('t-collapsing');
+                // height(200) + width(240) + opacity(100) + margin(100) + buffer
+                setTimeout(function() { el.remove(); }, 660);
             }
 
-            // Enter: start invisible at pill size → spring-expand → content fades in
-            // Content fires at 220ms — ~60% through the 360ms spring, shape is clearly expanded
+            // Enter: fade → width → height (sequential)
+            // Content fires at 400ms — shape is full width, height is ~30% grown
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
                     el.classList.add('t-expanded');
-                    setTimeout(function() { el.classList.add('t-content-in'); }, 340);
+                    setTimeout(function() { el.classList.add('t-content-in'); }, 400);
                 });
             });
 
