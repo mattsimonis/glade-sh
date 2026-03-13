@@ -4020,15 +4020,51 @@
             function dismissToast() {
                 if (dismissed) return;
                 dismissed = true;
-                // Content fades out simultaneously with height rising (both ~180-200ms)
-                el.classList.remove('t-content-in');
-                el.classList.add('t-collapsing');
-                // Once invisible (540ms), collapse layout footprint so stacked toasts
-                // slide up smoothly instead of snapping when el.remove() fires
-                setTimeout(function() {
-                    el.classList.add('t-layout-collapse');
-                    setTimeout(function() { el.remove(); }, 120);
-                }, 560);
+
+                var started = false;
+                function startCollapse() {
+                    if (started) return;
+                    started = true;
+                    el.classList.remove('t-content-in');
+                    el.classList.add('t-collapsing');
+                    setTimeout(function() {
+                        el.classList.add('t-layout-collapse');
+                        setTimeout(function() { el.remove(); }, 120);
+                    }, 560);
+                }
+
+                // If a preceding toast is still dismissing it will slide us upward —
+                // wait for its layout footprint to vanish before we start shrinking.
+                var prev = el.previousElementSibling;
+                if (!prev || !prev.classList.contains('t-collapsing')) {
+                    startCollapse();
+                    return;
+                }
+
+                var safeguard = setTimeout(startCollapse, 800);
+
+                function awaitHeightEnd() {
+                    prev.addEventListener('transitionend', function onHeightEnd(e) {
+                        if (e.propertyName === 'height') {
+                            prev.removeEventListener('transitionend', onHeightEnd);
+                            clearTimeout(safeguard);
+                            startCollapse();
+                        }
+                    });
+                }
+
+                if (prev.classList.contains('t-layout-collapse')) {
+                    awaitHeightEnd();
+                } else {
+                    // t-layout-collapse hasn't been added yet — watch for it
+                    var obs = new MutationObserver(function() {
+                        if (prev.classList.contains('t-layout-collapse')) {
+                            obs.disconnect();
+                            awaitHeightEnd();
+                        }
+                    });
+                    obs.observe(prev, { attributes: true, attributeFilter: ['class'] });
+                }
             }
 
             // Enter: fade → width → height (sequential)
