@@ -1216,11 +1216,11 @@
             /* GPU layer — matches reference will-change promotion */
             will-change:width, height;
             transform:translateZ(0);
-            /* Spring: stiffness=400 damping=30 approximation */
+            /* Entry: opacity first (120ms), then spring grows — mirrors exit (shrink then fade) */
             transition:
-                width  360ms cubic-bezier(0.34,1.12,0.64,1),
-                height 360ms cubic-bezier(0.34,1.12,0.64,1),
-                opacity 160ms ease;
+                opacity 120ms ease,
+                width   360ms cubic-bezier(0.34,1.12,0.64,1) 120ms,
+                height  360ms cubic-bezier(0.34,1.12,0.64,1) 120ms;
         }
         /* Desktop: compact slide-down only — no morphing */
         body.is-desktop .toast {
@@ -3881,7 +3881,7 @@
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
                     el.classList.add('t-expanded');
-                    setTimeout(function() { el.classList.add('t-content-in'); }, 220);
+                    setTimeout(function() { el.classList.add('t-content-in'); }, 340);
                 });
             });
 
