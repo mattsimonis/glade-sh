@@ -1233,9 +1233,9 @@
             transition: transform 360ms cubic-bezier(0.34,1.12,0.64,1),
                         opacity   160ms ease;
         }
-        /* Mobile expanded — 11px each side matches the 11px top gap (equidistant) */
+        /* Mobile expanded — 14px each side (slightly inside screen edge, visually balanced) */
         body:not(.is-desktop) .toast.t-expanded {
-            width:min(440px, calc(100vw - 22px));
+            width:min(440px, calc(100vw - 28px));
             height:78px;
             opacity:1;
         }
@@ -1282,18 +1282,19 @@
             0%, 100% { opacity:1; transform:scale(1); }
             50%       { opacity:0.3; transform:scale(0.65); }
         }
-        /* Exit: fade immediately, then collapse height + spacing so stacked toasts glide up smoothly.
-         * No intermediate stop at 37px — one continuous height animation prevents choppiness. */
+        /* Exit: opacity and height collapse simultaneously — no delay phase means no "invisible gap"
+         * half-step. Content is already hidden when this fires, so the pill shrinks while fading:
+         * one fluid motion rather than vanish-then-layout-shift. */
         body:not(.is-desktop) .toast.t-collapsing {
             opacity:0;
             height:0;
             padding:0;
             margin-bottom:0;
             transition:
-                opacity       80ms  ease,
-                height        220ms ease-in 70ms,
-                padding       220ms ease-in 70ms,
-                margin-bottom 220ms ease-in 70ms;
+                opacity       200ms ease-in,
+                height        280ms cubic-bezier(0.55,0,0.45,1),
+                padding       280ms cubic-bezier(0.55,0,0.45,1),
+                margin-bottom 280ms cubic-bezier(0.55,0,0.45,1);
         }
         body.is-desktop .toast.t-collapsing {
             transform:translateY(-52px) translateZ(0); opacity:0;
@@ -3869,12 +3870,11 @@
             function dismissToast() {
                 if (dismissed) return;
                 dismissed = true;
-                // Content fades out, then CSS handles everything: opacity→0, height→0, margin→0
+                // Content fades out, then t-collapsing handles opacity+height+margin simultaneously
                 el.classList.remove('t-content-in');
                 setTimeout(function() {
                     el.classList.add('t-collapsing');
-                    // 70ms delay + 220ms collapse + 30ms buffer
-                    setTimeout(function() { el.remove(); }, 320);
+                    setTimeout(function() { el.remove(); }, 310); // 280ms collapse + 30ms buffer
                 }, 80);
             }
 
