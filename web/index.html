@@ -6910,6 +6910,12 @@
             // opacity:0 keeps layout/dimensions intact so FitAddon measures correctly.
             iframe.style.transition = '';
             iframe.style.opacity = '0';
+            // Snapshot project/shell NOW — before any async work — so the key is stable
+            // even if the user switches projects during the 500 ms init window.
+            var _ctrlLKey = (currentProjectId || '') + ':' + (currentShellIdx !== null ? currentShellIdx : 0);
+            var _isFirstVisit = !_ctrlLDone.has(_ctrlLKey);
+            // Mark done immediately so any re-entrant load (e.g. slow WS) doesn't re-clear.
+            _ctrlLDone.add(_ctrlLKey);
             // ttyd registers window.addEventListener('beforeunload', ...) to warn on accidental
             // navigation. Setting onbeforeunload=null doesn't remove those listeners. Intercept
             // in the capture phase so ttyd's handler never runs and the dialog never appears.
@@ -6927,14 +6933,11 @@
                 // extra line. On the *first* connect for each shell, Ctrl+L clears the artifact
                 // and we fade in so the user never sees the flash. On return visits (switching
                 // projects and back) we skip the Ctrl+L so existing terminal content is preserved.
-                var _ctrlLKey = (currentProjectId || '') + ':' + (currentShellIdx !== null ? currentShellIdx : 0);
-                var _isFirstVisit = !_ctrlLDone.has(_ctrlLKey);
                 var ctrlLAttempts = 0;
                 function tryClearScreen() {
                     findTerminal();
                     if (terminalInstance && typeof terminalInstance.input === 'function') {
                         terminalInstance.input('\x0c', true);
-                        _ctrlLDone.add(_ctrlLKey);
                         setTimeout(function () {
                             iframe.style.transition = 'opacity 0.15s ease';
                             iframe.style.opacity = '1';
@@ -6948,7 +6951,6 @@
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keyup',   { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             if (wasDisabled) xtermTextarea.disabled = true;
-                            _ctrlLDone.add(_ctrlLKey);
                             setTimeout(function () {
                                 iframe.style.transition = 'opacity 0.15s ease';
                                 iframe.style.opacity = '1';
