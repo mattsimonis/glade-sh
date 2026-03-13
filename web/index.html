@@ -6677,6 +6677,10 @@
         });
         iframe.addEventListener('load', function () {
             if (iframe.src === 'about:blank' || !iframe.src || iframe.src === location.origin + '/') return; // skip blank navigations
+            // Hide terminal until the post-resize Ctrl+L clears the stray prompt line.
+            // opacity:0 keeps layout/dimensions intact so FitAddon measures correctly.
+            iframe.style.transition = '';
+            iframe.style.opacity = '0';
             // ttyd registers window.addEventListener('beforeunload', ...) to warn on accidental
             // navigation. Setting onbeforeunload=null doesn't remove those listeners. Intercept
             // in the capture phase so ttyd's handler never runs and the dialog never appears.
@@ -6691,16 +6695,17 @@
                 try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
                 // Every attach triggers a pty resize (80×24 → actual size), which causes tmux
                 // to redraw AND zsh SIGWINCH to fire — both print the prompt, leaving a stray
-                // extra line. Ctrl+L clears the artifact and leaves a single clean prompt.
-                // Retry until the terminal instance is ready — xterm may not be initialized yet.
-                // NOTE: findWebSockets() is unreliable (ttyd bundles the WS in module scope, not
-                // on window), so we go through terminalInstance.input() which is the same path
-                // used by the keyboard relay on iOS.
+                // extra line. Ctrl+L clears the artifact, then we fade in so the user never
+                // sees the flash.
                 var ctrlLAttempts = 0;
                 function tryClearScreen() {
                     findTerminal();
                     if (terminalInstance && typeof terminalInstance.input === 'function') {
                         terminalInstance.input('\x0c', true);
+                        setTimeout(function () {
+                            iframe.style.transition = 'opacity 0.15s ease';
+                            iframe.style.opacity = '1';
+                        }, 50);
                         return;
                     }
                     if (xtermTextarea) {
@@ -6710,10 +6715,20 @@
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             xtermTextarea.dispatchEvent(new KeyboardEvent('keyup',   { key: 'l', code: 'KeyL', keyCode: 76, which: 76, ctrlKey: true, bubbles: true, cancelable: true }));
                             if (wasDisabled) xtermTextarea.disabled = true;
+                            setTimeout(function () {
+                                iframe.style.transition = 'opacity 0.15s ease';
+                                iframe.style.opacity = '1';
+                            }, 50);
                             return;
                         } catch (e) {}
                     }
-                    if (++ctrlLAttempts < 6) setTimeout(tryClearScreen, 200);
+                    if (++ctrlLAttempts < 6) {
+                        setTimeout(tryClearScreen, 200);
+                    } else {
+                        // Exhausted retries — reveal anyway so the terminal isn't stuck hidden.
+                        iframe.style.transition = 'opacity 0.15s ease';
+                        iframe.style.opacity = '1';
+                    }
                 }
                 setTimeout(tryClearScreen, 300);
                 // iOS: after the initial load, the visualViewport settles (toolbar animation,
