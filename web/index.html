@@ -4707,6 +4707,7 @@
                 if (isSidebarLayout()) openProjectGrid();
             } else if (!currentProjectId) {
                 setConnectionState('connected'); // nothing to reconnect to — clear any stale overlay
+                showNoShells();
                 openProjectGrid();
             }
         }
