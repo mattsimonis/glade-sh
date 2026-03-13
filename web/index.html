@@ -5079,10 +5079,14 @@
                     switchProject(projects[0].id);
                 } else {
                     currentProjectId = null;
+                    currentShells = [];
+                    currentShellIdx = null;
                     localStorage.removeItem('lastProjectId');
                     try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
                     iframe.src = 'about:blank';
                     setConnectionState('connected');
+                    renderShellTabs([]);
+                    showNoShells();
                     openProjectGrid();
                 }
             }
