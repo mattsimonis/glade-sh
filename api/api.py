@@ -1133,10 +1133,9 @@ class Handler(BaseHTTPRequestHandler):
             row = conn.execute(
                 "SELECT value FROM settings WHERE key=?", (key,)
             ).fetchone()
-        if row:
-            self.send_json(200, json.loads(row["value"]))
-        else:
-            self.send_json(404, {"error": f"no {key} saved"})
+        # Return null (not 404) when no value saved — callers handle null as
+        # "use default" and a 404 shows as a red error in browser devtools.
+        self.send_json(200, json.loads(row["value"]) if row else None)
 
     def _put_setting(self, key):
         data, err = self._read_body()
