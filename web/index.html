@@ -83,8 +83,8 @@
                 --sky:      #04a5e5;
             }
         }
-        /* Manual theme overrides — take precedence over prefers-color-scheme */
-        html.force-dark {
+        /* Catppuccin flavor overrides — take precedence over prefers-color-scheme */
+        html.theme-mocha, html.force-dark {
             --base:     #1e1e2e; --mantle:   #181825; --crust:    #11111b;
             --surface0: #313244; --surface1: #45475a; --surface2: #585b70;
             --overlay0: #6c7086; --overlay1: #7f849c; --subtext1: #a6adc8;
@@ -92,7 +92,23 @@
             --red:      #f38ba8; --peach:    #fab387; --mauve:    #cba6f7;
             --teal:     #94e2d5; --pink:     #f5c2e7; --yellow:   #f9e2af; --sky: #89dceb;
         }
-        html.force-light {
+        html.theme-frappe {
+            --base:     #303446; --mantle:   #292c3c; --crust:    #232634;
+            --surface0: #414559; --surface1: #51576d; --surface2: #626880;
+            --overlay0: #737994; --overlay1: #838ba7; --subtext1: #b5bfe2;
+            --text:     #c6d0f5; --blue:     #8caaee; --green:    #a6d189;
+            --red:      #e78284; --peach:    #ef9f76; --mauve:    #ca9ee6;
+            --teal:     #81c8be; --pink:     #f4b8e4; --yellow:   #e5c890; --sky: #99d1db;
+        }
+        html.theme-macchiato {
+            --base:     #24273a; --mantle:   #1e2030; --crust:    #181926;
+            --surface0: #363a4f; --surface1: #494d64; --surface2: #5b6078;
+            --overlay0: #6e738d; --overlay1: #8087a2; --subtext1: #b8c0e0;
+            --text:     #cad3f5; --blue:     #8aadf4; --green:    #a6da95;
+            --red:      #ed8796; --peach:    #f5a97f; --mauve:    #c6a0f6;
+            --teal:     #8bd5ca; --pink:     #f5bde6; --yellow:   #eed49f; --sky: #91d7e3;
+        }
+        html.theme-latte, html.force-light {
             --base:     #eff1f5; --mantle:   #e6e9ef; --crust:    #dce0e8;
             --surface0: #ccd0da; --surface1: #bcc0cc; --surface2: #acb0be;
             --overlay0: #9ca0b0; --overlay1: #8c8fa1; --subtext1: #6c6f85;
@@ -2015,6 +2031,7 @@
             <div class="settings-section-title">Appearance</div>
             <div class="settings-row">
                 <span class="settings-label">App theme</span>
+                <span class="settings-value" style="color:var(--overlay0);font-size:10px">Override</span>
             </div>
             <div class="appearance-picker" style="margin-top:6px">
                 <button class="appearance-btn" data-theme="system">System</button>
@@ -2052,8 +2069,9 @@
 
         <!-- Terminal Theme section -->
         <div class="settings-section">
-            <div class="settings-section-title">Terminal Theme</div>
-            <div id="settings-theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"></div>
+            <div class="settings-section-title">Theme</div>
+            <div style="font-size:11px;color:var(--overlay0);margin-bottom:8px">Catppuccin themes apply to the entire app.</div>
+            <div id="settings-theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
         </div>
 
         <!-- About section -->
@@ -2254,11 +2272,17 @@
         let trackpadHintShown = false;
         let trackpadHintTimer = null;
 
-        // ── App theme (System / Dark / Light) ──────────────────────────────────
+        // ── App theme (System / Dark / Light / Catppuccin flavor) ──────────────
         function applyAppTheme(t) {
-            document.documentElement.classList.remove('force-dark', 'force-light');
-            if (t === 'dark')  document.documentElement.classList.add('force-dark');
-            if (t === 'light') document.documentElement.classList.add('force-light');
+            document.documentElement.classList.remove(
+                'force-dark', 'force-light',
+                'theme-mocha', 'theme-frappe', 'theme-macchiato', 'theme-latte'
+            );
+            if (t === 'dark'  || t === 'mocha')     document.documentElement.classList.add('theme-mocha');
+            else if (t === 'frappe')                document.documentElement.classList.add('theme-frappe');
+            else if (t === 'macchiato')             document.documentElement.classList.add('theme-macchiato');
+            else if (t === 'light' || t === 'latte') document.documentElement.classList.add('theme-latte');
+            // 'system' → no class; @media prefers-color-scheme handles it
         }
         applyAppTheme(localStorage.getItem('appTheme') || 'system');
 
@@ -6012,7 +6036,7 @@
 
         let currentTermTheme = localStorage.getItem('termTheme') || 'mocha';
 
-        function applyTermTheme(themeId) {
+        function applyTermTheme(themeId, syncApp) {
             const def = TERM_THEMES[themeId];
             if (!def) return;
             currentTermTheme = themeId;
@@ -6023,6 +6047,14 @@
                     w.term.options.theme = def.theme;
                 }
             } catch(e) {}
+            // Catppuccin flavors drive the full app theme — only on explicit user selection
+            if (syncApp && ['mocha', 'frappe', 'macchiato', 'latte'].indexOf(themeId) !== -1) {
+                localStorage.setItem('appTheme', themeId);
+                applyAppTheme(themeId);
+                document.querySelectorAll('.appearance-btn').forEach(function(b) {
+                    b.classList.remove('active');
+                });
+            }
             // Update swatch active state
             document.querySelectorAll('.theme-swatch').forEach(function(el) {
                 const active = el.dataset.themeId === themeId;
@@ -6061,7 +6093,7 @@
                     return '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + def.theme[c] + ';margin:0 1px"></span>';
                 }).join('');
                 btn.innerHTML = '<div style="margin-bottom:4px">' + bar + '</div>' + def.label;
-                btn.addEventListener('click', function() { applyTermTheme(id); });
+                btn.addEventListener('click', function() { applyTermTheme(id, true); });
                 grid.appendChild(btn);
             });
         }
