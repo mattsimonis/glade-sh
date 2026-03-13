@@ -2271,7 +2271,6 @@
         let selListenerAdded = false;          // xterm selection listener guard
         let connectionState = 'connected';
         let statusFadeTimer = null;
-        let connToastDismiss = null; // dismiss fn for the current connection-state toast
         let xtermTextarea = null, terminalInstance = null;
         let editMode = false, editorTargetRow = null, editorTargetIndex = null;
         let currentPanel = 'keyboard';
@@ -6876,12 +6875,6 @@
             var dbgText = document.getElementById('dbg-conn-text');
             if (dbgDot)  { dbgDot.className = 'status-dot ' + state; }
             if (dbgText) { dbgText.textContent = labels[state] || state; }
-            // Connection-state toast (dismiss any previous before showing next)
-            if (connToastDismiss) { connToastDismiss(); connToastDismiss = null; }
-            var connMsgs = { connected: 'Connected', reconnecting: 'Reconnecting…', disconnected: 'Disconnected' };
-            var connTypes = { connected: 'success', reconnecting: 'warning', disconnected: 'error' };
-            var connDurations = { connected: 3000, reconnecting: 2200, disconnected: 2200 };
-            connToastDismiss = toast(connMsgs[state], connTypes[state], connDurations[state]);
         }
         let consecutiveFailures = 0;
         let reconnectInProgress = false;
