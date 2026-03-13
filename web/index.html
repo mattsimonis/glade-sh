@@ -3667,6 +3667,15 @@
                 var rebuildPre   = document.getElementById('rebuild-log-pre');
                 var rebuildVal   = document.getElementById('rebuild-status-val');
                 var rebuildPoll  = null;
+                var wasBuilding  = false;
+
+                function setRefreshMode(success) {
+                    rebuildBtn.disabled = false;
+                    rebuildBtn.textContent = '↺ Refresh App';
+                    rebuildBtn.style.background = success ? 'var(--green)' : 'var(--peach)';
+                    rebuildBtn.style.color = 'var(--base)';
+                    rebuildBtn.onclick = function () { location.reload(); };
+                }
 
                 function pollRebuildLog() {
                     fetch('/api/rebuild/log').then(function (r) { return r.json(); }).then(function (d) {
@@ -3676,17 +3685,25 @@
                             rebuildPre.scrollTop = rebuildPre.scrollHeight;
                         }
                         if (d.running) {
+                            wasBuilding = true;
                             rebuildVal.textContent = 'Building…';
                             rebuildVal.style.color = '#fab387';
                             rebuildBtn.disabled = true;
                             rebuildBtn.textContent = 'Building…';
                         } else {
-                            rebuildVal.style.color = d.log ? '#a6e3a1' : '#6c7086';
-                            rebuildVal.textContent = d.log ? 'Done' : 'Idle';
-                            rebuildBtn.disabled = false;
-                            rebuildBtn.textContent = 'Rebuild Container';
                             clearInterval(rebuildPoll);
                             rebuildPoll = null;
+                            if (wasBuilding) {
+                                var success = d.log && d.log.includes('exit=0');
+                                rebuildVal.style.color = success ? '#a6e3a1' : '#f38ba8';
+                                rebuildVal.textContent  = success ? 'Done' : 'Failed';
+                                setRefreshMode(success);
+                            } else {
+                                rebuildVal.style.color = d.log ? '#a6e3a1' : '#6c7086';
+                                rebuildVal.textContent = d.log ? 'Done' : 'Idle';
+                                rebuildBtn.disabled = false;
+                                rebuildBtn.textContent = 'Rebuild Container';
+                            }
                         }
                     }).catch(function () {
                         clearInterval(rebuildPoll);
@@ -3700,12 +3717,17 @@
                     rebuildVal.textContent = 'Triggered…';
                     rebuildVal.style.color = '#fab387';
                     rebuildBtn.disabled = true;
+                    rebuildBtn.textContent = 'Triggered…';
+                    rebuildBtn.style.background = '';
+                    rebuildBtn.style.color = '';
+                    wasBuilding = false;
                     fetch('/api/rebuild', { method: 'POST' }).then(function () {
                         if (!rebuildPoll) rebuildPoll = setInterval(pollRebuildLog, 2000);
                     }).catch(function () {
                         rebuildVal.textContent = 'Error';
                         rebuildVal.style.color = '#f38ba8';
                         rebuildBtn.disabled = false;
+                        rebuildBtn.textContent = 'Rebuild Container';
                     });
                 });
             })();
