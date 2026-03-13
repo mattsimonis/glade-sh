@@ -8,10 +8,13 @@ from conftest import assert_cors
 # ── Full keyboard layout ──────────────────────────────────────────────────────
 
 
-def test_get_layout_returns_404_when_not_saved(client):
+def test_get_layout_returns_null_when_not_saved(client):
+    """When no keyboard layout has been saved, returns 200 with null body — not 404.
+    Callers guard with `if (serverLayout)`. Returning 404 shows as a red
+    devtools error on every first load. See COPILOT_INSTRUCTIONS."""
     status, data, headers = client.get("/api/settings/layout")
-    assert status == 404
-    assert "error" in data
+    assert status == 200
+    assert data is None
     assert_cors(headers)
 
 
@@ -56,10 +59,11 @@ def test_save_layout_overwrites_previous(client):
 # ── Compact keyboard layout ───────────────────────────────────────────────────
 
 
-def test_get_compact_layout_returns_404_when_not_saved(client):
+def test_get_compact_layout_returns_null_when_not_saved(client):
+    """Same as layout — 200+null when not saved, not 404."""
     status, data, headers = client.get("/api/settings/compact-layout")
-    assert status == 404
-    assert "error" in data
+    assert status == 200
+    assert data is None
     assert_cors(headers)
 
 
