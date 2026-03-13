@@ -6145,6 +6145,15 @@
             if (terminalInstance && typeof terminalInstance.options === 'object') {
                 try { terminalInstance.options.theme = def.theme; } catch(e) {}
             }
+            // Keep the injected viewport style tag in sync — it's written once at iframe
+            // load time so without this update the old background persists as a border
+            try {
+                const iDoc = iframe.contentWindow && iframe.contentWindow.document;
+                const styleEl = iDoc && iDoc.getElementById('glade-theme-bg');
+                if (styleEl) {
+                    styleEl.textContent = '.xterm-viewport,.xterm-screen{background:' + def.theme.background + '!important}';
+                }
+            } catch(e) {}
             // Persist to server so new ttyd processes start with the correct theme (no flash)
             if (syncApp) {
                 fetch('/api/settings/term-theme', {
