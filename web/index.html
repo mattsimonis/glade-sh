@@ -6915,35 +6915,12 @@
                 return d;
             }
 
-            const matchedPresets = CP_PRESETS.filter(function(p){ return fuzzyMatch(q, p.label) || fuzzyMatch(q, p.desc); });
-            if (matchedPresets.length) {
-                const sec = document.createElement('div'); sec.className = 'cp-section';
-                const hdr = document.createElement('div'); hdr.className = 'cp-section-hdr'; hdr.textContent = 'Presets';
-                sec.appendChild(hdr);
-                matchedPresets.forEach(function(p){
-                    const item = makeItem('preset',
-                        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>',
-                        p.label, p.desc, null,
-                        function(){
-                            closePalette();
-                            haptic(8);
-                            const ws = findTerminalWS();
-                            if (ws && ws.readyState === WebSocket.OPEN) ws.send('0' + p.cmd);
-                            else for (const ch of p.cmd) sendKey(ch, {});
-                            if (!p.partial) { setTimeout(function(){ const ws2=findTerminalWS(); if(ws2) ws2.send('0\r'); }, 60); }
-                        }
-                    );
-                    sec.appendChild(item);
-                });
-                cpList.appendChild(sec);
-            }
-
             const matchedSnips = snippets.filter(function(s){ return fuzzyMatch(q, s.name) || fuzzyMatch(q, s.command); });
             if (matchedSnips.length) {
                 const sec = document.createElement('div'); sec.className = 'cp-section';
                 const hdr = document.createElement('div'); hdr.className = 'cp-section-hdr'; hdr.textContent = 'Snippets';
                 sec.appendChild(hdr);
-                matchedSnips.slice(0,6).forEach(function(s){
+                matchedSnips.forEach(function(s){
                     const item = makeItem('snippet',
                         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></svg>',
                         s.name, s.command, null,
@@ -6974,7 +6951,7 @@
                 cpList.appendChild(sec);
             }
 
-            if (!matchedPresets.length && !matchedSnips.length && !matchedActions.length) {
+            if (!matchedSnips.length && !matchedActions.length) {
                 const em = document.createElement('div'); em.className = 'cp-empty';
                 em.textContent = q ? 'No results for "' + q + '"' : 'Start typing to search\u2026';
                 cpList.appendChild(em);
@@ -7121,8 +7098,8 @@
         }, { passive: false });
 
         (async function () {
-            const [serverLayout, serverCompactLayout, serverSnippets, serverPresets] = await Promise.all([
-                fetchLayout(), fetchCompactLayout(), fetchSnippetsFromServer(), fetchPresetsFromServer(),
+            const [serverLayout, serverCompactLayout, serverSnippets] = await Promise.all([
+                fetchLayout(), fetchCompactLayout(), fetchSnippetsFromServer(),
             ]);
             if (serverLayout) {
                 if (layoutIsStale(serverLayout)) {
@@ -7136,7 +7113,6 @@
             }
             renderKeyboard();
             snippets = serverSnippets;
-            presets  = serverPresets;
 
             // Load projects after layout/snippets ready
             await loadProjects();
@@ -7326,7 +7302,6 @@
                     ['debug-panel',          function(){ document.getElementById('debug-panel').classList.remove('open'); }],
                     ['key-editor-sheet',     closeKeyEditor],
                     ['snippet-editor-sheet', closeSnippetEditor],
-                    ['preset-editor-sheet',  closePresetEditor],
                     ['snippet-fill-sheet',   closeFillSheet],
                     ['add-project-sheet',    closeAddProjectSheet],
                     ['cmd-palette-sheet',    closePalette],
