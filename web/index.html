@@ -4734,6 +4734,12 @@
             if (currentProjectId && currentProjectId !== pid) {
                 markProjectViewed(currentProjectId);
             }
+            // Snapshot terminal dimensions NOW before clearing terminalInstance —
+            // passed to /start so the tmux pane is pre-resized to match. This makes
+            // FitAddon's resize a no-op on reconnect, preventing SIGWINCH and stray
+            // prompt redraws (the "> " artifacts visible after switching back).
+            var _preRows = (terminalInstance && terminalInstance.rows) ? terminalInstance.rows : 0;
+            var _preCols = (terminalInstance && terminalInstance.cols) ? terminalInstance.cols : 0;
             currentProjectId = pid;
             currentShellIdx = null;  // reset — belongs to new project
             localStorage.setItem('lastProjectId', pid);
@@ -4754,7 +4760,8 @@
             repositionShortcutBar();
             // Start project & get port
             try {
-                const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST' });
+                var _startBody = (_preRows && _preCols) ? { rows: _preRows, cols: _preCols } : {};
+                const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST', body: JSON.stringify(_startBody) });
                 // Prefer this device's last-used shell; fall back to tmux's active window
                 const active = _savedShellChoice(pid, data.shells) || (data.shells || []).find(function(s) { return s.active; });
                 const port = (active && active.port) || data.port;

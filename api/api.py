@@ -769,6 +769,20 @@ class Handler(BaseHTTPRequestHandler):
         if port is None:
             return self.send_json(503, {"error": "no ports available"})
         sname = session_name(pid)
+        # Pre-resize the tmux window to the client's current terminal dimensions so
+        # that when ttyd connects and FitAddon runs, the pty is already the right size.
+        # A no-op resize means no SIGWINCH → no stray prompt redraws on reconnect.
+        try:
+            body = self.read_json()
+            cols = int(body.get("cols", 0))
+            rows = int(body.get("rows", 0))
+            if cols > 0 and rows > 0:
+                subprocess.run(
+                    ["tmux", "resize-window", "-t", sname, "-x", str(cols), "-y", str(rows)],
+                    capture_output=True
+                )
+        except Exception:
+            pass
         shells = self._shells_with_ports(pid, sname)
         if pid not in _baselines:
             _baselines[pid] = tmux_history_size(sname)
