@@ -5158,8 +5158,12 @@
             }
         }
 
-        function doDeleteProject(pid) {
-            apiJson('/api/projects/' + pid, { method: 'DELETE' })
+        function doDeleteProject(pid, deleteDir) {
+            apiJson('/api/projects/' + pid, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ delete_dir: !!deleteDir })
+            })
                 .then(function() {
                     projects = projects.filter(function(x) { return x.id !== pid; });
                     afterDeleteProject(pid);
@@ -5168,6 +5172,17 @@
                     toast('Project deleted', 'success');
                 })
                 .catch(function() { toast('Delete failed', 'error'); });
+        }
+
+        function confirmDeleteProject(p) {
+            var dir = p.directory || '';
+            var actions = [
+                { label: 'Delete project', style: 'danger', onConfirm: function() { doDeleteProject(p.id, false); } }
+            ];
+            if (dir) {
+                actions.unshift({ label: 'Delete project + directory', style: 'danger', onConfirm: function() { doDeleteProject(p.id, true); } });
+            }
+            showConfirm('Delete \u201c' + p.name + '\u201d?', dir || 'No directory set.', actions);
         }
 
         function confirmCloseShell(idx) {
@@ -5295,7 +5310,7 @@
                                     switchProject(p.id);
                                 }},
                                 { label: 'Edit', style: 'neutral', onConfirm: function() { openEditProjectSheet(p); }},
-                                { label: 'Delete', style: 'danger', onConfirm: function() { doDeleteProject(p.id); } }
+                                { label: 'Delete', style: 'danger', onConfirm: function() { confirmDeleteProject(p); } }
                             ]
                         );
                     }, 500);
@@ -5316,7 +5331,7 @@
                         p.directory || '',
                         [
                             { label: 'Edit', style: 'neutral', onConfirm: function() { openEditProjectSheet(p); }},
-                            { label: 'Delete', style: 'danger', onConfirm: function() { doDeleteProject(p.id); } }
+                            { label: 'Delete', style: 'danger', onConfirm: function() { confirmDeleteProject(p); } }
                         ]
                     );
                 });

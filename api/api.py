@@ -762,12 +762,28 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, {"ok": True})
 
     def _delete_project(self, pid):
+        try:
+            data = self.read_json()
+        except ValueError:
+            data = {}
+        delete_dir = bool(data.get("delete_dir"))
+
+        with open_db() as conn:
+            row = conn.execute("SELECT directory FROM projects WHERE id=?", (pid,)).fetchone()
+        directory = row["directory"] if row else None
+
         stop_project_proc(pid)
-        # Kill the tmux session so no shells linger after deletion
         sname = session_name(pid)
         subprocess.run(["tmux", "kill-session", "-t", sname], capture_output=True)
         with open_db() as conn:
             conn.execute("DELETE FROM projects WHERE id=?", (pid,))
+
+        if delete_dir and directory:
+            safe_root = os.path.realpath(PROJECTS_DIR)
+            target = os.path.realpath(directory)
+            if target.startswith(safe_root + os.sep) or target == safe_root:
+                shutil.rmtree(target, ignore_errors=True)
+
         self.send_json(200, {"ok": True})
 
     def _start_project(self, pid):
