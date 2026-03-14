@@ -1,7 +1,7 @@
 # Glade — Architecture Reference
 
 > Self-hosted, always-on terminal accessible from any device via browser.
-> Runs on any always-on host with Docker. Catppuccin Mocha theme. Commit Mono font (bundled).
+> Runs on any always-on host with Docker. Catppuccin (4 flavors) + 304 Base16 themes. Commit Mono font (bundled).
 
 For AI-specific guidance (endpoints, gotchas, common tasks), see `COPILOT_INSTRUCTIONS.md`.
 For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
@@ -109,9 +109,9 @@ Two Docker services defined in `docker-compose.yml`:
 |---|---|---|
 | Session recording | `tmux pipe-pane` to flat files | Zero overhead, always on, no daemon |
 | Log storage | Flat files, not SQLite | Faster writes, simpler grep, cheaper |
-| Frontend | Single-file PWA (~6600 lines) | No build step, instant deploy via git pull |
+| Frontend | Single-file PWA (~8200 lines) | No build step, instant deploy via git pull |
 | API framework | Python stdlib `BaseHTTPRequestHandler` | Zero dependencies, runs on any Python |
-| CSS approach | Inline styles, no framework | Catppuccin Mocha palette applied directly |
+| CSS approach | CSS custom properties on `:root`; Catppuccin flavors via class swap; Base16 via inline `style.setProperty`; no framework | Instant theme switching; both app UI and xterm.js terminal update together |
 | Auth | Tailscale (network-level) | No passwords, no tokens, no sessions |
 | Package installs | `config/packages.sh` build-time hook | Image ships lean; user adds what they need |
 | Reverse proxy | Caddy (standalone container) | Shared with other `*.home` services |
@@ -121,15 +121,20 @@ Two Docker services defined in `docker-compose.yml`:
 
 ## Catppuccin Mocha Palette
 
-Used consistently across terminal theme, UI chrome, buttons, overlays.
+Default theme. Used consistently across terminal theme, UI chrome, buttons, overlays.
 
 ```
 Crust:     #11111b    Mantle:    #181825    Base:      #1e1e2e
 Surface0:  #313244    Surface1:  #45475a    Surface2:  #585b70
-Overlay0:  #6c7086    Subtext0:  #a6adc8    Text:      #cdd6f4
-Blue:      #89b4fa    Green:     #a6e3a1    Red:       #f38ba8
-Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
+Overlay0:  #6c7086    Subtext0:  #a6adc8    Subtext1:  #bac2de
+Text:      #cdd6f4    Blue:      #89b4fa    Green:     #a6e3a1
+Red:       #f38ba8    Mauve:     #cba6f7    Peach:     #fab387
+Rosewater: #f5e0dc
 ```
+
+19 CSS custom properties are defined for each flavor: `--base`, `--mantle`, `--crust`, `--surface0`, `--surface1`, `--surface2`, `--overlay0`, `--overlay1`, `--subtext0`, `--subtext1`, `--text`, `--red`, `--peach`, `--yellow`, `--green`, `--teal`, `--sky`, `--blue`, `--mauve`, `--pink`, `--rosewater`.
+
+Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `theme-macchiato`, `theme-latte`) to `html`. Base16 overrides all 19 vars via inline `style.setProperty` on `:root`, which has higher specificity than class rules. `clearBase16Theme()` removes the inline overrides to restore class-driven theming.
 
 ---
 
@@ -139,8 +144,8 @@ Mauve:     #cba6f7    Peach:     #fab387    Rosewater: #f5e0dc
 
 | File | Lines | Purpose |
 |---|---|---|
-| `web/index.html` | ~7450 | Single-file PWA: CSS, HTML, JavaScript inline |
-| `api/api.py` | ~1350 | REST API: projects, snippets, logs, uploads, GitHub auth |
+| `web/index.html` | ~8200 | Single-file PWA: CSS, HTML, JavaScript inline |
+| `api/api.py` | ~1480 | REST API: projects, snippets, logs, uploads, GitHub auth |
 | `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
 | `docker-compose.yml` | ~65 | Two services: ttyd + web |

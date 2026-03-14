@@ -6,7 +6,7 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~7450 lines). The backend is a stdlib Python API (`api/api.py`, ~1350 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~8200 lines). The backend is a stdlib Python API (`api/api.py`, ~1480 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
 GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a named Docker volume (`gh-config`), and projects can be created directly from GitHub repos.
 
@@ -50,7 +50,7 @@ assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 - `POST /api/projects` — create `{name, directory, color}`
 - `GET /api/projects/:id` — get one
 - `PUT /api/projects/:id` — update
-- `DELETE /api/projects/:id` — delete + stop ttyd
+- `DELETE /api/projects/:id` — delete + stop ttyd; accepts optional JSON body `{delete_dir: true}` to also remove the cloned directory from `~/.glade/projects/`
 - `POST /api/projects/:id/start` — ensure tmux + ttyd running → `{port}`
 - `POST /api/projects/:id/stop` — kill ttyd (keep tmux)
 - `GET /api/projects/:id/shells` — list tmux windows
@@ -73,6 +73,8 @@ assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 - `PUT /api/settings/compact-layout` — save compact layout
 - `GET /api/settings/font` — `{family, url}` or `null`
 - `PUT /api/settings/font` — save font config JSON
+- `GET /api/settings/term-theme` — saved terminal theme (string name or full Base16 theme dict) or `null`
+- `PUT /api/settings/term-theme` — save terminal theme; accepts a named string (`"mocha"`) or a full xterm.js theme object (used by Base16); stored as JSON and passed to ttyd's `-t theme=` arg at startup
 - `POST /api/font` — upload font file → `{family, url}`
 - `DELETE /api/font` — remove custom font + DB entry
 
@@ -146,7 +148,7 @@ assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 | `ensure_tables()` | Creates projects/snippets/settings/interactions tables |
 | `strip_ansi(text)` | Remove ANSI escape codes from terminal output |
 | `slugify(name)` | "My Project" → "my-project" (for log directory names) |
-| `session_name(project_id)` | "glade-{id}" (tmux session name) |
+| `session_name(project_id)` | `"proj-" + project_id[:8]` (tmux session name) |
 | `create_tmux_session()` | Create tmux session + start pipe-pane recording |
 | `start_pipe_pane()` | Start `tmux pipe-pane` for a session |
 | `ensure_project_running()` | Create tmux + spawn ttyd on a free port |
@@ -179,7 +181,11 @@ assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 | `setProjectSource(src)` | Toggle Local ↔ GitHub in project creation sheet; shows 🔒 on button when not connected |
 | `searchGhRepos(q)` | Debounced repo search; renders autocomplete dropdown |
 | `refreshGithubSettingsState()` | Fetches auth status; updates Settings UI and GitHub Repo button icon |
-| `applyTermTheme(name)` | Apply one of 6 xterm.js themes to the terminal (Catppuccin Mocha/Frappé/Macchiato/Latte, Solarized Dark, One Dark); persisted in localStorage |
+| `applyTermTheme(name, syncApp)` | Apply a named Catppuccin/Solarized/One Dark theme; clears any active Base16 scheme when `syncApp` is true (user-initiated); persisted in localStorage |
+| `applyBase16Scheme(slug, syncApp)` | Apply a Base16 community scheme by slug; sets all 19 CSS vars on `:root` inline, applies xterm.js terminal colors, persists full theme dict to API; deselects Catppuccin swatches |
+| `clearBase16Theme()` | Remove inline CSS var overrides from `:root` so Catppuccin class-driven theming resumes; clears `localStorage('base16Theme')` |
+| `renderB16List(query)` | Render the Base16 scheme picker list (color dots, name, variant badge, active highlight); used in Settings; has `._markActive(slug)` sub-function |
+| `confirmDeleteProject(p)` | Show two-step delete confirmation: "Delete project + directory" vs "Delete project only"; second prompt added after long-press/right-click context menu |
 | `openFind()` | Open floating find-in-scrollback bar (Cmd+F); scans xterm.js buffer via `getLine()` |
 | `looksLikeSecret(str)` | Detect credentials (GitHub PAT, OpenAI key, AWS AKIA, JWT, Slack, PEM) in pasted text |
 | `applyCustomFont(cfg)` | Inject `@font-face` style tag (`id="custom-font-face"`) and set `--font-mono` CSS var; `applyCustomFont(null)` removes it and falls back to Commit Mono |
@@ -270,7 +276,7 @@ make shell
 
 19. **Terminal iframe keyboard forwarding** — when the terminal iframe has focus, keydown fires on `iframe.contentWindow`, not the parent. A capture-phase listener on `iframe.contentWindow` forwards Meta / Ctrl+` / Escape combos to the parent via synthetic `KeyboardEvent`. Does not call `preventDefault`, so the terminal still receives keys normally.
 
-20. **Terminal themes persist in localStorage** — `applyTermTheme(name)` stores the chosen theme in `localStorage`. On reconnect, it reads back and reapplies. Six themes: Catppuccin Mocha (default), Frappé, Macchiato, Latte, Solarized Dark, One Dark.
+20. **Terminal themes: named + Base16** — `applyTermTheme(name)` stores a named string in `localStorage('termTheme')`; six built-in named themes: Catppuccin Mocha (default), Frappé, Macchiato, Latte, Solarized Dark, One Dark. `applyBase16Scheme(slug)` stores the full xterm.js theme dict in `localStorage('base16Theme')` and a string slug in `currentB16Scheme`. On reconnect, `setConnectionState('connected')` prefers `base16Theme` over `termTheme`. The two pickers are mutually exclusive: picking a named theme calls `clearBase16Theme()`; picking a Base16 scheme deselects named swatches.
 
 21. **Paste guard on multiline input** — pasting text with newlines shows a confirm dialog with line count before sending. Smart paste also detects secrets (PAT, OpenAI key, AWS AKIA, JWT, PEM, Slack token) and offers bracketed paste (concealed mode) via `looksLikeSecret()`.
 
@@ -285,3 +291,9 @@ make shell
 26. **iOS cross-frame `instanceof WebSocket` always fails — use `terminalInstance.input()`** — WebKit enforces strict realm separation: a WebSocket created inside an iframe has a different constructor than `window.WebSocket` in the parent frame. Duck-typing also fails because ttyd bundles its WebSocket in webpack module scope, never on `window`. The only reliable path to inject input from the parent frame is `terminalInstance.input(str, true)` (found via `findTerminal()`). This is the same path used by the iOS keyboard relay. Never go back to `findWebSockets()` for this purpose.
 
 27. **Rebuild button: poll immediately, POST is fire-and-forget** — `POST /api/rebuild` writes the trigger file and returns 200. Start `setInterval(pollRebuildLog, 2000)` immediately when the button is clicked — do not wait for the POST to resolve. Add an `AbortController` with an 8s timeout to the POST so a stale connection (common on iOS Safari) can't leave the button stuck on "Triggered…". When the poll's `catch` fires with `wasBuilding=true`, the container is restarting after `docker compose up -d` — show "Restarting…" and re-queue the poll after 4s rather than stopping it.
+
+28. **`_onThemeLoad` must resolve the active theme, not assume Catppuccin** — `_onThemeLoad` runs on every iframe `load` event. It applies the terminal theme to `options.theme` and injects the `glade-theme-bg` style tag (which prevents the xterm viewport from flashing the wrong background on first paint). It checks `currentB16Scheme` first and derives colors via `_b16term()`; falls back to `TERM_THEMES[currentTermTheme]`. Do not simplify this back to only checking `TERM_THEMES` — that was the exact bug that caused the stale background color on theme switch.
+
+29. **Deleting a project does not auto-delete the cloned directory** — `DELETE /api/projects/:id` only removes the DB record and kills ttyd by default. Pass `{delete_dir: true}` in the JSON body to also `shutil.rmtree` the `directory` field from the DB. The API resolves `os.path.realpath()` on both `PROJECTS_DIR` and the target path before deleting — it will refuse to delete anything outside `~/.glade/projects/`. If the directory is not removed, re-creating a GitHub project from the same repo will increment the clone path counter (`my-project-2`, `-3`, etc.).
+
+30. **Smart GitHub repo input: two modes** — In the new-project sheet, the repo input field has two behaviors. Typing plain text debounces a `/api/github/repos?q=` search and shows a dropdown. Typing `owner/repo` or a GitHub URL (contains `/` or `github.com`) hides the dropdown and skips the search; on blur it auto-fills the project name from the repo slug. Do not revert to auto-open-on-focus — it caused noise on every tap.

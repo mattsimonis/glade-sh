@@ -85,17 +85,17 @@ Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the 
 - **AI-ready** — run Claude Code, GitHub Copilot, or any agentic tool directly on your server; isolated inside Docker from your local machine and files; sessions keep running after you close the laptop
 - **Installable PWA** — Add to Home Screen on iOS or Android; full-screen, no browser chrome
 - **Custom mobile keyboard** — Esc, Tab, Ctrl, arrows, combos; long-press to repeat; drag to reorder
-- **Project isolation** — each project gets its own tmux session and ttyd instance; multiple shell tabs per project
+- **Project isolation** — each project gets its own tmux session and ttyd instance; multiple shell tabs per project; long-press or right-click a card to open, edit (name, directory, color), or delete
 - **Session logging** — every session recorded automatically via `tmux pipe-pane`; browse and search from History tab
 - **Command snippets** — saved commands that inject directly into the terminal with one tap
 - **Command palette** — keyboard-accessible actions: `^C`, `^Z`, `^A`, new shell, history, snippets, and more
-- **GitHub integration** — connect your GitHub account in Settings; create projects directly from any repo without manual cloning; auth persists across container restarts
+- **GitHub integration** — connect your GitHub account in Settings; create projects directly from any repo without manual cloning; type `owner/repo` or a GitHub URL to skip search entirely; auth persists across container restarts
 - **Auto-reconnect** — recovers from network drops and app backgrounding automatically; shows a clear overlay if the host can't be reached
 - **In-app rebuild** — queue a `git pull && docker compose build` from the UI; no SSH needed
 - **Commit Mono font (bundled)** — ships as the default; upload a custom font via Settings → Font for a personalized look
 - **Haptic feedback** — iOS 18+ light haptic on key presses and interactions via the WebKit `switch` input trick; falls back to `navigator.vibrate` on Android
 - **Direct tmux access** — sessions run inside the container and can be attached from any terminal with `docker exec -it glade-ttyd tmux attach -t <session>`; the PWA and a local terminal can share the same session simultaneously
-- **Catppuccin Mocha** — consistent theme across terminal, UI, and toolbar
+- **Theming** — Catppuccin Mocha/Frappé/Macchiato/Latte built in, plus 304 Base16 community schemes bundled locally; both app UI and terminal colors switch together; persists across sessions
 
 ---
 
