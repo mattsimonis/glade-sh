@@ -799,6 +799,21 @@ class Handler(BaseHTTPRequestHandler):
             conn.execute("UPDATE projects SET last_active=CURRENT_TIMESTAMP WHERE id=?", (pid,))
         sname = session_name(pid)
         session_was_new = not tmux_session_exists(sname)
+        if not session_was_new:
+            # Existing session — treat it as "new" for clear purposes if it's
+            # effectively empty (just a prompt, no prior output). This lets the
+            # front end send Ctrl+L to clean up the SIGWINCH artifact on reconnect
+            # without risking content loss on sessions that have real output.
+            try:
+                r = subprocess.run(
+                    ["tmux", "capture-pane", "-p", "-t", sname],
+                    capture_output=True, text=True, timeout=2
+                )
+                visible_lines = [l for l in r.stdout.splitlines() if l.strip()]
+                if len(visible_lines) <= 1:
+                    session_was_new = True
+            except Exception:
+                pass
         port = ensure_project_running(pid, directory, project_name=project_name)
         if port is None:
             return self.send_json(503, {"error": "no ports available"})
