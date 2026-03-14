@@ -147,3 +147,118 @@ test.describe('Terminal themes — persistence', () => {
     expect(applied).toBe(key);
   });
 });
+
+// ── Base16 theme picker ───────────────────────────────────────────────────────
+
+test.describe('Base16 themes — JS API', () => {
+  test('BASE16_SCHEMES is defined', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const ok = await page.evaluate(() => Array.isArray(BASE16_SCHEMES) && BASE16_SCHEMES.length > 0);
+    expect(ok).toBe(true);
+  });
+
+  test('BASE16_SCHEMES has 304 entries', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const count = await page.evaluate(() => BASE16_SCHEMES.length);
+    expect(count).toBe(304);
+  });
+
+  test('each scheme has slug, name, variant, and 16-entry palette', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const ok = await page.evaluate(() =>
+      BASE16_SCHEMES.every(s =>
+        typeof s.s === 'string' && s.s.length > 0 &&
+        typeof s.n === 'string' && s.n.length > 0 &&
+        (s.v === 'dark' || s.v === 'light') &&
+        Array.isArray(s.p) && s.p.length === 16
+      )
+    );
+    expect(ok).toBe(true);
+  });
+
+  test('applyBase16Scheme function is defined', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const ok = await page.evaluate(() => typeof applyBase16Scheme === 'function');
+    expect(ok).toBe(true);
+  });
+
+  test('clearBase16Theme function is defined', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const ok = await page.evaluate(() => typeof clearBase16Theme === 'function');
+    expect(ok).toBe(true);
+  });
+});
+
+test.describe('Base16 themes — settings DOM', () => {
+  test('#b16-list element exists', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    await expect(page.locator('#b16-list')).toBeAttached();
+  });
+});
+
+test.describe('Base16 themes — persistence and mutual exclusivity', () => {
+  test('applyBase16Scheme stores slug in localStorage.base16Theme', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const slug = await page.evaluate(() => BASE16_SCHEMES[0].s);
+    await page.evaluate((s) => applyBase16Scheme(s, false), slug);
+
+    const stored = await page.evaluate(() => localStorage.getItem('base16Theme'));
+    expect(stored).toBe(slug);
+  });
+
+  test('clearBase16Theme removes base16Theme from localStorage', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const slug = await page.evaluate(() => BASE16_SCHEMES[0].s);
+    await page.evaluate((s) => applyBase16Scheme(s, false), slug);
+    await page.evaluate(() => clearBase16Theme());
+
+    const stored = await page.evaluate(() => localStorage.getItem('base16Theme'));
+    expect(stored).toBeNull();
+  });
+
+  test('applyTermTheme with syncApp=true clears base16Theme from localStorage', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    // Set a Base16 theme first
+    const slug = await page.evaluate(() => BASE16_SCHEMES[0].s);
+    await page.evaluate((s) => applyBase16Scheme(s, false), slug);
+    expect(await page.evaluate(() => localStorage.getItem('base16Theme'))).toBe(slug);
+
+    // Switching to a named theme with syncApp=true should clear Base16
+    await page.evaluate(() => applyTermTheme('mocha', true));
+
+    const b16 = await page.evaluate(() => localStorage.getItem('base16Theme'));
+    expect(b16).toBeNull();
+  });
+
+  test('base16Theme in localStorage is restored on page reload', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const slug = await page.evaluate(() => BASE16_SCHEMES[0].s);
+    await page.evaluate((s) => applyBase16Scheme(s, false), slug);
+
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+
+    const stored = await page.evaluate(() => localStorage.getItem('base16Theme'));
+    expect(stored).toBe(slug);
+  });
+});

@@ -135,6 +135,72 @@ def test_delete_project_not_in_list_after_deletion(client):
     assert not any(x["id"] == pid for x in projects)
 
 
+def test_delete_project_without_delete_dir_keeps_directory(client, monkeypatch, tmp_path):
+    """Default delete (no delete_dir flag) must not remove the cloned directory."""
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    monkeypatch.setattr(api, "PROJECTS_DIR", str(projects_dir))
+
+    proj_dir = projects_dir / "my-repo"
+    proj_dir.mkdir()
+    (proj_dir / "README.md").write_text("hello")
+
+    _, p, _ = client.post("/api/projects", {"name": "KeepDir", "directory": str(proj_dir)})
+    client.delete(f"/api/projects/{p['id']}")
+
+    assert proj_dir.exists(), "directory should still exist after plain delete"
+
+
+def test_delete_project_with_delete_dir_removes_directory(client, monkeypatch, tmp_path):
+    """DELETE with {delete_dir: true} must remove the project directory."""
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    monkeypatch.setattr(api, "PROJECTS_DIR", str(projects_dir))
+
+    proj_dir = projects_dir / "my-repo"
+    proj_dir.mkdir()
+    (proj_dir / "README.md").write_text("hello")
+
+    _, p, _ = client.post("/api/projects", {"name": "RemoveDir", "directory": str(proj_dir)})
+    status, data, _ = client.delete(f"/api/projects/{p['id']}", {"delete_dir": True})
+
+    assert status == 200
+    assert data["ok"] is True
+    assert not proj_dir.exists(), "directory should be removed when delete_dir=true"
+
+
+def test_delete_project_with_delete_dir_outside_projects_dir_is_safe(client, monkeypatch, tmp_path):
+    """Safety check: delete_dir must not remove directories outside PROJECTS_DIR."""
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    monkeypatch.setattr(api, "PROJECTS_DIR", str(projects_dir))
+
+    # Directory is outside PROJECTS_DIR — should NOT be deleted
+    outside_dir = tmp_path / "sensitive"
+    outside_dir.mkdir()
+    (outside_dir / "secret.txt").write_text("do not delete")
+
+    _, p, _ = client.post("/api/projects", {"name": "Unsafe", "directory": str(outside_dir)})
+    client.delete(f"/api/projects/{p['id']}", {"delete_dir": True})
+
+    assert outside_dir.exists(), "directory outside PROJECTS_DIR must not be removed"
+
+
+def test_delete_project_with_delete_dir_false_keeps_directory(client, monkeypatch, tmp_path):
+    """Explicit delete_dir=false is the same as omitting it."""
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    monkeypatch.setattr(api, "PROJECTS_DIR", str(projects_dir))
+
+    proj_dir = projects_dir / "keep-me"
+    proj_dir.mkdir()
+
+    _, p, _ = client.post("/api/projects", {"name": "FalseFlag", "directory": str(proj_dir)})
+    client.delete(f"/api/projects/{p['id']}", {"delete_dir": False})
+
+    assert proj_dir.exists()
+
+
 # ── Start ─────────────────────────────────────────────────────────────────────
 
 

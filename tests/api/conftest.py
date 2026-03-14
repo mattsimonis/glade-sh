@@ -225,8 +225,10 @@ class _Client:
     def put(self, path, data=None):
         return self._request("PUT", path, {} if data is None else data)
 
-    def delete(self, path):
-        return self._request("DELETE", path)
+    def delete(self, path, data=None):
+        if data is None:
+            return self._request("DELETE", path)
+        return self._request("DELETE", path, data)
 
 
 # ── 7. Core per-test fixture ──────────────────────────────────────────────────
