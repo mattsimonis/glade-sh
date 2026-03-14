@@ -196,7 +196,7 @@ Docker Engine starts at boot by default after `get.docker.com` install.
 
 ## Accessing Outside Your Local Network
 
-Tailscale connects your devices over a mesh VPN so Glade is reachable from anywhere — home, office, phone on mobile data. Install it on the Glade host and every client device (laptop, phone), sign in with the same account, and they all appear on the same private network.
+Tailscale connects your devices over a mesh VPN so Glade is reachable from anywhere — home, office, phone on mobile data. Install it on the Glade host and every client device, sign in with the same account, and they all appear on the same private network.
 
 **Install Tailscale on the host:**
 
@@ -210,70 +210,12 @@ Tailscale connects your devices over a mesh VPN so Glade is reachable from anywh
 
 **Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) → enable MagicDNS.
 
-Verify on the host:
-```bash
-tailscale status
-```
+Once Tailscale is running, `glade.home` needs a DNS record so every device can find it. Pick the guide that matches your setup:
 
-Once Tailscale is running on the host, `glade.home` needs to resolve to the host's Tailscale IP from every device — on the LAN and remote. Two ways to set that up:
-
----
-
-### Option A: Pi-hole (Recommended)
-
-One DNS record, works automatically for every device. No per-device configuration.
-
-**1. Find your Glade host's Tailscale IP:**
-```bash
-tailscale ip -4
-```
-
-**2. Add a DNS record in Pi-hole:**
-
-Open Pi-hole admin → **Local DNS** → **DNS Records** → Add:
-- **Domain:** `glade.home`
-- **IP Address:** your host's Tailscale IP (`100.x.x.x`)
-
-Point it at the Tailscale IP, not the LAN IP. Tailscale routes locally when you're home and tunnels when you're away — same URL, same IP, no reconfiguration between networks.
-
-**3. Add Pi-hole as a Tailscale global nameserver:**
-
-In [Tailscale admin → DNS](https://login.tailscale.com/admin/dns) → **Nameservers** → add your Pi-hole's Tailscale IP as a **Global nameserver**.
-
-Find your Pi-hole's Tailscale IP (on the Pi-hole machine):
-```bash
-tailscale ip -4
-```
-
-This tells every Tailscale-connected device to resolve DNS via Pi-hole — so `glade.home` works whether you're on the LAN or anywhere else.
-
----
-
-### Option B: No Pi-hole — `/etc/hosts` on each device
-
-No extra infrastructure. Add one line to `/etc/hosts` on each device. Repeat whenever you add a new device.
-
-Find your Glade host's Tailscale IP:
-```bash
-tailscale ip -4
-```
-
-**macOS / Linux:**
-```bash
-sudo sh -c 'echo "100.x.x.x  glade.home" >> /etc/hosts'
-```
-
-**Windows** (run PowerShell as Administrator):
-```powershell
-Add-Content C:\Windows\System32\drivers\etc\hosts "100.x.x.x  glade.home"
-```
-
-**iOS / Android:** No `/etc/hosts` access. Options:
-- Use the host's Tailscale IP directly in the browser (`http://100.x.x.x:7682`) — no TLS, no PWA install
-- Set up Pi-hole (Option A) — cleanest path for phones
-- Use Tailscale's MagicDNS name directly: `http://[hostname]` where hostname is the device name shown in Tailscale admin
-
-Replace `100.x.x.x` with your actual Tailscale IP in all of the above.
+| Setup | Guide |
+|---|---|
+| You have Pi-hole | [docs/remote-access-pihole.md](docs/remote-access-pihole.md) — one record, works for all devices automatically; covers Tailscale on Pi-hole (recommended) and subnet routing |
+| No Pi-hole | [docs/remote-access-hosts-file.md](docs/remote-access-hosts-file.md) — add an entry to `/etc/hosts` on each device manually |
 
 ---
 

@@ -74,7 +74,7 @@ make setup   # builds image (~2 min) and starts containers
 Open `https://glade.home`. Tap **Share → Add to Home Screen** to install the PWA.
 
 > `glade.home` requires a Pi-hole A record pointing to your host's **Tailscale IP** — this makes the same URL work on your local network and remotely over Tailscale.  
-> See [SETUP.md](SETUP.md) for the full walkthrough.
+> See [SETUP.md](SETUP.md) for the full walkthrough, or jump straight to [Pi-hole DNS setup](docs/remote-access-pihole.md) / [no Pi-hole setup](docs/remote-access-hosts-file.md).
 
 ---
 
