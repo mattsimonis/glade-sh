@@ -252,11 +252,11 @@
       pointer-events:none; z-index:20; display:block;
     }
     #gd-phone-screen {
-      position:absolute; left:11px; top:11px; width:191px; height:419px;
+      position:absolute; left:9px; top:8px; width:197px; height:425px;
       background:var(--gd-base); border-radius:22px; overflow:hidden;
       display:flex; flex-direction:column;
     }
-    #gd-ph-island-pad { height:26px; background:var(--gd-base); flex-shrink:0; }
+    #gd-ph-island-pad { height:26px; background:var(--gd-mantle); flex-shrink:0; }
     #gd-ph-proj-tabbar {
       height:38px; background:var(--gd-mantle); flex-shrink:0;
       border-bottom:1px solid var(--gd-surface0);
@@ -281,13 +281,28 @@
     #gd-phone .gd-shell-x { font-size:10px; margin-left:2px; opacity:0.6; }
     #gd-phone .gd-shell-add { display:flex; align-items:center; justify-content:center; width:20px; height:20px; font-size:13px; }
     #gd-phone-body { flex:1; position:relative; overflow:hidden; min-height:0; }
+    #gd-ph-pathbar {
+      height:26px; background:var(--gd-mantle); flex-shrink:0;
+      border-top:1px solid var(--gd-surface0); border-bottom:1px solid var(--gd-surface0);
+      display:flex; align-items:center; padding:0 10px;
+    }
+    #gd-ph-sbpath {
+      font-size:9px; color:var(--gd-blue); font-family:var(--gd-mono);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
     #gd-ph-shortcut {
-      height:30px; background:var(--gd-mantle); flex-shrink:0;
-      border-top:1px solid var(--gd-surface0);
-      display:flex; align-items:center; gap:4px; padding:0 6px; overflow:hidden;
+      height:34px; background:var(--gd-mantle); flex-shrink:0;
+      display:flex; align-items:center; gap:3px; padding:0 6px; overflow-x:auto; overflow-y:hidden;
+      scrollbar-width:none;
+    }
+    #gd-ph-shortcut::-webkit-scrollbar { display:none; }
+    #gd-phone .gd-sb-back {
+      color:var(--gd-blue); background:transparent;
+      border:1px solid color-mix(in srgb,var(--gd-blue) 30%,transparent);
+      min-width:28px;
     }
     #gd-phone .gd-sb-btn {
-      display:flex; flex-shrink:0; height:20px; padding:0 8px;
+      display:flex; flex-shrink:0; height:24px; padding:0 8px;
       background:var(--gd-surface0); border-radius:5px;
       font-size:8.5px; font-weight:500; color:var(--gd-text);
       align-items:center; white-space:nowrap;
@@ -318,8 +333,14 @@
     }
     #gd-phone-body .gd-term { font-size:10px; padding:8px 10px; }
     .gd-term-spacer { flex:1; }
-    .gd-line { display:block; white-space:pre; overflow:hidden; text-overflow:ellipsis; }
-    .gd-line-cmd::before { content:'$ '; color:var(--gd-blue); }
+    #gd-phone-body .gd-term-spacer { display:none; }
+    .gd-line { display:block; white-space:pre-line; overflow:hidden; text-overflow:ellipsis; }
+    #gd-phone-body .gd-line { white-space:pre-wrap; overflow:visible; text-overflow:clip; overflow-wrap:break-word; }
+    .gd-line-cmd::before {
+      content: '› '; color: var(--gd-blue); font-size: 18px;
+      font-weight: 900; width: 16px; height: 15px;
+      display: inline-flex;
+    }
     .gd-line-out { color:var(--gd-subtext0); }
     .gd-line-out.ok { color:var(--gd-green); }
     .gd-cursor {
@@ -551,7 +572,7 @@
               <div class="gd-os-dot y"></div>
               <div class="gd-os-dot g"></div>
             </div>
-            <div id="gd-urlbar">app.glade.sh</div>
+            <div id="gd-urlbar">glade.local</div>
             <div style="width:50px"></div>
           </div>
           <div id="gd-proj-tabbar">
@@ -615,13 +636,26 @@
               </div>
               <div class="gd-term" id="gd-ph-term"></div>
             </div>
+            <div id="gd-ph-pathbar">
+              <div id="gd-ph-sbpath">~/glade-sh</div>
+            </div>
             <div id="gd-ph-shortcut">
-              <div class="gd-sb-btn gd-sb-path" id="gd-ph-sbpath">~/glade-sh</div>
+              <div class="gd-sb-btn gd-sb-back">ABC</div>
               <div class="gd-sb-sep"></div>
-              <div class="gd-sb-btn">cd ..</div>
-              <div class="gd-sb-btn">ls</div>
-              <div class="gd-sb-btn">git log</div>
-              <div class="gd-sb-btn">grep</div>
+              <div class="gd-sb-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><line x1="16" y1="5" x2="16" y2="11"/><line x1="19" y1="8" x2="13" y2="8"/></svg></div>
+              <div class="gd-sb-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m10 8 4 4-4 4"/></svg></div>
+              <div class="gd-sb-sep"></div>
+              <div class="gd-sb-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg></div>
+              <div class="gd-sb-btn">Ctrl</div>
+              <div class="gd-sb-btn">Alt</div>
+              <div class="gd-sb-btn">^C</div>
+              <div class="gd-sb-sep"></div>
+              <div class="gd-sb-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></div>
+              <div class="gd-sb-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></div>
+              <div class="gd-sb-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m19 12-7 7-7-7"/><path d="M12 5v14"/></svg></div>
+              <div class="gd-sb-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m12 5 7 7-7 7"/><path d="M5 12h14"/></svg></div>
+              <div class="gd-sb-sep"></div>
+              <div class="gd-sb-btn" style="min-width:28px;letter-spacing:1px">⎵</div>
             </div>
             <div id="gd-ph-nav">
               <div class="gd-nav-btn active">
@@ -741,7 +775,7 @@
     renderTerm(dtTerm, st.desktop);
     renderTerm(phTerm, st.phone);
     // Update shortcut bar path once shell is open
-    if (phSbPath) phSbPath.textContent = st.phone.phase === 'terminal' ? '~/glade-sh' : '~';
+    if (phSbPath) phSbPath.textContent = '~/glade-sh';
   }
 
   // Sort timeline by t so stateAt can iterate cleanly
