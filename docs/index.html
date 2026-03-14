@@ -156,40 +156,232 @@
     /* ── Demo ───────────────────────────────────────────── */
     .demo { padding: 0 1.5rem 5rem; }
     .demo-inner { max-width: 920px; margin: 0 auto; }
-    .terminal-window {
-      background: var(--base); border: 1px solid var(--surface0);
-      border-radius: 12px; overflow: hidden;
-      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55);
+
+    /* Outer wrapper handles responsive scaling */
+    #gd-outer { width: 100%; }
+    /* Inner fixed-size component, scaled by JS */
+    #gd-wrap {
+      width: 920px; height: 500px;
+      position: relative;
+      transform-origin: top left;
+      user-select: none; -webkit-user-select: none;
+      --gd-base:#1e1e2e; --gd-mantle:#181825; --gd-crust:#11111b;
+      --gd-surface0:#313244; --gd-surface1:#45475a;
+      --gd-overlay0:#6c7086; --gd-subtext0:#a6adc8; --gd-text:#cdd6f4;
+      --gd-blue:#89b4fa; --gd-green:#a6e3a1; --gd-mauve:#cba6f7;
+      font-family: 'Commit Mono','Consolas','Courier New',monospace;
     }
-    .terminal-bar {
-      background: var(--mantle); padding: 10px 14px;
-      display: flex; align-items: center; gap: 7px;
-      border-bottom: 1px solid var(--surface0);
+    /* Browser frame */
+    #gd-browser {
+      position:absolute; top:0; left:0; right:0; height:454px;
+      background:var(--gd-base); border:1px solid var(--gd-surface0);
+      border-radius:10px; overflow:hidden;
+      display:flex; flex-direction:column;
+      box-shadow:0 24px 72px rgba(0,0,0,0.5);
     }
-    .dots { display: flex; gap: 7px; position: absolute; }
-    .dot { width: 11px; height: 11px; border-radius: 50%; }
-    .dot-r { background: var(--red);    opacity: 0.75; }
-    .dot-y { background: var(--yellow); opacity: 0.75; }
-    .dot-g { background: var(--green);  opacity: 0.75; }
-    .bar-title { flex: 1; text-align: center; font-size: 0.72rem; color: var(--overlay0); }
-    .terminal-body {
-      aspect-ratio: 16 / 9; overflow: hidden;
-      background: var(--base);
-      display: flex; align-items: center; justify-content: center;
+    #gd-chrome {
+      height:34px; background:var(--gd-mantle); flex-shrink:0;
+      border-bottom:1px solid var(--gd-surface0);
+      display:flex; align-items:center; padding:0 12px; gap:10px;
     }
-    /*
-     * ┌─ ADD YOUR GIF ─────────────────────────────────────────────────────────┐
-     * │  1. Drop demo.gif into docs/                                            │
-     * │  2. Replace the .terminal-placeholder div below with:                  │
-     * │       <img src="demo.gif" alt="Glade demo"                             │
-     * │            style="width:100%;height:100%;object-fit:cover;display:block;"> │
-     * └────────────────────────────────────────────────────────────────────────┘
-     */
-    .terminal-placeholder {
-      text-align: center; color: var(--overlay0);
-      font-size: 0.8rem; line-height: 2.2;
+    .gd-traffic { display:flex; gap:6px; }
+    .gd-os-dot { width:11px; height:11px; border-radius:50%; }
+    .gd-os-dot.r{background:#ff5f57;} .gd-os-dot.y{background:#febc2e;} .gd-os-dot.g{background:#28c840;}
+    #gd-urlbar {
+      flex:1; height:19px; background:var(--gd-surface0); border-radius:4px;
+      font-size:11px; color:var(--gd-overlay0);
+      display:flex; align-items:center; justify-content:center;
     }
-    .terminal-placeholder .nest { font-size: 2.75rem; margin-bottom: 0.375rem; }
+    /* ── Project tabs bar (both surfaces) ── */
+    #gd-proj-tabbar {
+      height:38px; background:var(--gd-mantle); flex-shrink:0;
+      border-bottom:1px solid var(--gd-surface0);
+      display:flex; align-items:center; padding:0 8px; gap:2px; overflow:hidden;
+    }
+    .gd-proj-tab {
+      height:28px; padding:0 10px; border-radius:8px;
+      display:flex; align-items:center; gap:5px;
+      font-size:12px; color:var(--gd-overlay0); white-space:nowrap;
+    }
+    .gd-proj-tab.active { background:var(--gd-surface0); color:var(--gd-text); }
+    .gd-proj-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    /* ── Shell tabs bar (desktop) ── */
+    #gd-shell-tabbar {
+      height:32px; background:var(--gd-base); flex-shrink:0;
+      border-bottom:1px solid var(--gd-surface0);
+      display:flex; align-items:center; padding:0 8px; gap:3px;
+    }
+    .gd-shell-tab {
+      height:24px; padding:0 9px; border-radius:6px;
+      display:flex; align-items:center; gap:5px;
+      font-size:11px; color:var(--gd-overlay0);
+    }
+    .gd-shell-tab.active { background:var(--gd-surface0); color:var(--gd-text); }
+    .gd-shell-x { font-size:10px; color:var(--gd-overlay0); opacity:0.6; margin-left:2px; line-height:1; }
+    .gd-shell-add {
+      width:20px; height:20px; border-radius:4px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; color:var(--gd-overlay0); line-height:1;
+    }
+    /* ── Terminal body ── */
+    #gd-dt-body { flex:1; position:relative; overflow:hidden; }
+    /* ── Status indicator ── */
+    #gd-status {
+      position:absolute; top:9px; right:12px;
+      display:flex; align-items:center; gap:5px;
+      font-size:10px; color:var(--gd-overlay0); z-index:2; pointer-events:none;
+    }
+    .gd-status-dot {
+      width:7px; height:7px; border-radius:50%; background:var(--gd-green);
+      box-shadow:0 0 6px color-mix(in srgb,var(--gd-green) 50%,transparent);
+    }
+    /* ── Path bar (desktop) ── */
+    #gd-pathbar {
+      height:25px; background:var(--gd-mantle); flex-shrink:0;
+      border-top:1px solid var(--gd-surface0);
+      display:flex; align-items:center; padding:0 14px;
+      font-size:11px; color:var(--gd-blue);
+    }
+    /* ── Phone (SVG frame overlay) ── */
+    #gd-phone {
+      position:absolute; right:14px; top:7px;
+      width:214px; height:441px; z-index:10;
+    }
+    #gd-ph-frame {
+      position:absolute; inset:0; width:100%; height:100%;
+      pointer-events:none; z-index:20; display:block;
+    }
+    #gd-phone-screen {
+      position:absolute; left:11px; top:11px; width:191px; height:419px;
+      background:var(--gd-base); border-radius:22px; overflow:hidden;
+      display:flex; flex-direction:column;
+    }
+    #gd-ph-island-pad { height:26px; background:var(--gd-base); flex-shrink:0; }
+    #gd-ph-proj-tabbar {
+      height:38px; background:var(--gd-mantle); flex-shrink:0;
+      border-bottom:1px solid var(--gd-surface0);
+      display:flex; align-items:center; padding:0 8px; gap:2px; overflow:hidden;
+    }
+    #gd-phone .gd-proj-tab {
+      display:flex; height:24px; padding:0 8px; border-radius:8px;
+      align-items:center; gap:5px; font-size:10px; color:var(--gd-overlay0); white-space:nowrap;
+    }
+    #gd-phone .gd-proj-tab.active { background:var(--gd-surface0); color:var(--gd-text); }
+    #gd-phone .gd-proj-dot { width:7px; height:7px; }
+    #gd-ph-shell-tabbar {
+      height:32px; background:var(--gd-base); flex-shrink:0;
+      border-bottom:1px solid var(--gd-surface0);
+      display:flex; align-items:center; padding:0 8px; gap:3px;
+    }
+    #gd-phone .gd-shell-tab {
+      display:flex; height:20px; padding:0 9px; border-radius:6px;
+      align-items:center; gap:6px; font-size:9.5px; color:var(--gd-overlay0);
+    }
+    #gd-phone .gd-shell-tab.active { background:var(--gd-surface0); color:var(--gd-text); }
+    #gd-phone .gd-shell-x { font-size:10px; margin-left:2px; opacity:0.6; }
+    #gd-phone .gd-shell-add { display:flex; align-items:center; justify-content:center; width:20px; height:20px; font-size:13px; }
+    #gd-phone-body { flex:1; position:relative; overflow:hidden; min-height:0; }
+    #gd-ph-shortcut {
+      height:30px; background:var(--gd-mantle); flex-shrink:0;
+      border-top:1px solid var(--gd-surface0);
+      display:flex; align-items:center; gap:4px; padding:0 6px; overflow:hidden;
+    }
+    #gd-phone .gd-sb-btn {
+      display:flex; flex-shrink:0; height:20px; padding:0 8px;
+      background:var(--gd-surface0); border-radius:5px;
+      font-size:8.5px; font-weight:500; color:var(--gd-text);
+      align-items:center; white-space:nowrap;
+    }
+    #gd-phone .gd-sb-path {
+      color:var(--gd-blue);
+      border:1px solid color-mix(in srgb,var(--gd-blue) 22%,transparent);
+      background:color-mix(in srgb,var(--gd-blue) 8%,transparent);
+    }
+    #gd-phone .gd-sb-sep { width:1px; height:12px; background:var(--gd-surface0); flex-shrink:0; }
+    #gd-ph-nav {
+      height:42px; background:var(--gd-mantle); flex-shrink:0;
+      border-top:1px solid var(--gd-surface0);
+      display:flex; align-items:center;
+    }
+    #gd-phone .gd-nav-btn {
+      display:flex; flex:1; align-items:center; justify-content:center;
+      height:36px; color:var(--gd-surface1);
+    }
+    #gd-phone .gd-nav-btn.active { color:var(--gd-blue); }
+    #gd-phone .gd-nav-div { width:1px; height:14px; background:var(--gd-surface0); flex-shrink:0; }
+    #gd-phone .gd-nav-btn svg { width:16px; height:16px; }
+    /* Terminal */
+    .gd-term {
+      position:absolute; inset:0; padding:12px 16px;
+      font-size:12px; line-height:1.65; color:var(--gd-text);
+      overflow:hidden; display:flex; flex-direction:column;
+    }
+    #gd-phone-body .gd-term { font-size:10px; padding:8px 10px; }
+    .gd-term-spacer { flex:1; }
+    .gd-line { display:block; white-space:pre; overflow:hidden; text-overflow:ellipsis; }
+    .gd-line-cmd::before { content:'$ '; color:var(--gd-blue); }
+    .gd-line-out { color:var(--gd-subtext0); }
+    .gd-line-out.ok { color:var(--gd-green); }
+    .gd-cursor {
+      display:inline-block; width:7px; height:1.1em;
+      background:var(--gd-blue); vertical-align:text-bottom; margin-left:1px;
+      animation:gd-blink 1s step-end infinite;
+    }
+    @keyframes gd-blink { 50%{opacity:0} }
+    /* Clone overlay */
+    .gd-clone-overlay {
+      position:absolute; inset:0; background:var(--gd-base);
+      display:flex; align-items:center; justify-content:center;
+      z-index:5; transition:opacity 0.35s ease;
+    }
+    .gd-clone-overlay.hidden { opacity:0; pointer-events:none; }
+    .gd-clone-card {
+      background:var(--gd-mantle); border:1px solid var(--gd-surface0);
+      border-radius:12px; padding:16px; width:230px;
+    }
+    #gd-phone-body .gd-clone-card { width:150px; padding:11px; border-radius:9px; }
+    .gd-clone-heading {
+      font-size:10px; font-weight:700; color:var(--gd-overlay0);
+      text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;
+    }
+    .gd-clone-row { margin-bottom:8px; }
+    .gd-clone-lbl { font-size:9px; color:var(--gd-overlay0); text-transform:uppercase; letter-spacing:0.07em; }
+    .gd-clone-val { font-size:11px; color:var(--gd-text); margin-top:1px; }
+    #gd-phone-body .gd-clone-val { font-size:9px; }
+    .gd-clone-btn {
+      width:100%; padding:7px; margin-top:10px; border-radius:6px;
+      text-align:center; font-size:11px; font-weight:600;
+      background:var(--gd-blue); color:var(--gd-base);
+      font-family:inherit;
+    }
+    #gd-phone-body .gd-clone-btn { font-size:9px; padding:6px; margin-top:8px; }
+    .gd-clone-btn.cloning { background:var(--gd-surface0); color:var(--gd-subtext0); }
+    .gd-clone-btn.done    { background:var(--gd-green);   color:var(--gd-base); }
+    /* Controls */
+    #gd-controls {
+      position:absolute; bottom:0; left:0; right:0; height:36px;
+      display:flex; align-items:center; gap:10px; padding:0 2px;
+    }
+    #gd-scrubber {
+      flex:1; height:4px; background:var(--gd-surface0);
+      border-radius:2px; position:relative; cursor:pointer;
+    }
+    #gd-scrubber:hover #gd-scrubber-thumb { transform:translate(-50%,-50%) scale(1); }
+    #gd-scrubber-fill { height:100%; background:var(--gd-blue); border-radius:2px; pointer-events:none; }
+    #gd-scrubber-thumb {
+      position:absolute; top:50%; transform:translate(-50%,-50%) scale(0);
+      width:12px; height:12px; background:var(--gd-blue); border-radius:50%;
+      pointer-events:none; transition:transform 0.15s;
+      box-shadow:0 0 0 3px color-mix(in srgb,var(--gd-blue) 25%,transparent);
+    }
+    #gd-replay {
+      background:none; border:1px solid var(--gd-surface0);
+      color:var(--gd-subtext0); border-radius:6px;
+      width:28px; height:28px; cursor:pointer; font-size:14px;
+      display:flex; align-items:center; justify-content:center;
+      transition:background 0.1s, color 0.1s; flex-shrink:0;
+    }
+    #gd-replay:hover { background:var(--gd-surface0); color:var(--gd-text); }
 
     /* ── Sections ───────────────────────────────────────── */
     section { padding: 5rem 1.5rem; }
@@ -348,30 +540,264 @@
 <!-- ── Demo ── -->
 <div class="demo">
   <div class="demo-inner">
-    <div class="terminal-window">
-      <div class="terminal-bar">
-        <span class="dots">
-          <span class="dot dot-r"></span>
-          <span class="dot dot-y"></span>
-          <span class="dot dot-g"></span>
-        </span>
-        <span class="bar-title">glade.local</span>
-      </div>
-      <div class="terminal-body">
-        <!--
-          ADD YOUR GIF:
-          1. Drop demo.gif into docs/
-          2. Replace the div below with:
-             <img src="demo.gif" alt="Glade demo" style="width:100%;height:100%;object-fit:cover;display:block;">
-        -->
-        <div class="terminal-placeholder">
-          <div class="nest">🪺</div>
-          demo coming soon
+    <div id="gd-outer">
+      <div id="gd-wrap">
+
+        <!-- Browser window -->
+        <div id="gd-browser">
+          <div id="gd-chrome">
+            <div class="gd-traffic">
+              <div class="gd-os-dot r"></div>
+              <div class="gd-os-dot y"></div>
+              <div class="gd-os-dot g"></div>
+            </div>
+            <div id="gd-urlbar">app.glade.sh</div>
+            <div style="width:50px"></div>
+          </div>
+          <div id="gd-proj-tabbar">
+            <div class="gd-proj-tab active"><div class="gd-proj-dot" style="background:var(--gd-blue)"></div>glade-sh</div>
+            <div class="gd-proj-tab"><div class="gd-proj-dot" style="background:#a6e3a1"></div>dotfiles</div>
+          </div>
+          <div id="gd-shell-tabbar">
+            <div class="gd-shell-tab active">bash<span class="gd-shell-x">✕</span></div>
+            <div class="gd-shell-tab">bash<span class="gd-shell-x">✕</span></div>
+            <div class="gd-shell-add">+</div>
+          </div>
+          <div id="gd-dt-body">
+            <div id="gd-status"><div class="gd-status-dot"></div>Connected</div>
+            <div class="gd-clone-overlay" id="gd-dt-clone">
+              <div class="gd-clone-card">
+                <div class="gd-clone-heading">New Project</div>
+                <div class="gd-clone-row">
+                  <div class="gd-clone-lbl">Name</div>
+                  <div class="gd-clone-val">glade-sh</div>
+                </div>
+                <div class="gd-clone-row">
+                  <div class="gd-clone-lbl">Repository</div>
+                  <div class="gd-clone-val">mattsimonis/glade-sh</div>
+                </div>
+                <div class="gd-clone-btn" id="gd-dt-btn">Clone Repository</div>
+              </div>
+            </div>
+            <div class="gd-term" id="gd-dt-term"></div>
+          </div>
+          <div id="gd-pathbar">~/glade-sh</div>
         </div>
-      </div>
-    </div>
+
+        <!-- iPhone — SVG frame overlay -->
+        <div id="gd-phone">
+          <img id="gd-ph-frame" src="phone-frame.svg" alt="">
+          <div id="gd-phone-screen">
+            <div id="gd-ph-island-pad"></div>
+            <div id="gd-ph-proj-tabbar">
+              <div class="gd-proj-tab active"><div class="gd-proj-dot" style="background:var(--gd-blue)"></div>glade-sh</div>
+              <div class="gd-proj-tab"><div class="gd-proj-dot" style="background:#a6e3a1"></div>dotfiles</div>
+            </div>
+            <div id="gd-ph-shell-tabbar">
+              <div class="gd-shell-tab active">bash<span class="gd-shell-x">✕</span></div>
+              <div class="gd-shell-tab">bash<span class="gd-shell-x">✕</span></div>
+              <div class="gd-shell-add">+</div>
+            </div>
+            <div id="gd-phone-body">
+              <div class="gd-clone-overlay" id="gd-ph-clone">
+                <div class="gd-clone-card">
+                  <div class="gd-clone-heading">New Project</div>
+                  <div class="gd-clone-row">
+                    <div class="gd-clone-lbl">Name</div>
+                    <div class="gd-clone-val">glade-sh</div>
+                  </div>
+                  <div class="gd-clone-row">
+                    <div class="gd-clone-lbl">Repository</div>
+                    <div class="gd-clone-val">mattsimonis/glade-sh</div>
+                  </div>
+                  <div class="gd-clone-btn" id="gd-ph-btn">Clone Repository</div>
+                </div>
+              </div>
+              <div class="gd-term" id="gd-ph-term"></div>
+            </div>
+            <div id="gd-ph-shortcut">
+              <div class="gd-sb-btn gd-sb-path" id="gd-ph-sbpath">~/glade-sh</div>
+              <div class="gd-sb-sep"></div>
+              <div class="gd-sb-btn">cd ..</div>
+              <div class="gd-sb-btn">ls</div>
+              <div class="gd-sb-btn">git log</div>
+              <div class="gd-sb-btn">grep</div>
+            </div>
+            <div id="gd-ph-nav">
+              <div class="gd-nav-btn active">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></svg>
+              </div>
+              <div class="gd-nav-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></svg>
+              </div>
+              <div class="gd-nav-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+              </div>
+              <div class="gd-nav-div"></div>
+              <div class="gd-nav-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <div class="gd-nav-div"></div>
+              <div class="gd-nav-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div id="gd-controls">
+          <div id="gd-scrubber">
+            <div id="gd-scrubber-fill"></div>
+            <div id="gd-scrubber-thumb"></div>
+          </div>
+          <button id="gd-replay" title="Replay">↺</button>
+        </div>
+
+      </div><!-- #gd-wrap -->
+    </div><!-- #gd-outer -->
   </div>
 </div>
+
+<script>
+(function () {
+  var DURATION = 12000;
+  var CHAR_MS  = 68;
+
+  var TIMELINE = [
+    // Clone phase — both screens
+    {t:200,  tgt:'both',    type:'clone-start'},
+    {t:1600, tgt:'both',    type:'clone-progress'},
+    {t:3100, tgt:'both',    type:'clone-done'},
+    {t:3800, tgt:'both',    type:'shell-open'},
+    // Same tmux session — both screens update together
+    {t:4300, tgt:'both', type:'type',   text:'pwd'},
+    {t:5000, tgt:'both', type:'output', lines:['/home/matt/glade-sh']},
+    {t:5400, tgt:'both', type:'type',   text:'ls'},
+    {t:6200, tgt:'both', type:'output', lines:['README.md  api/  tests/  web/']},
+    {t:6600, tgt:'both', type:'type',   text:'git status'},
+    {t:7700, tgt:'both', type:'output', lines:['On branch main', "nothing to commit, working tree clean"]},
+  ];
+
+  function stateAt(elapsed) {
+    var ds = {phase:'idle', clone:'idle', lines:[], pending:null};
+    var ps = {phase:'idle', clone:'idle', lines:[], pending:null};
+    for (var i = 0; i < TIMELINE.length; i++) {
+      var ev = TIMELINE[i];
+      if (ev.t > elapsed) break;
+      var targets = ev.tgt === 'both' ? [ds,ps] : ev.tgt === 'desktop' ? [ds] : [ps];
+      var dt = elapsed - ev.t;
+      for (var j = 0; j < targets.length; j++) {
+        var s = targets[j];
+        if (ev.type === 'clone-start')    { s.phase='clone'; s.clone='start'; }
+        else if (ev.type === 'clone-progress') { s.clone='progress'; }
+        else if (ev.type === 'clone-done')     { s.clone='done'; }
+        else if (ev.type === 'shell-open')     { s.phase='terminal'; }
+        else if (ev.type === 'type') {
+          var n = Math.min(ev.text.length, Math.floor(dt / CHAR_MS) + 1);
+          s.pending = {text: ev.text.slice(0,n), full: ev.text, done: n >= ev.text.length};
+        } else if (ev.type === 'output') {
+          if (s.pending) { s.lines.push({k:'cmd', v: s.pending.full}); s.pending = null; }
+          for (var k = 0; k < ev.lines.length; k++) s.lines.push({k:'out', v: ev.lines[k]});
+        }
+      }
+    }
+    return {desktop:ds, phone:ps};
+  }
+
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderClone(overlay, btn, s) {
+    if (s.phase !== 'clone') { overlay.classList.add('hidden'); return; }
+    overlay.classList.remove('hidden');
+    if (s.clone === 'start')    { btn.textContent = 'Clone Repository'; btn.className = 'gd-clone-btn'; }
+    else if (s.clone === 'progress') { btn.textContent = 'Cloning\u2026';      btn.className = 'gd-clone-btn cloning'; }
+    else if (s.clone === 'done')     { btn.textContent = '\u2713 Cloned';       btn.className = 'gd-clone-btn done'; }
+  }
+
+  function renderTerm(el, s) {
+    if (s.phase !== 'terminal') { el.innerHTML = ''; return; }
+    var html = '<div class="gd-term-spacer"></div>';
+    for (var i = 0; i < s.lines.length; i++) {
+      var l = s.lines[i];
+      if (l.k === 'cmd') html += '<div class="gd-line gd-line-cmd">' + esc(l.v) + '</div>';
+      else {
+        var cls = l.v.indexOf('clean') >= 0 ? ' ok' : '';
+        html += '<div class="gd-line gd-line-out' + cls + '">' + esc(l.v) + '</div>';
+      }
+    }
+    if (s.pending) html += '<div class="gd-line gd-line-cmd">' + esc(s.pending.text) + '<span class="gd-cursor"></span></div>';
+    else           html += '<div class="gd-line gd-line-cmd"><span class="gd-cursor"></span></div>';
+    el.innerHTML = html;
+  }
+
+  function render(t) {
+    var frac = Math.min(1, t / DURATION);
+    fill.style.width  = (frac * 100) + '%';
+    thumb.style.left  = (frac * 100) + '%';
+    var st = stateAt(t);
+    renderClone(dtClone, dtBtn, st.desktop);
+    renderClone(phClone, phBtn, st.phone);
+    renderTerm(dtTerm, st.desktop);
+    renderTerm(phTerm, st.phone);
+    // Update shortcut bar path once shell is open
+    if (phSbPath) phSbPath.textContent = st.phone.phase === 'terminal' ? '~/glade-sh' : '~';
+  }
+
+  // Sort timeline by t so stateAt can iterate cleanly
+  TIMELINE.sort(function(a,b){ return a.t - b.t; });
+
+  var dtClone  = document.getElementById('gd-dt-clone');
+  var dtBtn    = document.getElementById('gd-dt-btn');
+  var dtTerm   = document.getElementById('gd-dt-term');
+  var phClone  = document.getElementById('gd-ph-clone');
+  var phBtn    = document.getElementById('gd-ph-btn');
+  var phTerm   = document.getElementById('gd-ph-term');
+  var phSbPath = document.getElementById('gd-ph-sbpath');
+  var scrubber = document.getElementById('gd-scrubber');
+  var fill    = document.getElementById('gd-scrubber-fill');
+  var thumb   = document.getElementById('gd-scrubber-thumb');
+  var replay  = document.getElementById('gd-replay');
+  var outer   = document.getElementById('gd-outer');
+  var wrap    = document.getElementById('gd-wrap');
+
+  var raf=null, startTs=null, elapsed=0, scrubbing=false;
+
+  function tick(ts) {
+    if (!startTs) startTs = ts;
+    elapsed = Math.min(DURATION, ts - startTs);
+    render(elapsed);
+    if (elapsed < DURATION) raf = requestAnimationFrame(tick);
+  }
+
+  function play(from) {
+    if (raf) cancelAnimationFrame(raf);
+    elapsed = from || 0;
+    startTs = null;
+    raf = requestAnimationFrame(function(ts){ startTs = ts - elapsed; raf = requestAnimationFrame(tick); });
+  }
+
+  function seek(frac) {
+    if (raf) cancelAnimationFrame(raf);
+    elapsed = frac * DURATION;
+    render(elapsed);
+  }
+
+  scrubber.addEventListener('mousedown', function(e) { scrubbing=true; seek(Math.max(0,Math.min(1,(e.clientX-scrubber.getBoundingClientRect().left)/scrubber.offsetWidth))); });
+  document.addEventListener('mousemove', function(e) { if(!scrubbing) return; seek(Math.max(0,Math.min(1,(e.clientX-scrubber.getBoundingClientRect().left)/scrubber.offsetWidth))); });
+  document.addEventListener('mouseup',   function()  { if(!scrubbing) return; scrubbing=false; play(elapsed); });
+  replay.addEventListener('click', function() { play(0); });
+
+  function scale() {
+    var s = Math.min(1, outer.clientWidth / 920);
+    wrap.style.transform = 'scale(' + s + ')';
+    outer.style.height = Math.round(500 * s) + 'px';
+  }
+  window.addEventListener('resize', scale);
+  scale();
+  play(0);
+})();
+</script>
 
 <!-- ── Features ── -->
 <section id="features">

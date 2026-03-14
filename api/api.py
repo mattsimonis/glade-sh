@@ -134,9 +134,12 @@ def _get_term_theme():
         with open_db() as conn:
             row = conn.execute("SELECT value FROM settings WHERE key='term_theme'").fetchone()
         if row:
-            name = json.loads(row["value"])
-            if isinstance(name, str) and name in TTYD_THEMES:
-                return TTYD_THEMES[name]
+            val = json.loads(row["value"])
+            if isinstance(val, str) and val in TTYD_THEMES:
+                return TTYD_THEMES[val]
+            elif isinstance(val, dict):
+                # Full theme object saved directly (e.g. from a Base16 scheme)
+                return json.dumps(val, separators=(',', ':'))
     except Exception:
         pass
     return TTYD_THEMES["mocha"]
