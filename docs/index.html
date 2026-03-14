@@ -166,14 +166,14 @@
       transform-origin: top left;
       user-select: none; -webkit-user-select: none;
       --gd-base:#1e1e2e; --gd-mantle:#181825; --gd-crust:#11111b;
-      --gd-surface0:#313244; --gd-surface1:#45475a;
+      --gd-surface0:#313244; --gd-surface1:#45475a; --gd-surface2:#585b70;
       --gd-overlay0:#6c7086; --gd-subtext0:#a6adc8; --gd-text:#cdd6f4;
       --gd-blue:#89b4fa; --gd-green:#a6e3a1; --gd-mauve:#cba6f7;
       font-family: 'Commit Mono','Consolas','Courier New',monospace;
     }
     /* Browser frame */
     #gd-browser {
-      position:absolute; top:0; left:0; right:0; height:454px;
+      position:absolute; top:0; left:0; width:690px; height:454px;
       background:var(--gd-base); border:1px solid var(--gd-surface0);
       border-radius:10px; overflow:hidden;
       display:flex; flex-direction:column;
@@ -244,7 +244,7 @@
     }
     /* ── Phone (SVG frame overlay) ── */
     #gd-phone {
-      position:absolute; right:14px; top:7px;
+      position:absolute; right:0; top:6px;
       width:214px; height:441px; z-index:10;
     }
     #gd-ph-frame {
@@ -335,21 +335,47 @@
     .gd-term-spacer { flex:1; }
     #gd-phone-body .gd-term-spacer { display:none; }
     .gd-line { display:block; white-space:pre-line; overflow:hidden; text-overflow:ellipsis; }
-    #gd-phone-body .gd-line { white-space:pre-wrap; overflow:visible; text-overflow:clip; overflow-wrap:break-word; }
+    #gd-phone-body .gd-line { line-height: 14px; white-space:pre-wrap; overflow:visible; text-overflow:clip; overflow-wrap:break-word; }
     .gd-line-cmd::before {
       content: '› '; color: var(--gd-blue); font-size: 18px;
       font-weight: 900; width: 16px; height: 15px;
-      display: inline-flex;
+      display: inline-flex; transform: translateY(2px);
     }
     .gd-line-out { color:var(--gd-subtext0); }
-    .gd-line-out.ok { color:var(--gd-green); }
+    .gd-line-out.ok  { color:var(--gd-green); }
+    .gd-line-out.sel { color:var(--gd-blue); }
     .gd-cursor {
       display:inline-block; width:7px; height:1.1em;
-      background:var(--gd-blue); vertical-align:text-bottom; margin-left:1px;
-      animation:gd-blink 1s step-end infinite;
+      background:var(--gd-blue); vertical-align:text-bottom;
+      margin-left:1px; animation:gd-blink 1s step-end infinite;
+      flex-shrink: 0; align-self: flex-start;
     }
     @keyframes gd-blink { 50%{opacity:0} }
-    /* Clone overlay */
+    /* ── Copilot UI ── */
+    .gd-copilot { display:flex; flex-direction:column; gap:3px; margin-top:2px; }
+    .gd-cp-box {
+      border:1px solid #f5c2e7; border-radius:4px;
+      padding:8px 10px 10px;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+    }
+    .gd-cp-logomark { display:flex; flex-direction:column; align-items:center; margin-bottom:4px; line-height:1.2; }
+    .gd-cp-sq-row { color:#89dceb; }
+    .gd-cp-bar-row { white-space:pre; }
+    .gd-cp-name { color:#f5c2e7; font-weight:700; }
+    .gd-cp-tagline { color:var(--gd-subtext0); text-align: center; line-height: 12px; }
+    .gd-cp-env { display:flex; align-items:center; gap:5px; color:var(--gd-subtext0); }
+    .gd-cp-dot { width:6px; height:6px; border-radius:50%; background:var(--gd-blue); flex-shrink:0; }
+    .gd-cp-meta { display:flex; justify-content:space-between; color:var(--gd-overlay0); }
+    .gd-cp-rule { height:1px; background: var(--gd-surface1); margin:1px 0; }
+    .gd-cp-input { display:flex; align-items:center; gap:4px; }
+    .gd-cp-arrow {
+      color:var(--gd-blue); font-size: 18px; align-self: flex-start;
+      font-weight: 900; width: 16px; height: 15px;
+      display: inline-flex; transform: translateY(-9px);
+    }
+    .gd-cp-hint { color:var(--gd-surface2); line-height: 10px; }
+    .gd-cp-footer { color:var(--gd-overlay0); }
+    .gd-cp-footer strong { color:var(--gd-text); font-weight:600; }
     .gd-clone-overlay {
       position:absolute; inset:0; background:var(--gd-base);
       display:flex; align-items:center; justify-content:center;
@@ -380,7 +406,7 @@
     .gd-clone-btn.done    { background:var(--gd-green);   color:var(--gd-base); }
     /* Controls */
     #gd-controls {
-      position:absolute; bottom:0; left:0; right:0; height:36px;
+      position:absolute; bottom:0; left:0; width:100%; height:36px;
       display:flex; align-items:center; gap:10px; padding:0 2px;
     }
     #gd-scrubber {
@@ -395,14 +421,14 @@
       pointer-events:none; transition:transform 0.15s;
       box-shadow:0 0 0 3px color-mix(in srgb,var(--gd-blue) 25%,transparent);
     }
-    #gd-replay {
+    #gd-playpause, #gd-replay {
       background:none; border:1px solid var(--gd-surface0);
       color:var(--gd-subtext0); border-radius:6px;
       width:28px; height:28px; cursor:pointer; font-size:14px;
       display:flex; align-items:center; justify-content:center;
       transition:background 0.1s, color 0.1s; flex-shrink:0;
     }
-    #gd-replay:hover { background:var(--gd-surface0); color:var(--gd-text); }
+    #gd-playpause:hover, #gd-replay:hover { background:var(--gd-surface0); color:var(--gd-text); }
 
     /* ── Sections ───────────────────────────────────────── */
     section { padding: 5rem 1.5rem; }
@@ -585,7 +611,6 @@
             <div class="gd-shell-add">+</div>
           </div>
           <div id="gd-dt-body">
-            <div id="gd-status"><div class="gd-status-dot"></div>Connected</div>
             <div class="gd-clone-overlay" id="gd-dt-clone">
               <div class="gd-clone-card">
                 <div class="gd-clone-heading">New Project</div>
@@ -615,8 +640,8 @@
               <div class="gd-proj-tab"><div class="gd-proj-dot" style="background:#a6e3a1"></div>dotfiles</div>
             </div>
             <div id="gd-ph-shell-tabbar">
-              <div class="gd-shell-tab active">bash<span class="gd-shell-x">✕</span></div>
-              <div class="gd-shell-tab">bash<span class="gd-shell-x">✕</span></div>
+              <div class="gd-shell-tab active">zsh<span class="gd-shell-x">✕</span></div>
+              <div class="gd-shell-tab">zsh<span class="gd-shell-x">✕</span></div>
               <div class="gd-shell-add">+</div>
             </div>
             <div id="gd-phone-body">
@@ -685,6 +710,7 @@
             <div id="gd-scrubber-fill"></div>
             <div id="gd-scrubber-thumb"></div>
           </div>
+          <button id="gd-playpause" title="Play / Pause">⏸</button>
           <button id="gd-replay" title="Replay">↺</button>
         </div>
 
@@ -695,8 +721,8 @@
 
 <script>
 (function () {
-  var DURATION = 12000;
-  var CHAR_MS  = 68;
+  var DURATION = 14000;
+  var CHAR_MS  = 110;
 
   var TIMELINE = [
     // Clone phase — both screens
@@ -706,11 +732,13 @@
     {t:3800, tgt:'both',    type:'shell-open'},
     // Same tmux session — both screens update together
     {t:4300, tgt:'both', type:'type',   text:'pwd'},
-    {t:5000, tgt:'both', type:'output', lines:['/home/matt/glade-sh']},
-    {t:5400, tgt:'both', type:'type',   text:'ls'},
-    {t:6200, tgt:'both', type:'output', lines:['README.md  api/  tests/  web/']},
-    {t:6600, tgt:'both', type:'type',   text:'git status'},
-    {t:7700, tgt:'both', type:'output', lines:['On branch main', "nothing to commit, working tree clean"]},
+    {t:5300, tgt:'both', type:'output', lines:['/home/matt/glade-sh']},
+    {t:6000, tgt:'both', type:'type',   text:'ls'},
+    {t:6900, tgt:'both', type:'output', lines:['README.md  api/  tests/  web/']},
+    {t:7600, tgt:'both', type:'type',   text:'git status'},
+    {t:9200, tgt:'both', type:'output', lines:['On branch main', "nothing to commit, working tree clean"]},
+    {t:9900, tgt:'both', type:'type',   text:'gh copilot'},
+    {t:11500, tgt:'both', type:'copilot-open'},
   ];
 
   function stateAt(elapsed) {
@@ -733,6 +761,9 @@
         } else if (ev.type === 'output') {
           if (s.pending) { s.lines.push({k:'cmd', v: s.pending.full}); s.pending = null; }
           for (var k = 0; k < ev.lines.length; k++) s.lines.push({k:'out', v: ev.lines[k]});
+        } else if (ev.type === 'copilot-open') {
+          if (s.pending) { s.lines.push({k:'cmd', v: s.pending.full}); s.pending = null; }
+          s.copilotOpen = true;
         }
       }
     }
@@ -751,12 +782,33 @@
 
   function renderTerm(el, s) {
     if (s.phase !== 'terminal') { el.innerHTML = ''; return; }
-    var html = '<div class="gd-term-spacer"></div>';
+    if (s.copilotOpen) {
+      el.innerHTML = '<div class="gd-line gd-line-cmd">gh copilot</div>' +
+        '<div class="gd-copilot">' +
+          '<div class="gd-cp-box">' +
+            '<div class="gd-cp-logomark">' +
+              '<div class="gd-cp-sq-row">╭─╮╭─╮</div>' +
+              '<div class="gd-cp-sq-row">╰─╯╰─╯</div>' +
+              '<div class="gd-cp-bar-row"><span style="color:#f5c2e7">█</span> <span style="color:#a6e3a1">▘▝</span> <span style="color:#f5c2e7">█</span></div>' +
+              '<div class="gd-cp-bar-row" style="color:#f5c2e7"> ▔▔▔ </div>' +
+            '</div>' +
+            '<div class="gd-cp-name">GitHub Copilot</div>' +
+            '<div class="gd-cp-tagline">What are we breaking today?</div>' +
+          '</div>' +
+          '<div class="gd-cp-meta"><span>~/glade-sh</span><span>claude-opus-4.6</span></div>' +
+          '<div class="gd-cp-rule"></div>' +
+          '<div class="gd-cp-input"><span class="gd-cp-arrow">›</span><span class="gd-cursor"></span><span class="gd-cp-hint"> Type @ to mention files, / for commands, or ? for shortcuts</span></div>' +
+          '<div class="gd-cp-rule"></div>' +
+          '<div class="gd-cp-footer"><strong>shift+tab</strong> switch mode</div>' +
+        '</div>';
+      return;
+    }
+    var html = '';
     for (var i = 0; i < s.lines.length; i++) {
       var l = s.lines[i];
       if (l.k === 'cmd') html += '<div class="gd-line gd-line-cmd">' + esc(l.v) + '</div>';
       else {
-        var cls = l.v.indexOf('clean') >= 0 ? ' ok' : '';
+        var cls = l.v.indexOf('clean') >= 0 ? ' ok' : l.v.charAt(0) === '❯' ? ' sel' : '';
         html += '<div class="gd-line gd-line-out' + cls + '">' + esc(l.v) + '</div>';
       }
     }
@@ -790,37 +842,52 @@
   var phSbPath = document.getElementById('gd-ph-sbpath');
   var scrubber = document.getElementById('gd-scrubber');
   var fill    = document.getElementById('gd-scrubber-fill');
-  var thumb   = document.getElementById('gd-scrubber-thumb');
-  var replay  = document.getElementById('gd-replay');
-  var outer   = document.getElementById('gd-outer');
-  var wrap    = document.getElementById('gd-wrap');
+  var thumb     = document.getElementById('gd-scrubber-thumb');
+  var playpause = document.getElementById('gd-playpause');
+  var replay    = document.getElementById('gd-replay');
+  var outer     = document.getElementById('gd-outer');
+  var wrap      = document.getElementById('gd-wrap');
 
-  var raf=null, startTs=null, elapsed=0, scrubbing=false;
+  var raf=null, startTs=null, elapsed=0, scrubbing=false, paused=false;
+
+  function setPPIcon() { playpause.textContent = paused ? '▶' : '⏸'; }
 
   function tick(ts) {
     if (!startTs) startTs = ts;
     elapsed = Math.min(DURATION, ts - startTs);
     render(elapsed);
-    if (elapsed < DURATION) raf = requestAnimationFrame(tick);
+    if (elapsed < DURATION) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      raf = null; paused = true; setPPIcon();
+    }
   }
 
   function play(from) {
     if (raf) cancelAnimationFrame(raf);
-    elapsed = from || 0;
-    startTs = null;
+    elapsed = (from == null ? elapsed : from);
+    startTs = null; paused = false; setPPIcon();
     raf = requestAnimationFrame(function(ts){ startTs = ts - elapsed; raf = requestAnimationFrame(tick); });
   }
 
   function seek(frac) {
-    if (raf) cancelAnimationFrame(raf);
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
     elapsed = frac * DURATION;
     render(elapsed);
   }
 
+  playpause.addEventListener('click', function() {
+    if (paused) {
+      play(elapsed >= DURATION ? 0 : elapsed);
+    } else {
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      paused = true; setPPIcon();
+    }
+  });
+  replay.addEventListener('click', function() { play(0); });
   scrubber.addEventListener('mousedown', function(e) { scrubbing=true; seek(Math.max(0,Math.min(1,(e.clientX-scrubber.getBoundingClientRect().left)/scrubber.offsetWidth))); });
   document.addEventListener('mousemove', function(e) { if(!scrubbing) return; seek(Math.max(0,Math.min(1,(e.clientX-scrubber.getBoundingClientRect().left)/scrubber.offsetWidth))); });
   document.addEventListener('mouseup',   function()  { if(!scrubbing) return; scrubbing=false; play(elapsed); });
-  replay.addEventListener('click', function() { play(0); });
 
   function scale() {
     var s = Math.min(1, outer.clientWidth / 920);
