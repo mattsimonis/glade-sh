@@ -1358,7 +1358,7 @@
         body.is-desktop .toast {
             flex-direction:row;
             width:auto; max-width:calc(100vw - 32px); min-width:200px;
-            height:40px; padding:0 18px;
+            height:auto; min-height:40px; padding:10px 18px;
             align-items:center; justify-content:flex-start; gap:10px;
             opacity:0; transform:translateY(-52px) translateZ(0);
             will-change:transform, opacity;
@@ -1368,8 +1368,13 @@
         /* Mobile expanded — 14px each side (slightly inside screen edge, visually balanced) */
         body:not(.is-desktop) .toast.t-expanded {
             width:min(440px, calc(100vw - 28px));
-            height:78px;
+            height:var(--toast-h, 78px);
             opacity:1;
+            justify-content:center; padding:0;
+        }
+        /* Give the inner row a bounded width so text wraps, 20px breathing room each side */
+        body:not(.is-desktop) .toast.t-expanded .toast-inner {
+            width:calc(100% - 40px);
         }
         /* Desktop visible */
         body.is-desktop .toast.t-expanded {
@@ -1378,7 +1383,7 @@
         }
         /* Inner row: dot + text, anchored to bottom content zone */
         .toast-inner {
-            display:flex; align-items:center; gap:9px;
+            display:flex; align-items:center; gap:9px; min-width:0;
             opacity:0; transform:translateY(6px);
             transition: opacity 180ms ease, transform 220ms cubic-bezier(0.34,1.12,0.64,1);
         }
@@ -1397,7 +1402,8 @@
         /* Message text */
         .toast-msg {
             font-size:11px; font-family:var(--font-mono); font-weight:500;
-            color:var(--text); white-space:nowrap;
+            color:var(--text); line-height:1.45;
+            word-break:break-word; overflow-wrap:break-word; min-width:0;
         }
         /* Content reveal — fires after shape is ~70% expanded */
         .toast.t-content-in .toast-inner {
@@ -4186,6 +4192,22 @@
             }
 
             // Enter: fade → width → height (sequential)
+            // Mobile: probe the natural text height so --toast-h sizes the pill to fit wrapped text.
+            if (!document.body.classList.contains('is-desktop')) {
+                var pillW = Math.min(440, window.innerWidth - 28);
+                var textW = pillW - 40 - 7 - 9; // 40px h-padding + 7px dot + 9px gap
+                var probe = document.createElement('div');
+                probe.style.cssText =
+                    'position:fixed;top:-9999px;left:0;pointer-events:none;visibility:hidden;' +
+                    'font-size:11px;font-family:var(--font-mono);font-weight:500;' +
+                    'line-height:1.45;word-break:break-word;white-space:normal;' +
+                    'width:' + textW + 'px;';
+                probe.textContent = msg;
+                document.body.appendChild(probe);
+                var probeH = probe.offsetHeight;
+                document.body.removeChild(probe);
+                el.style.setProperty('--toast-h', Math.max(78, Math.ceil(probeH) + 40) + 'px');
+            }
             // Content fires at 400ms — shape is full width, height is ~30% grown
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
