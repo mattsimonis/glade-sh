@@ -4972,15 +4972,25 @@
                     iframe.removeEventListener('load', _onThemeLoad);
                     if (!iframe.src || !iframe.src.includes('/ttyd/')) return;
                     try {
-                        var _w   = iframe.contentWindow;
-                        var _def = TERM_THEMES && TERM_THEMES[currentTermTheme];
-                        if (!_w || !_def) return;
+                        var _w = iframe.contentWindow;
+                        if (!_w) return;
+                        // Resolve active terminal theme — Base16 takes precedence over Catppuccin
+                        var _termTheme = null;
+                        if (currentB16Scheme) {
+                            var _b16s = BASE16_SCHEMES.find(function(s) { return s.s === currentB16Scheme; });
+                            if (_b16s) _termTheme = _b16term(_b16s.p);
+                        }
+                        if (!_termTheme) {
+                            var _def = TERM_THEMES && TERM_THEMES[currentTermTheme];
+                            if (_def) _termTheme = _def.theme;
+                        }
+                        if (!_termTheme) return;
                         var _ti = _w.term || _w.terminal || (_w.tty && _w.tty.term);
                         if (!_ti) for (var _k of Object.keys(_w)) {
                             if (_w[_k] && typeof _w[_k] === 'object' && typeof _w[_k].onData === 'function') { _ti = _w[_k]; break; }
                         }
                         if (_ti && typeof _ti.options === 'object') {
-                            _ti.options.theme = _def.theme;
+                            _ti.options.theme = _termTheme;
                             if (!terminalInstance) terminalInstance = _ti;
                         }
                         // CSS fallback: override background before canvas paints
@@ -4988,7 +4998,7 @@
                         if (_iDoc && _iDoc.head && !_iDoc.getElementById('glade-theme-bg')) {
                             var _s = _iDoc.createElement('style');
                             _s.id = 'glade-theme-bg';
-                            _s.textContent = '.xterm-viewport,.xterm-screen{background:' + _def.theme.background + '!important}';
+                            _s.textContent = '.xterm-viewport,.xterm-screen{background:' + _termTheme.background + '!important}';
                             _iDoc.head.appendChild(_s);
                         }
                     } catch(e) {}
