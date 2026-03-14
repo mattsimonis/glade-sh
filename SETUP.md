@@ -1,7 +1,6 @@
 # Glade — Setup Guide
 
-> **DNS requires a local DNS entry.** `glade.local` does not resolve via mDNS automatically — mDNS only resolves the machine's own hostname. Add an A record in Pi-hole, or an `/etc/hosts` entry on each client, pointing your chosen domain to your host's LAN IP.  
-> **Tailscale is optional** — required only for remote access outside your home network. Start without it.
+> **DNS setup required.** `glade.home` won't resolve automatically — see [Accessing Outside Your Local Network](#accessing-outside-your-local-network) to configure DNS so the same URL works on your LAN and remotely via Tailscale.
 
 ---
 
@@ -56,7 +55,7 @@ cp .env.example .env
 Edit `.env`:
 ```bash
 HOST=your-hostname  # hostname of the machine running Docker
-DOMAIN=glade.local  # domain you'll use to access the UI
+DOMAIN=glade.home  # domain you'll use to access the UI
 ```
 
 To mount personal directories inside the container, create a gitignored `docker-compose.override.yml`:
@@ -88,16 +87,16 @@ Install mkcert on the machine where `caddy-proxy` is managed:
 
 Then generate the cert:
 ```bash
-mkcert glade.local
-mv glade.local.pem       /path/to/caddy/certs/glade.local.pem
-mv glade.local-key.pem   /path/to/caddy/certs/glade.local-key.pem
+mkcert glade.home
+mv glade.home.pem       /path/to/caddy/certs/glade.home.pem
+mv glade.home-key.pem   /path/to/caddy/certs/glade.home-key.pem
 ```
 
 ---
 
-## Step 6: Add glade.local to Your Standalone Caddy
+## Step 6: Add glade.home to Your Standalone Caddy
 
-Copy the `glade.local` block from `services/Caddyfile` into your Caddy project's `Caddyfile`, then restart:
+Copy the `glade.home` block from `services/Caddyfile` into your Caddy project's `Caddyfile`, then restart:
 
 ```bash
 docker restart caddy-proxy
@@ -129,14 +128,14 @@ make build
 curl -s http://localhost:7683/api/health | python3 -m json.tool
 ```
 
-Then open `https://glade.local` in a browser on the host to confirm the UI loads.
+Then open `https://glade.home` in a browser on the host to confirm the UI loads.
 
 ---
 
 ## Step 9: Connect from Your Laptop
 
-1. Make sure you're on the same network
-2. Go to `https://glade.local` in a browser
+1. Make sure you're on the same network (or connected via Tailscale)
+2. Go to `https://glade.home` in a browser
 3. First visit: run `mkcert -install` on the laptop to trust the local CA (avoids cert warning)
 4. Create a project and run a command — it executes on the host
 
@@ -144,8 +143,8 @@ Then open `https://glade.local` in a browser on the host to confirm the UI loads
 
 ## Step 10: Connect from Your Phone
 
-1. Make sure you're on the same network
-2. Open Safari (iOS) or Chrome (Android) → `https://glade.local`
+1. Make sure Tailscale is connected (on LAN or remotely)
+2. Open Safari (iOS) or Chrome (Android) → `https://glade.home`
 3. The terminal loads with the mobile keyboard toolbar at the bottom
 
 **Tip:** On iOS, tap "Share → Add to Home Screen" for full-screen mode with no browser chrome.
@@ -195,11 +194,11 @@ Docker Engine starts at boot by default after `get.docker.com` install.
 
 ---
 
-## Optional: Tailscale (Remote Access)
+## Accessing Outside Your Local Network
 
-Skip this if you only need LAN access.
+Tailscale connects your devices over a mesh VPN so Glade is reachable from anywhere — home, office, phone on mobile data. Install it on the Glade host and every client device (laptop, phone), sign in with the same account, and they all appear on the same private network.
 
-**Host:**
+**Install Tailscale on the host:**
 
 | Platform | Command |
 |---|---|
@@ -207,33 +206,74 @@ Skip this if you only need LAN access.
 | Linux / Raspberry Pi | `curl -fsSL https://tailscale.com/install.sh \| sh` then `sudo tailscale up` |
 | Windows | Download from [tailscale.com/download](https://tailscale.com/download) |
 
-**Laptop / Phone:** Download Tailscale from [tailscale.com/download](https://tailscale.com/download) and sign in with the same account.
+**Install Tailscale on clients:** Download from [tailscale.com/download](https://tailscale.com/download) and sign in with the same account.
+
+**Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) → enable MagicDNS.
 
 Verify on the host:
 ```bash
 tailscale status
 ```
 
-**Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) → enable MagicDNS so you can reach the host by hostname over Tailscale.
+Once Tailscale is running on the host, `glade.home` needs to resolve to the host's Tailscale IP from every device — on the LAN and remote. Two ways to set that up:
 
 ---
 
-## Pi-hole DNS (Required for `glade.local`)
+### Option A: Pi-hole (Recommended)
 
-`glade.local` is not your machine's hostname, so it won't resolve automatically. Add an A record:
+One DNS record, works automatically for every device. No per-device configuration.
 
-1. Open Pi-hole admin → **Local DNS** → **DNS Records**
-2. Add:
-   - **Domain:** `glade.local`
-   - **IP Address:** your host's LAN IP
+**1. Find your Glade host's Tailscale IP:**
+```bash
+tailscale ip -4
+```
 
-Find your host's LAN IP:
+**2. Add a DNS record in Pi-hole:**
 
-| Platform | Command |
-|---|---|
-| macOS | `ipconfig getifaddr en0` |
-| Linux / Raspberry Pi | `hostname -I \| awk '{print $1}'` |
-| Windows | `ipconfig` → IPv4 Address under your network adapter |
+Open Pi-hole admin → **Local DNS** → **DNS Records** → Add:
+- **Domain:** `glade.home`
+- **IP Address:** your host's Tailscale IP (`100.x.x.x`)
+
+Point it at the Tailscale IP, not the LAN IP. Tailscale routes locally when you're home and tunnels when you're away — same URL, same IP, no reconfiguration between networks.
+
+**3. Add Pi-hole as a Tailscale global nameserver:**
+
+In [Tailscale admin → DNS](https://login.tailscale.com/admin/dns) → **Nameservers** → add your Pi-hole's Tailscale IP as a **Global nameserver**.
+
+Find your Pi-hole's Tailscale IP (on the Pi-hole machine):
+```bash
+tailscale ip -4
+```
+
+This tells every Tailscale-connected device to resolve DNS via Pi-hole — so `glade.home` works whether you're on the LAN or anywhere else.
+
+---
+
+### Option B: No Pi-hole — `/etc/hosts` on each device
+
+No extra infrastructure. Add one line to `/etc/hosts` on each device. Repeat whenever you add a new device.
+
+Find your Glade host's Tailscale IP:
+```bash
+tailscale ip -4
+```
+
+**macOS / Linux:**
+```bash
+sudo sh -c 'echo "100.x.x.x  glade.home" >> /etc/hosts'
+```
+
+**Windows** (run PowerShell as Administrator):
+```powershell
+Add-Content C:\Windows\System32\drivers\etc\hosts "100.x.x.x  glade.home"
+```
+
+**iOS / Android:** No `/etc/hosts` access. Options:
+- Use the host's Tailscale IP directly in the browser (`http://100.x.x.x:7682`) — no TLS, no PWA install
+- Set up Pi-hole (Option A) — cleanest path for phones
+- Use Tailscale's MagicDNS name directly: `http://[hostname]` where hostname is the device name shown in Tailscale admin
+
+Replace `100.x.x.x` with your actual Tailscale IP in all of the above.
 
 ---
 
@@ -267,7 +307,7 @@ If you tap "GitHub Repo" without being connected, the auth flow starts automatic
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://glade.local` | Check that Pi-hole (or `/etc/hosts`) has an A record for `glade.local` pointing to your host's LAN IP. Check `caddy-proxy` is running: `docker ps`. Try the IP directly to isolate DNS from routing. |
+| Can't reach `https://glade.home` | Check Pi-hole has an A record for `glade.home` pointing to the host's Tailscale IP. Check Tailscale is running on the client. Check `caddy-proxy` is running: `docker ps`. Try the Tailscale IP directly to isolate DNS from routing. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
 | Docker first build is slow | Normal — first build takes ~2 min. Watch with `docker compose logs -f ttyd` |

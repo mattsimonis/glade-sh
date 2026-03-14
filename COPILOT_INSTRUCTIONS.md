@@ -6,7 +6,7 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.local`. The frontend is a single-file PWA (`web/index.html`, ~8200 lines). The backend is a stdlib Python API (`api/api.py`, ~1480 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.home`. The frontend is a single-file PWA (`web/index.html`, ~8200 lines). The backend is a stdlib Python API (`api/api.py`, ~1480 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
 GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a named Docker volume (`gh-config`), and projects can be created directly from GitHub repos.
 
@@ -21,7 +21,7 @@ entrypoint.sh               ← Container boot: mkdir, start API
 Dockerfile                  ← Debian bookworm-slim + ttyd + zsh + packages.sh hook
 docker-compose.yml          ← Two services: glade-ttyd + glade-web
 Makefile                    ← Daily ops: up, down, restart, build, logs, shell
-services/Caddyfile          ← caddy-proxy config (glade.local routes)
+services/Caddyfile          ← caddy-proxy config (glade.home routes)
 services/web.Caddyfile      ← Inner Caddy for glade-web (file server + API proxy)
 config/zshrc                ← Personal Zsh config (gitignored; edit in place, no rebuild)
 config/zshrc.example        ← Starter template (committed; plain prompt, tmux hooks, glade-wrap)
@@ -256,7 +256,7 @@ make shell
 
 9. **iOS viewport math** — The PWA panel height is `31vh`, tuned for iOS Safari's viewport with keyboard open. Changing this requires testing on an actual iPhone.
 
-10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes glade.local traffic). `services/web.Caddyfile` is for the glade-web container (serves files, proxies API).
+10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes glade.home traffic). `services/web.Caddyfile` is for the glade-web container (serves files, proxies API).
 
 11. **`config/zshrc` and `config/packages.sh` are gitignored** — They are personal copies, never committed. `config/zshrc.example` and `config/packages.sh.example` are the committed templates. `install.sh` copies `*.example` → actual on first run if the actual doesn't exist.
 

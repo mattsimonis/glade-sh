@@ -60,10 +60,10 @@ cd glade
 cp .env.example .env   # set HOST= to your server's hostname
 ```
 
-Add the `glade.local` block from `services/Caddyfile` to your standalone `caddy-proxy` and generate a cert:
+Add the `glade.home` block from `services/Caddyfile` to your standalone `caddy-proxy` and generate a cert:
 
 ```bash
-mkcert glade.local
+mkcert glade.home
 # move cert files into your Caddy certs directory, restart caddy-proxy
 ```
 
@@ -71,10 +71,9 @@ mkcert glade.local
 make setup   # builds image (~2 min) and starts containers
 ```
 
-Open `https://glade.local`. Tap **Share → Add to Home Screen** to install the PWA.
+Open `https://glade.home`. Tap **Share → Add to Home Screen** to install the PWA.
 
-> `glade.local` requires a DNS entry — add an A record in Pi-hole or `/etc/hosts` on each client pointing to your host's LAN IP.  
-> Tailscale is optional — only needed for remote access outside your home network.  
+> `glade.home` requires a Pi-hole A record pointing to your host's **Tailscale IP** — this makes the same URL work on your local network and remotely over Tailscale.  
 > See [SETUP.md](SETUP.md) for the full walkthrough.
 
 ---
@@ -113,7 +112,7 @@ It's also a practical choice for AI coding tools. The agent runs in Docker on yo
 |---|---|
 | Always-on host (Mac Mini, Raspberry Pi, Linux server, Windows PC) | Docker runs here |
 | Docker Desktop | Container runtime |
-| Standalone `caddy-proxy` container | Handles TLS for `*.local` domains |
+| Standalone `caddy-proxy` container | Handles TLS for `*.home` and other custom domains |
 | Tailscale *(optional)* | Remote access outside the home network |
 
 ---
@@ -124,7 +123,7 @@ Copy `.env.example` to `.env` and edit:
 
 ```bash
 HOST=mac-mini      # hostname of the machine running Docker
-DOMAIN=glade.local # domain for the web UI
+DOMAIN=glade.home # domain for the web UI
 ```
 
 Optional environment variables:

@@ -9,10 +9,10 @@ tls /etc/caddy/certs/yoto.home.pem /etc/caddy/certs/yoto.home-key.pem
 }
 
 # Glade — plain HTTP fallback
-# Handles http:// requests if a client skips TLS. Requires a DNS entry for
-# the domain (Pi-hole A record or /etc/hosts). Replace glade.local below
+# Handles http:// requests if a client skips TLS. Requires a Pi-hole A record
+# for the domain pointing to the host's Tailscale IP. Replace glade.home below
 # with whatever you set DOMAIN= to in your .env file.
-http://glade.local {
+http://glade.home {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
 uri strip_prefix /ttyd/{http.regexp.tport.1}
@@ -37,10 +37,10 @@ Referrer-Policy strict-origin-when-cross-origin
 }
 
 # Glade — HTTPS
-# Replace glade.local with whatever you set DOMAIN= to in your .env file.
-# Requires a DNS entry (Pi-hole A record or /etc/hosts) pointing the domain
-# to this machine's LAN IP, and a matching mkcert TLS cert.
-glade.local {
+# Replace glade.home with whatever you set DOMAIN= to in your .env file.
+# Requires a Pi-hole A record pointing the domain to the host's Tailscale IP,
+# and a matching mkcert TLS cert.
+glade.home {
 @ttyd_proxy path_regexp tport /ttyd/(\d{4,5})(/.*)?
 handle @ttyd_proxy {
 uri strip_prefix /ttyd/{http.regexp.tport.1}
@@ -57,7 +57,7 @@ write_timeout 0
 handle {
 reverse_proxy glade-web:7682
 }
-tls /etc/caddy/certs/glade.local.pem /etc/caddy/certs/glade.local-key.pem
+tls /etc/caddy/certs/glade.home.pem /etc/caddy/certs/glade.home-key.pem
 header {
 -X-Frame-Options
 X-Content-Type-Options nosniff

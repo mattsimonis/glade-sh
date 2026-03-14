@@ -80,7 +80,7 @@ E2E tests use Playwright and require a running Glade instance. By default
 they target `http://localhost:3000` (the `make dev` server). Override with:
 
 ```bash
-BASE_URL=https://glade.local make test-e2e
+BASE_URL=https://glade.home make test-e2e
 ```
 
 ### Writing new tests

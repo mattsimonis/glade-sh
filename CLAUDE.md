@@ -22,7 +22,7 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        │       Server / Host (Docker)        │
        │                                      │
        │  caddy-proxy (standalone container)  │
-       │    glade.local → :7682                   │
+       │    glade.home → :7682                   │
        │    /ttyd/{port} → :769x              │
        │                                      │
        │  glade-web (:7682, Caddy)            │
@@ -39,8 +39,8 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        └──────────────────────────────────────┘
 ```
 
-**DNS:** `glade.local` requires a local DNS entry (Pi-hole A record or `/etc/hosts`). mDNS only resolves the host's own hostname, not custom domains.
-**TLS:** mkcert cert for `glade.local`, managed by standalone `caddy-proxy`.
+**DNS:** `glade.home` requires a Pi-hole A record pointing to the host's **Tailscale IP**. This makes the same URL resolve on the LAN and remotely over Tailscale. Pi-hole must be configured as a global nameserver in Tailscale admin DNS settings.
+**TLS:** mkcert cert for `glade.home`, managed by standalone `caddy-proxy`.
 **Remote:** Tailscale mesh VPN for access outside the home network.
 
 ---
@@ -65,7 +65,7 @@ Two Docker services defined in `docker-compose.yml`:
 
 **caddy-proxy** — standalone (not in this compose file):
 - Pre-existing container shared with other `*.home` services
-- Routes `glade.local` to `glade-web:7682`
+- Routes `glade.home` to `glade-web:7682`
 - Routes `/ttyd/{port}` to `glade-ttyd:{port}` for WebSocket proxying
 - Manages TLS certs
 
@@ -81,7 +81,7 @@ Two Docker services defined in `docker-compose.yml`:
 4. API starts `tmux pipe-pane` to record output to `~/.glade/logs/{slug}/{timestamp}.log`
 5. API spawns ttyd on a free port (7690–7699) attached to the tmux session
 6. API returns `{port}` to PWA
-7. PWA loads `https://glade.local/ttyd/{port}/` in an iframe
+7. PWA loads `https://glade.home/ttyd/{port}/` in an iframe
 8. User types; input flows through iframe → WebSocket → ttyd → tmux → zsh
 
 ### Session Recording
@@ -156,7 +156,7 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 | `config/tmux.conf` | — | Tmux config (Catppuccin Mocha status bar) |
 | `config/packages.sh` | — | Build-time hook: user-defined package installs (empty by default) |
 | `config/packages.sh.example` | — | Recipe examples: gh CLI, Node.js, pip, Rust, apt |
-| `services/Caddyfile` | 61 | Caddy-proxy config for glade.local |
+| `services/Caddyfile` | 61 | Caddy-proxy config for glade.home |
 | `services/web.Caddyfile` | 42 | Inner Caddy config for glade-web container |
 
 ### Runtime (outside repo, on host at `~/.glade/`)
