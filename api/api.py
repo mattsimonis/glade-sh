@@ -797,10 +797,11 @@ class Handler(BaseHTTPRequestHandler):
             directory = row["directory"]
             project_name = row["name"]
             conn.execute("UPDATE projects SET last_active=CURRENT_TIMESTAMP WHERE id=?", (pid,))
+        sname = session_name(pid)
+        session_was_new = not tmux_session_exists(sname)
         port = ensure_project_running(pid, directory, project_name=project_name)
         if port is None:
             return self.send_json(503, {"error": "no ports available"})
-        sname = session_name(pid)
         # Pre-resize the tmux window to the client's current terminal dimensions so
         # that when ttyd connects and FitAddon runs, the pty is already the right size.
         # A no-op resize means no SIGWINCH → no stray prompt redraws on reconnect.
@@ -818,7 +819,7 @@ class Handler(BaseHTTPRequestHandler):
         shells = self._shells_with_ports(pid, sname)
         if pid not in _baselines:
             _baselines[pid] = tmux_history_size(sname)
-        self.send_json(200, {"port": port, "shells": shells})
+        self.send_json(200, {"port": port, "shells": shells, "session_was_new": session_was_new})
 
     def _stop_project(self, pid):
         stop_project_proc(pid)

@@ -2364,6 +2364,7 @@
         let currentShells = [];    // [{index, name, active, port}] — last fetched shell list
         let currentShellIdx = null; // index of shell currently displayed in the iframe
         const _ctrlLDone = new Set(); // project:shell combos that have had their initial clear
+        let _sessionWasNew = false;   // true when /start created a fresh tmux session
         let activityPollTimer = null;
         let selectedProjectColor = '#89b4fa';
         const PROJECT_COLORS = [
@@ -4853,6 +4854,7 @@
                 const port = (active && active.port) || data.port;
                 if (active) currentShellIdx = active.index;
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
+                _sessionWasNew = !!data.session_was_new;
                 hideNoShells();
                 loadShellUrl('/ttyd/' + port + '/');
                 startShellPoll(pid);
@@ -7137,6 +7139,7 @@
                     if (active) currentShellIdx = active.index;
                     const url = '/ttyd/' + port + '/';
                     if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
+                    _sessionWasNew = !!data.session_was_new;
                     try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
                     iframe.src = 'about:blank';
                     requestAnimationFrame(function () { iframe.src = url; startTerminalPoll(); startShellPoll(pid); });
@@ -7312,7 +7315,7 @@
             // Snapshot project/shell NOW — before any async work — so the key is stable
             // even if the user switches projects during the 500 ms init window.
             var _ctrlLKey = (currentProjectId || '') + ':' + (currentShellIdx !== null ? currentShellIdx : 0);
-            var _isFirstVisit = !_ctrlLDone.has(_ctrlLKey);
+            var _isFirstVisit = _sessionWasNew && !_ctrlLDone.has(_ctrlLKey);
             // Mark done immediately so any re-entrant load (e.g. slow WS) doesn't re-clear.
             _ctrlLDone.add(_ctrlLKey);
             // ttyd registers window.addEventListener('beforeunload', ...) to warn on accidental
