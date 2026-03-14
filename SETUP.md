@@ -196,7 +196,7 @@ Docker Engine starts at boot by default after `get.docker.com` install.
 
 ## Accessing Outside Your Local Network
 
-Tailscale connects your devices over a mesh VPN so Glade is reachable from anywhere — home, office, phone on mobile data. Install it on the Glade host and every client device, sign in with the same account, and they all appear on the same private network.
+Tailscale connects your devices over a mesh VPN so Glade is reachable from anywhere — home, office, phone on mobile data. Install it on the Glade host, then on any client device you want to use remotely. On the local network, Tailscale is not required — `glade.home` resolves directly.
 
 **Install Tailscale on the host:**
 
@@ -206,15 +206,15 @@ Tailscale connects your devices over a mesh VPN so Glade is reachable from anywh
 | Linux / Raspberry Pi | `curl -fsSL https://tailscale.com/install.sh \| sh` then `sudo tailscale up` |
 | Windows | Download from [tailscale.com/download](https://tailscale.com/download) |
 
-**Install Tailscale on clients:** Download from [tailscale.com/download](https://tailscale.com/download) and sign in with the same account.
+**Install Tailscale on remote clients:** Download from [tailscale.com/download](https://tailscale.com/download) and sign in with the same account. Only needed when accessing Glade outside your home network.
 
 **Enable MagicDNS:** Go to [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) → enable MagicDNS.
 
-Once Tailscale is running, `glade.home` needs a DNS record so every device can find it. Pick the guide that matches your setup:
+Once Tailscale is set up on the host, `glade.home` needs a DNS record so every device can find it — with or without Tailscale running. Pick the guide that matches your setup:
 
 | Setup | Guide |
 |---|---|
-| You have Pi-hole | [docs/remote-access-pihole.md](docs/remote-access-pihole.md) — one record, works for all devices automatically; covers Tailscale on Pi-hole (recommended) and subnet routing |
+| You have Pi-hole | [docs/remote-access-pihole.md](docs/remote-access-pihole.md) — one record, works for all devices; Tailscale optional on LAN, automatic when remote |
 | No Pi-hole | [docs/remote-access-hosts-file.md](docs/remote-access-hosts-file.md) — add an entry to `/etc/hosts` on each device manually |
 
 ---
@@ -249,7 +249,9 @@ If you tap "GitHub Repo" without being connected, the auth flow starts automatic
 
 | Problem | Fix |
 |---|---|
-| Can't reach `https://glade.home` | Check Pi-hole has an A record for `glade.home` pointing to the host's Tailscale IP. Check Tailscale is running on the client. Check `caddy-proxy` is running: `docker ps`. Try the Tailscale IP directly to isolate DNS from routing. |
+| Can't reach `https://glade.home` | Check Pi-hole has an A record for `glade.home` pointing to the host's **LAN IP** (`192.168.x.x`). Check Tailscale is running on the client. Check `caddy-proxy` is running: `docker ps`. Try the LAN IP directly to isolate DNS from routing. |
+| `glade.home` works on LAN but not on mobile | Tailscale's **Override DNS servers** toggle must be enabled — [Tailscale admin → DNS](https://login.tailscale.com/admin/dns) → Global nameservers → enable it. Without this, iOS/Android ignore Pi-hole and use carrier DNS. |
+| PWA icon is blank after adding to home screen | Safari fetches the icon at the moment you tap "Add to Home Screen". Remove the shortcut, let `https://glade.home` fully load, then re-add it. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
 | Docker first build is slow | Normal — first build takes ~2 min. Watch with `docker compose logs -f ttyd` |
