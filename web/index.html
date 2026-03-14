@@ -1921,11 +1921,12 @@
           <div class="shortcuts-section-title">Tabs</div>
           <div class="shortcuts-row"><span class="shortcuts-desc">New shell tab</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">T</span></span></div>
           <div class="shortcuts-row"><span class="shortcuts-desc">Close current tab</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">W</span></span></div>
-          <div class="shortcuts-row"><span class="shortcuts-desc">Next / previous tab</span><span class="shortcuts-keys"><span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">]</span> / <span class="kbd">[</span></span></div>
-          <div class="shortcuts-row"><span class="shortcuts-desc">Switch to tab 1–9</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">1</span>–<span class="kbd">9</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Next / previous tab</span><span class="shortcuts-keys"><span class="kbd">Ctrl</span><span class="kbd">Tab</span> / <span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">Tab</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Next / previous tab (alt)</span><span class="shortcuts-keys"><span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">]</span> / <span class="kbd">[</span></span></div>
         </div>
         <div class="shortcuts-section">
           <div class="shortcuts-section-title">Projects</div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Switch to project 1–9</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">1</span>–<span class="kbd">9</span></span></div>
           <div class="shortcuts-row"><span class="shortcuts-desc">Open project switcher</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">K</span> → projects</span></div>
           <div class="shortcuts-row"><span class="shortcuts-desc">Close any overlay</span><span class="shortcuts-keys"><span class="kbd">Esc</span></span></div>
         </div>
@@ -7330,6 +7331,13 @@
             }
             if (stateChanged && state === 'connected') {
                 requestWakeLock();
+                // Force a resize nudge — the tmux window may be sized to a stale smaller
+                // client (e.g. a phone that previously used this session). Dispatching a
+                // resize event to the iframe triggers FitAddon.fit(), which sends the
+                // correct SIGWINCH and clears any trailing '-' padding from tmux.
+                setTimeout(function () {
+                    try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
+                }, 200);
                 showTrackpadHint();
                 if (termFontScale !== 1.0) applyTermFontScale(termFontScale);
                 if (currentB16Scheme) {
@@ -7498,9 +7506,22 @@
                 const iWin = iframe.contentWindow;
                 if (iWin) {
                     iWin.addEventListener('keydown', function (e) {
+                        // Arrow keys + Enter: bypass xterm.js and send directly to the terminal
+                        // via WebSocket. Interactive TUI prompts (e.g. gh copilot suggest) can
+                        // lose these keys through xterm.js; the direct path is always reliable.
+                        var isTerminalNav = !e.ctrlKey && !e.metaKey && !e.altKey &&
+                            (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+                             e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+                             e.key === 'Enter');
+                        if (isTerminalNav) {
+                            e.preventDefault();
+                            sendKey(e.key, {});
+                            return;
+                        }
                         var isAppShortcut = e.metaKey ||
                             (e.ctrlKey && e.code === 'Backquote') ||
-                            (e.key === 'Escape');
+                            (e.key === 'Escape') ||
+                            (e.ctrlKey && !e.metaKey && e.key === 'Tab');
                         if (!isAppShortcut) return;
                         document.dispatchEvent(new KeyboardEvent('keydown', {
                             key: e.key, code: e.code,
@@ -8111,14 +8132,15 @@
         })();
 
         // ── Desktop keyboard shortcuts ───────────────────────────────────────────
-        // Escape           — close topmost open modal (all devices)
-        // Ctrl+Shift+] / [ — next / prev shell tab (desktop; Ctrl+Tab is browser-owned)
-        // Cmd+K            — open command palette (desktop)
-        // Cmd+T            — new shell tab
-        // Cmd+W            — close current shell tab (with confirm)
-        // Cmd+1-9          — switch to nth shell tab
-        // Ctrl+`           — toggle bottom panel (desktop)
-        // ?                — keyboard shortcuts help
+        // Escape               — close topmost open modal (all devices)
+        // Ctrl+Tab / Ctrl+Shift+Tab — next / prev shell tab
+        // Ctrl+Shift+] / [     — next / prev shell tab (alternate)
+        // Cmd+K                — open command palette (desktop)
+        // Cmd+T                — new shell tab
+        // Cmd+W                — close current shell tab (with confirm)
+        // Cmd+1-9              — switch to nth project
+        // Ctrl+`               — toggle bottom panel (desktop)
+        // ?                    — keyboard shortcuts help
         document.addEventListener('keydown', function (e) {
             // Escape: close topmost open modal ──────────────────────────────────
             if (e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
@@ -8152,15 +8174,20 @@
                 (focused.tagName === 'INPUT' || focused.tagName === 'TEXTAREA' || focused.tagName === 'SELECT');
             if (isRealInput) return;
 
-            // Ctrl+Shift+] / [ — next / prev shell (use e.code: Shift changes ] → } on Mac)
-            if (e.ctrlKey && e.shiftKey && (e.code === 'BracketRight' || e.code === 'BracketLeft')) {
+            // Ctrl+Shift+] / [ or Ctrl+Tab / Ctrl+Shift+Tab — next / prev shell
+            // (use e.code for ] / [: Shift changes ] → } on Mac keyboard)
+            var isNextShell = (e.ctrlKey && e.shiftKey && e.code === 'BracketRight') ||
+                              (e.ctrlKey && !e.shiftKey && e.key === 'Tab');
+            var isPrevShell = (e.ctrlKey && e.shiftKey && e.code === 'BracketLeft') ||
+                              (e.ctrlKey && e.shiftKey && e.key === 'Tab');
+            if (isNextShell || isPrevShell) {
                 var sbar = document.getElementById('shell-tabs-bar');
                 if (!sbar) return;
                 var stabs = Array.from(sbar.querySelectorAll('.shell-tab'));
                 var sn = stabs.length;
                 if (sn < 2) return;
                 var scur = stabs.findIndex(function(t){ return t.classList.contains('active'); });
-                var snext = e.code === 'BracketRight' ? (scur + 1) % sn : (scur - 1 + sn) % sn;
+                var snext = isNextShell ? (scur + 1) % sn : (scur - 1 + sn) % sn;
                 e.preventDefault(); e.stopImmediatePropagation();
                 switchShell(snext);
                 return;
@@ -8204,12 +8231,12 @@
                 return;
             }
 
-            // Cmd+1-9 — switch to nth shell tab ─────────────────────────────────
+            // Cmd+1-9 — switch to nth project ────────────────────────────────────
             if (e.metaKey && !e.ctrlKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
                 var n = parseInt(e.code.slice(5), 10) - 1;
-                if (currentShells && currentShells[n]) {
+                if (projects && projects[n]) {
                     e.preventDefault(); e.stopImmediatePropagation();
-                    switchShell(currentShells[n].index);
+                    switchProject(projects[n].id);
                 }
                 return;
             }

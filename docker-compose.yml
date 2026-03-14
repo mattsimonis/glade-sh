@@ -34,6 +34,9 @@ services:
       - ${GLADE_DIR:-~/.glade}:/root/.glade
       - glade-app:/app/glade              # cloned repo lives here
       - gh-config:/root/.config/gh        # gh auth state (isolated to container)
+      # Persist CLI auth + session data so container rebuilds don't require re-login
+      - ${GLADE_DIR:-~/.glade}/config/github-copilot:/root/.config/github-copilot   # Copilot CLI auth + sessions
+      - ${GLADE_DIR:-~/.glade}/config/claude:/root/.claude                           # Claude CLI auth + sessions
     environment:
       - TERM=xterm-256color
       - GLADE_DIR=/root/.glade

@@ -16,7 +16,7 @@ export PORT=7683
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [glade] $*"; }
 
-mkdir -p "${GLADE_DIR}/db" "${GLADE_DIR}/logs/_main" "${GLADE_DIR}/projects"
+mkdir -p "${GLADE_DIR}/db" "${GLADE_DIR}/logs/_main" "${GLADE_DIR}/projects" "${GLADE_DIR}/config" "${GLADE_DIR}/config/github-copilot" "${GLADE_DIR}/config/claude"
 
 # ── Clone or pull app repo ─────────────────────────────────────────────────────
 if git -C "$APP_DIR" pull --ff-only -q 2>/dev/null; then
