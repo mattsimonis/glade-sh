@@ -1983,7 +1983,7 @@
         <div class="sheet-field" id="ap-repo-field" style="position:relative">
             <label class="sheet-label" for="ap-repo-input">Repository</label>
             <input class="sheet-input" id="ap-repo-input" type="text"
-                   autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search your repos…">
+                   autocomplete="off" autocorrect="off" spellcheck="false" placeholder="owner/repo, URL, or search yours…">
             <div class="repo-dropdown" id="ap-repo-dropdown" style="display:none"></div>
         </div>
         <div class="sheet-field">
@@ -5629,19 +5629,26 @@
                 selectedRepo = null;
                 clearTimeout(repoSearchTimer);
                 var q = apRepoInput.value.trim();
-                if (!q) {
-                    // Load all repos on focus/clear
-                    fetch('/api/github/repos').then(function(r){ return r.json(); }).then(renderRepoDrop).catch(function(){});
+                // Direct entry: owner/repo or URL — no search needed
+                var isDirect = q.includes('/') || q.startsWith('http');
+                if (!q || isDirect) {
+                    if (apRepoDropdown) apRepoDropdown.style.display = 'none';
                     return;
                 }
+                // Partial name — search personal repos
                 repoSearchTimer = setTimeout(function() {
                     fetch('/api/github/repos?q=' + encodeURIComponent(q))
                         .then(function(r){ return r.json(); }).then(renderRepoDrop).catch(function(){});
                 }, 300);
             });
-            apRepoInput.addEventListener('focus', function() {
-                if (!apRepoInput.value.trim()) {
-                    fetch('/api/github/repos').then(function(r){ return r.json(); }).then(renderRepoDrop).catch(function(){});
+            // Auto-fill project name for direct owner/repo or URL entry
+            apRepoInput.addEventListener('blur', function() {
+                var q = apRepoInput.value.trim();
+                if (!q || !q.includes('/')) return;
+                var nameIn = document.getElementById('ap-name-input');
+                if (nameIn && !nameIn.value.trim()) {
+                    var match = q.match(/([^\/]+?)(\.git)?\s*$/);
+                    if (match) nameIn.value = match[1];
                 }
             });
             // Close dropdown on outside click
