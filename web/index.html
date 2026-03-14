@@ -1506,6 +1506,9 @@
         .hu-body { font-size:13px; color:var(--overlay0); line-height:1.6; max-width:280px; margin-bottom:24px; }
         .hu-checking { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--surface1); font-family:var(--font-mono); }
         .hu-spinner { width:14px; height:14px; border:2px solid var(--surface0); border-top-color:var(--surface2); border-radius:50%; animation:gh-spin 1s linear infinite; flex-shrink:0; }
+        .hu-elapsed { font-variant-numeric:tabular-nums; }
+        .hu-tips { margin-top:20px; font-size:11px; color:var(--surface2); line-height:1.8; max-width:260px; }
+        .hu-tips span { color:var(--overlay0); }
 
         /* ── Connection state pulse ──────────────────────────── */
         @keyframes conn-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
@@ -7065,13 +7068,29 @@
 
         // ── Connection monitoring ───────────────────────────────────────────────
         const huOverlay = document.getElementById('host-unreachable-overlay');
+        const huCheckingText = document.getElementById('hu-checking-text');
         let huPollTimer = null;
+        let _huElapsedTimer = null;
+        let _autoReconnectTimer = null;
+        let _disconnectedAt = 0;
+        let _disconnectedElapsedTimer = null;
 
         function isNetworkError(e) {
             return e instanceof TypeError;
         }
+
+        function formatElapsed(ms) {
+            var s = Math.round(ms / 1000);
+            if (s < 60) return s + 's';
+            return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+        }
+
         function showHostUnreachable() {
+            stopAutoReconnect();
+            if (!_disconnectedAt) _disconnectedAt = Date.now();
             if (huOverlay) huOverlay.classList.add('visible');
+            updateHuElapsed();
+            if (!_huElapsedTimer) _huElapsedTimer = setInterval(updateHuElapsed, 1000);
             if (!huPollTimer) {
                 huPollTimer = setInterval(function() {
                     fetch('/api/health').then(function(r) {
@@ -7089,6 +7108,47 @@
         function hideHostUnreachable() {
             if (huOverlay) huOverlay.classList.remove('visible');
             if (huPollTimer) { clearInterval(huPollTimer); huPollTimer = null; }
+            if (_huElapsedTimer) { clearInterval(_huElapsedTimer); _huElapsedTimer = null; }
+            if (huCheckingText) huCheckingText.textContent = 'Checking\u2026';
+            _disconnectedAt = 0;
+        }
+
+        function updateHuElapsed() {
+            if (!_disconnectedAt || !huCheckingText) return;
+            huCheckingText.textContent = 'Checking\u2026 ' + formatElapsed(Date.now() - _disconnectedAt);
+        }
+
+        // Probe API health to distinguish "terminal died" from "host unreachable"
+        function probeAndReconnect() {
+            if (reconnectInProgress) return;
+            if (huOverlay && huOverlay.classList.contains('visible')) return;
+            fetch('/api/health').then(function(r) {
+                if (r.ok) forceReconnect();
+            }).catch(function() {
+                showHostUnreachable();
+            });
+        }
+
+        function startAutoReconnect() {
+            if (_autoReconnectTimer) return;
+            if (!_disconnectedAt) _disconnectedAt = Date.now();
+            updateDisconnectedElapsed();
+            _disconnectedElapsedTimer = setInterval(updateDisconnectedElapsed, 1000);
+            probeAndReconnect();
+            _autoReconnectTimer = setInterval(probeAndReconnect, 8000);
+        }
+
+        function stopAutoReconnect() {
+            if (_autoReconnectTimer) { clearInterval(_autoReconnectTimer); _autoReconnectTimer = null; }
+            if (_disconnectedElapsedTimer) { clearInterval(_disconnectedElapsedTimer); _disconnectedElapsedTimer = null; }
+        }
+
+        function updateDisconnectedElapsed() {
+            if (!_disconnectedAt || connectionState === 'connected') return;
+            var elapsed = formatElapsed(Date.now() - _disconnectedAt);
+            var activeProj = projects && currentProjectId && projects.find(function(p) { return p.id === currentProjectId; });
+            var projName = activeProj ? activeProj.name : 'terminal';
+            if (reconnectHint) reconnectHint.textContent = 'Retrying ' + projName + ' \u00b7 ' + elapsed;
         }
 
 
@@ -7234,16 +7294,22 @@
                 reconnectOverlay.classList.toggle('disconnected', state === 'disconnected');
                 reconnectTitle.textContent = state === 'disconnected' ? 'Disconnected' : 'Reconnecting...';
                 var activeProj = projects && currentProjectId && projects.find(function(p) { return p.id === currentProjectId; });
-                reconnectHint.textContent = activeProj
-                    ? (state === 'disconnected' ? 'Tap to reconnect to ' + activeProj.name : 'Reconnecting to ' + activeProj.name + '\u2026')
-                    : 'Tap or press Enter to reconnect';
+                if (state === 'disconnected') {
+                    reconnectHint.textContent = 'Checking connection\u2026';
+                } else {
+                    reconnectHint.textContent = activeProj
+                        ? 'Reconnecting to ' + activeProj.name + '\u2026'
+                        : 'Reconnecting\u2026';
+                }
                 if (stateChanged) {
-                    if (state === 'disconnected') haptic([50,30,50]);
+                    if (state === 'disconnected') { haptic([50,30,50]); startAutoReconnect(); }
                     releaseWakeLock();
                     setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
                 }
             } else if (stateChanged) {
                 reconnectOverlay.classList.remove('visible', 'disconnected');
+                stopAutoReconnect();
+                _disconnectedAt = 0;
             }
             if (stateChanged) {
                 statusIndicator.classList.remove('fade-out');
@@ -8239,7 +8305,10 @@
         <div class="hu-body">Make sure you're on the same network or VPN as your server. Glade will reconnect automatically.</div>
         <div class="hu-checking">
             <div class="hu-spinner"></div>
-            <span>Checking…</span>
+            <span id="hu-checking-text">Checking…</span>
+        </div>
+        <div class="hu-tips">
+            <span>Try:</span> Open Tailscale · Check Wi-Fi · Verify the container is running
         </div>
     </div>
 
