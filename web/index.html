@@ -412,6 +412,19 @@
         }
         .ap-color-swatch.selected { border-color: var(--text); }
 
+        #edit-project-backdrop {
+            position: fixed; inset: 0; z-index: 210; background: color-mix(in srgb, var(--crust) 70%, transparent);
+            opacity: 0; transition: opacity 260ms ease; pointer-events: none;
+        }
+        #edit-project-backdrop.visible { opacity: 1; pointer-events: auto; }
+        #edit-project-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 220;
+            background: var(--mantle); border-radius: 20px 20px 0 0;
+            padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+            transform: translateY(100%); transition: transform 320ms cubic-bezier(0.34,1.12,0.64,1);
+        }
+        #edit-project-sheet.open { transform: translateY(0); }
+
         /* ── Reconnect overlay ────────────────────────────────── */
         #reconnect-overlay {
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -1993,6 +2006,31 @@
         <div class="sheet-actions">
             <button class="sheet-btn cancel" id="ap-cancel-btn">Cancel</button>
             <button class="sheet-btn save"   id="ap-create-btn">Create</button>
+        </div>
+    </div>
+
+    <!-- Edit project sheet -->
+    <div id="edit-project-backdrop"></div>
+    <div id="edit-project-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Edit Project</div>
+        <div class="sheet-field">
+            <label class="sheet-label" for="ep-name-input">Name</label>
+            <input class="sheet-input" id="ep-name-input" type="text"
+                   autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="sheet-field">
+            <label class="sheet-label" for="ep-dir-input">Directory</label>
+            <input class="sheet-input" id="ep-dir-input" type="text"
+                   autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="sheet-field">
+            <label class="sheet-label">Color</label>
+            <div id="ep-color-row"></div>
+        </div>
+        <div class="sheet-actions">
+            <button class="sheet-btn cancel" id="ep-cancel-btn">Cancel</button>
+            <button class="sheet-btn save"   id="ep-save-btn">Save</button>
         </div>
     </div>
 
@@ -5256,6 +5294,7 @@
                                     if (!isSidebarLayout()) closeProjectGrid();
                                     switchProject(p.id);
                                 }},
+                                { label: 'Edit', style: 'neutral', onConfirm: function() { openEditProjectSheet(p); }},
                                 { label: 'Delete', style: 'danger', onConfirm: function() { doDeleteProject(p.id); } }
                             ]
                         );
@@ -5273,9 +5312,12 @@
                 card.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
                     showConfirm(
-                        'Delete \u201c' + p.name + '\u201d?',
+                        p.name,
                         p.directory || '',
-                        [{ label: 'Delete', style: 'danger', onConfirm: function() { doDeleteProject(p.id); } }]
+                        [
+                            { label: 'Edit', style: 'neutral', onConfirm: function() { openEditProjectSheet(p); }},
+                            { label: 'Delete', style: 'danger', onConfirm: function() { doDeleteProject(p.id); } }
+                        ]
                     );
                 });
                 grid.appendChild(card);
@@ -5422,6 +5464,80 @@
         apBackdrop.addEventListener('click', closeAddProjectSheet);
         attachSwipeToDismiss(apSheet.querySelector('.sheet-handle'), apSheet, closeAddProjectSheet, apBackdrop);
         apCancelBtn.addEventListener('click', closeAddProjectSheet);
+
+        // ── Edit project sheet ───────────────────────────────────────────
+        var epBackdrop  = document.getElementById('edit-project-backdrop');
+        var epSheet     = document.getElementById('edit-project-sheet');
+        var epNameIn    = document.getElementById('ep-name-input');
+        var epDirIn     = document.getElementById('ep-dir-input');
+        var epColorRow  = document.getElementById('ep-color-row');
+        var epCancelBtn = document.getElementById('ep-cancel-btn');
+        var epSaveBtn   = document.getElementById('ep-save-btn');
+        var editingProjectId   = null;
+        var selectedEditColor  = PROJECT_COLORS[0];
+
+        function buildEditColorSwatches(current) {
+            epColorRow.innerHTML = '';
+            PROJECT_COLORS.forEach(function(c) {
+                var sw = document.createElement('button');
+                sw.className = 'ap-color-swatch' + (c === current ? ' selected' : '');
+                sw.style.background = c;
+                sw.addEventListener('click', function() {
+                    selectedEditColor = c;
+                    epColorRow.querySelectorAll('.ap-color-swatch').forEach(function(s) {
+                        s.classList.toggle('selected', s.style.background === c || rgbToHex(s.style.background) === c);
+                    });
+                });
+                epColorRow.appendChild(sw);
+            });
+        }
+
+        function openEditProjectSheet(p) {
+            editingProjectId  = p.id;
+            epNameIn.value    = p.name || '';
+            epDirIn.value     = p.directory || '';
+            selectedEditColor = p.color || PROJECT_COLORS[0];
+            buildEditColorSwatches(selectedEditColor);
+            epSaveBtn.disabled   = false;
+            epSaveBtn.textContent = 'Save';
+            epBackdrop.classList.add('visible');
+            epSheet.classList.add('open');
+            setTimeout(function(){ epNameIn.focus(); }, 320);
+        }
+
+        function closeEditProjectSheet() {
+            sheetClose(epBackdrop, epSheet);
+            editingProjectId = null;
+        }
+
+        epBackdrop.addEventListener('click', closeEditProjectSheet);
+        attachSwipeToDismiss(epSheet.querySelector('.sheet-handle'), epSheet, closeEditProjectSheet, epBackdrop);
+        epCancelBtn.addEventListener('click', closeEditProjectSheet);
+
+        epSaveBtn.addEventListener('click', async function() {
+            var name = epNameIn.value.trim();
+            if (!name) { epNameIn.focus(); return; }
+            var dir  = epDirIn.value.trim();
+            epSaveBtn.disabled    = true;
+            epSaveBtn.textContent = 'Saving…';
+            try {
+                await apiJson('/api/projects/' + editingProjectId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, directory: dir, color: selectedEditColor }),
+                });
+                var proj = projects.find(function(p) { return p.id === editingProjectId; });
+                if (proj) { proj.name = name; proj.directory = dir; proj.color = selectedEditColor; }
+                haptic(15);
+                closeEditProjectSheet();
+                renderProjectTabs();
+                renderProjectGrid();
+            } catch(e) {
+                epSaveBtn.disabled    = false;
+                epSaveBtn.textContent = 'Save';
+                alert('Failed to save: ' + (e.message || e));
+            }
+        });
 
         // ── GitHub connect ───────────────────────────────────────────────
         var ghModalBackdrop = document.getElementById('github-modal-backdrop');
