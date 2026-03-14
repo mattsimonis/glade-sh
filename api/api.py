@@ -413,6 +413,7 @@ def _start_shell_ttyd(sname, port):
     proc = subprocess.Popen([
         "ttyd", "-p", str(port), "--writable", "--max-clients", "5",
         "-t", "theme=" + _get_term_theme(),
+        "-t", "rendererType=canvas",
         "-t", "fontSize=14",
         "-t", "fontFamily=Commit Mono,JetBrains Mono,Fira Code,monospace",
         "-t", "cursorStyle=block",
