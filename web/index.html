@@ -3133,28 +3133,41 @@
 
         // Nudge ttyd's FitAddon whenever the terminal container changes size
         // (panel open/close, keyboard show/hide, window resize, device switch).
-        // Also nudges unconditionally on focus/visibility — catches the case where
-        // another client resized the terminal while this window was in the background.
+        // Focus/blur only trigger a resize if the container dimensions actually
+        // changed — prevents SIGWINCH flash cascades during rapid interaction.
+        // Visibility change (returning from background) always forces a nudge
+        // since another client may have resized the session while hidden.
         (function () {
             var fitDebounce = null;
-            function nudgeFit() {
+            var lastW = 0, lastH = 0;
+            var tc = document.getElementById('terminal-container');
+            function nudgeFit(force) {
                 clearTimeout(fitDebounce);
                 fitDebounce = setTimeout(function () {
+                    // Skip the resize dispatch if the container dimensions haven't
+                    // changed — avoids SIGWINCH → tmux redraw → zsh prompt flash
+                    // during rapid focus/blur cycles (e.g. Copilot running commands).
+                    if (!force) {
+                        var w = tc.clientWidth, h = tc.clientHeight;
+                        if (w === lastW && h === lastH) return;
+                        lastW = w; lastH = h;
+                    }
                     try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
-                }, 60);
+                }, 200);
             }
-            new ResizeObserver(nudgeFit).observe(document.getElementById('terminal-container'));
+            new ResizeObserver(function () { nudgeFit(false); }).observe(tc);
 
-            // Always nudge on focus — don't compare dimensions, since another device
-            // may have resized the session while this window was backgrounded.
-            window.addEventListener('focus', nudgeFit);
+            // Focus/blur: only nudge if dimensions actually changed.
+            window.addEventListener('focus', function () { nudgeFit(false); });
+            // Visibility change (returning from background): always nudge — another
+            // device may have resized the session while this window was hidden.
             document.addEventListener('visibilitychange', function () {
-                if (!document.hidden) nudgeFit();
+                if (!document.hidden) nudgeFit(true);
             });
             // On desktop, clicking INTO the iframe steals focus from the parent window
             // (window.blur fires, activeElement becomes the iframe). Catch that and refit.
             window.addEventListener('blur', function () {
-                if (document.activeElement === iframe) nudgeFit();
+                if (document.activeElement === iframe) nudgeFit(false);
             });
         })();
 
