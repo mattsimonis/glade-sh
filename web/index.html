@@ -4832,6 +4832,7 @@
             stopShellPoll();
             document.getElementById('shell-tabs-bar').innerHTML = '';
             reconnectInProgress = false; // project switch supersedes any in-flight reconnect
+            _iframeErrorAutoRetried = false;
             // Reset cached terminal references — they belong to the old ttyd page
             terminalInstance = null;
             xtermTextarea = null;
@@ -7103,7 +7104,7 @@
                     // and zsh may redraw the prompt on resize, leaving a stray '>' visible.
                     // Holding the overlay an extra 400ms lets the terminal finish repainting.
                     if (xtermTextarea) setTimeout(function() { setConnectionState('connected'); }, 400);
-                    else setConnectionState('connected');
+                    // else: terminal not found after 40 polls — leave state alone; checkConnection will resolve it
                 }
                 attempts++;
             }, 500);
@@ -7112,6 +7113,8 @@
             if (reconnectInProgress) return; // already in flight
             reconnectInProgress = true;
             consecutiveFailures = 0;
+            _iframeErrorAutoRetried = false;
+            const _myReconnectId = ++_forceReconnectId;
             // Use currentProjectId or fall back to last known project from localStorage
             const pid = currentProjectId || localStorage.getItem('lastProjectId');
             if (!pid) { reconnectInProgress = false; location.reload(); return; }
@@ -7122,6 +7125,7 @@
             // We reconnect to whichever shell was last active.
             apiJson('/api/projects/' + pid + '/start', { method: 'POST' })
                 .then(function (data) {
+                    if (_myReconnectId !== _forceReconnectId) { reconnectInProgress = false; return; }
                     // Prefer this device's saved shell, then in-memory idx, then tmux's active flag
                     const saved = _savedShellChoice(pid, data.shells);
                     const preferred = saved ||
@@ -7138,6 +7142,7 @@
                     requestAnimationFrame(function () { iframe.src = url; startTerminalPoll(); startShellPoll(pid); });
                 })
                 .catch(function (e) {
+                    if (_myReconnectId !== _forceReconnectId) { reconnectInProgress = false; return; }
                     if (isNetworkError(e)) { showHostUnreachable(); reconnectInProgress = false; return; }
                     const url = iframe.src;
                     try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
@@ -7152,13 +7157,14 @@
         });
         reconnectOverlay.addEventListener('touchend', function (e) {
             e.preventDefault();
+            haptic(30);
             reconnectInProgress = false; forceReconnect();
         }, { passive: false });
         reconnectOverlay.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); reconnectInProgress = false; forceReconnect(); }
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); haptic(20); reconnectInProgress = false; forceReconnect(); }
         });
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && connectionState !== 'connected') { e.preventDefault(); reconnectInProgress = false; forceReconnect(); }
+            if (e.key === 'Enter' && connectionState !== 'connected') { e.preventDefault(); haptic(20); reconnectInProgress = false; forceReconnect(); }
         });
         // iOS backgrounding drops the WebSocket; reload iframe when app comes back.
         // Track how long the page was hidden — if >5s, the WS is almost certainly dead.
@@ -7184,6 +7190,7 @@
                 if (connectionState === 'connected') requestWakeLock();
                 // Always reconnect after meaningful background time, not just when "disconnected"
                 if (wasHiddenMs > 5000 || connectionState !== 'connected') {
+                    if (connectionState === 'connected') setConnectionState('reconnecting');
                     forceReconnect();
                 }
                 // (quick switches: the ResizeObserver IIFE's own visibilitychange handles nudgeFit)
@@ -7208,30 +7215,38 @@
         }
 
         function setConnectionState(state) {
-            if (state === connectionState) return;
-            connectionState = state;
-            statusDot.className = 'status-dot ' + state;
-            statusIndicator.classList.remove('connected', 'reconnecting', 'disconnected');
-            statusIndicator.classList.add(state);
             const labels = { connected: 'Connected', reconnecting: 'Reconnecting...', disconnected: 'Disconnected' };
-            statusText.textContent = labels[state] || state;
+            // Fast-path: connected→connected is a no-op (checkConnection calls this every 2 s)
+            if (state === connectionState && state === 'connected') return;
+            var stateChanged = (state !== connectionState);
+            connectionState = state;
+            if (stateChanged) {
+                statusDot.className = 'status-dot ' + state;
+                statusIndicator.classList.remove('connected', 'reconnecting', 'disconnected');
+                statusIndicator.classList.add(state);
+                statusText.textContent = labels[state] || state;
+            }
             if (state === 'reconnecting' || state === 'disconnected') {
                 reconnectOverlay.classList.add('visible');
                 reconnectOverlay.classList.toggle('disconnected', state === 'disconnected');
                 reconnectTitle.textContent = state === 'disconnected' ? 'Disconnected' : 'Reconnecting...';
                 var activeProj = projects && currentProjectId && projects.find(function(p) { return p.id === currentProjectId; });
                 reconnectHint.textContent = activeProj
-                    ? (state === 'disconnected' ? 'Tap to reconnect to ' + activeProj.name : 'Reconnecting to ' + activeProj.name + '…')
+                    ? (state === 'disconnected' ? 'Tap to reconnect to ' + activeProj.name : 'Reconnecting to ' + activeProj.name + '\u2026')
                     : 'Tap or press Enter to reconnect';
-                if (state === 'disconnected') haptic([50,30,50]);
-                releaseWakeLock();
-                setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
-            } else {
+                if (stateChanged) {
+                    if (state === 'disconnected') haptic([50,30,50]);
+                    releaseWakeLock();
+                    setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
+                }
+            } else if (stateChanged) {
                 reconnectOverlay.classList.remove('visible', 'disconnected');
             }
-            statusIndicator.classList.remove('fade-out');
-            clearTimeout(statusFadeTimer);
-            if (state === 'connected') {
+            if (stateChanged) {
+                statusIndicator.classList.remove('fade-out');
+                clearTimeout(statusFadeTimer);
+            }
+            if (stateChanged && state === 'connected') {
                 requestWakeLock();
                 showTrackpadHint();
                 if (termFontScale !== 1.0) applyTermFontScale(termFontScale);
@@ -7265,6 +7280,8 @@
         }
         let consecutiveFailures = 0;
         let reconnectInProgress = false;
+        let _forceReconnectId = 0;
+        let _iframeErrorAutoRetried = false;
         const MAX_FAIL_RECONNECTING = 2, MAX_FAIL_DISCONNECTED = 6;
         function checkConnection() {
             if (reconnectInProgress) return; // don't fight an active reconnect
@@ -7287,6 +7304,7 @@
         });
         iframe.addEventListener('load', function () {
             if (iframe.src === 'about:blank' || !iframe.src || iframe.src === location.origin + '/') return; // skip blank navigations
+            _iframeErrorAutoRetried = false; // successful load clears the error retry flag
             // Hide terminal until the post-resize Ctrl+L clears the stray prompt line.
             // opacity:0 keeps layout/dimensions intact so FitAddon measures correctly.
             iframe.style.transition = '';
@@ -7413,7 +7431,16 @@
             } catch (e) {}
         });
         iframe.addEventListener('error', function () {
-            consecutiveFailures = MAX_FAIL_RECONNECTING; setConnectionState('reconnecting');
+            consecutiveFailures = MAX_FAIL_RECONNECTING;
+            setConnectionState('reconnecting');
+            // ttyd may not be ready yet — auto-retry once after 2s.
+            // If the retry also fails, surface 'disconnected' so the user gets a clear prompt.
+            if (!_iframeErrorAutoRetried) {
+                _iframeErrorAutoRetried = true;
+                setTimeout(function () { reconnectInProgress = false; forceReconnect(); }, 2000);
+            } else {
+                setConnectionState('disconnected');
+            }
         });
         document.getElementById('bottom-nav').addEventListener('touchend',  function (e) { e.preventDefault(); }, { passive: false });
         document.getElementById('bottom-nav').addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
