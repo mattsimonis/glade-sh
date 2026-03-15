@@ -346,7 +346,7 @@
     .gd-line-out.sel { color:var(--gd-blue); }
     .gd-cursor {
       display:inline-block; width:7px; height:1.1em;
-      background:var(--gd-blue); vertical-align:text-bottom;
+      background:var(--gd-text); vertical-align:text-bottom;
       margin-left:1px; animation:gd-blink 1s step-end infinite;
       flex-shrink: 0; align-self: flex-start;
     }
@@ -366,8 +366,9 @@
     .gd-cp-env { display:flex; align-items:center; gap:5px; color:var(--gd-subtext0); }
     .gd-cp-dot { width:6px; height:6px; border-radius:50%; background:var(--gd-blue); flex-shrink:0; }
     .gd-cp-meta { display:flex; justify-content:space-between; color:var(--gd-overlay0); }
+    .gd-cp-meta.claude { margin: 0.5rem 0; }
     .gd-cp-rule { height:1px; background: var(--gd-surface1); margin:1px 0; }
-    .gd-cp-input { display:flex; align-items:center; gap:4px; }
+    .gd-cp-input { display:flex; align-items:center; gap:2px; }
     .gd-cp-arrow {
       color:var(--gd-blue); font-size: 18px; align-self: flex-start;
       font-weight: 900; width: 16px; height: 15px;
@@ -376,6 +377,31 @@
     .gd-cp-hint { color:var(--gd-surface2); line-height: 10px; }
     .gd-cp-footer { color:var(--gd-overlay0); }
     .gd-cp-footer strong { color:var(--gd-text); font-weight:600; }
+    /* ── Claude Code UI ── */
+    .gd-claude { display:flex; flex-direction:column; gap:2px; margin-top:2px; }
+    
+    .gd-cc-outer {
+      border:1px solid color-mix(in srgb,#fab387 45%,transparent);
+      border-radius:3px; display:flex; overflow:hidden;
+    }
+    .gd-cc-left {
+      width:100%; padding:8px 12px;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+    }
+    .gd-cc-welcome { color:var(--gd-text); font-weight:700; text-align:center; }
+    .gd-cc-art { color:#fab387; text-align:center; line-height:1; }
+    .gd-cc-art div { white-space:pre; margin:0; padding:0; }
+    .gd-cc-meta { color:var(--gd-subtext0); text-align:center; line-height:1.5; }
+    .gd-cc-right { flex:1; padding:6px 8px; display:flex; flex-direction:column; gap:3px; overflow:hidden; }
+    .gd-cc-sh { color:#fab387; font-weight:700; }
+    .gd-cc-row { color:var(--gd-subtext0); }
+    .gd-cc-rule { height:1px; background:var(--gd-surface1); margin:2px 0; }
+    .gd-cc-hint { color:var(--gd-overlay0); margin-top:1px; }
+    .gd-cc-hrule { color:var(--gd-surface1); white-space:pre; overflow:hidden; }
+    .gd-cc-prompt { display:flex; align-items:center; gap:4px; }
+    .gd-cc-arr { color:var(--gd-blue); font-weight:900; }
+    .gd-cc-ph { color:var(--gd-overlay0); }
+    #gd-phone-body .gd-cc-left { display:none; }
     .gd-clone-overlay {
       position:absolute; inset:0; background:var(--gd-base);
       display:flex; align-items:center; justify-content:center;
@@ -724,22 +750,30 @@
   var DURATION = 14000;
   var CHAR_MS  = 110;
 
-  var TIMELINE = [
+  var VARIANT = Math.random() < 0.5 ? 'copilot' : 'claude';
+
+  var BASE_TIMELINE = [
     // Clone phase — both screens
-    {t:200,  tgt:'both',    type:'clone-start'},
-    {t:1600, tgt:'both',    type:'clone-progress'},
-    {t:3100, tgt:'both',    type:'clone-done'},
-    {t:3800, tgt:'both',    type:'shell-open'},
+    {t:200,  tgt:'both', type:'clone-start'},
+    {t:1600, tgt:'both', type:'clone-progress'},
+    {t:3100, tgt:'both', type:'clone-done'},
+    {t:3800, tgt:'both', type:'shell-open'},
     // Same tmux session — both screens update together
     {t:4300, tgt:'both', type:'type',   text:'pwd'},
     {t:5300, tgt:'both', type:'output', lines:['/home/matt/glade-sh']},
     {t:6000, tgt:'both', type:'type',   text:'ls'},
     {t:6900, tgt:'both', type:'output', lines:['README.md  api/  tests/  web/']},
     {t:7600, tgt:'both', type:'type',   text:'git status'},
-    {t:9200, tgt:'both', type:'output', lines:['On branch main', "nothing to commit, working tree clean"]},
-    {t:9900, tgt:'both', type:'type',   text:'gh copilot'},
-    {t:11500, tgt:'both', type:'copilot-open'},
+    {t:9200, tgt:'both', type:'output', lines:['On branch main', 'nothing to commit, working tree clean']},
   ];
+
+  var TIMELINE = BASE_TIMELINE.concat(VARIANT === 'copilot' ? [
+    {t:9900,  tgt:'both', type:'type',        text:'gh copilot'},
+    {t:11500, tgt:'both', type:'copilot-open'},
+  ] : [
+    {t:9900,  tgt:'both', type:'type',        text:'claude'},
+    {t:11200, tgt:'both', type:'claude-open'},
+  ]);
 
   function stateAt(elapsed) {
     var ds = {phase:'idle', clone:'idle', lines:[], pending:null};
@@ -764,6 +798,9 @@
         } else if (ev.type === 'copilot-open') {
           if (s.pending) { s.lines.push({k:'cmd', v: s.pending.full}); s.pending = null; }
           s.copilotOpen = true;
+        } else if (ev.type === 'claude-open') {
+          if (s.pending) { s.lines.push({k:'cmd', v: s.pending.full}); s.pending = null; }
+          s.claudeOpen = true;
         }
       }
     }
@@ -782,6 +819,30 @@
 
   function renderTerm(el, s) {
     if (s.phase !== 'terminal') { el.innerHTML = ''; return; }
+    if (s.claudeOpen) {
+      el.innerHTML = '<div class="gd-line gd-line-cmd">claude</div>' +
+        '<div class="gd-copilot">' +
+          '<div class="gd-cp-box" style="border-color:color-mix(in srgb,#d77757 60%,transparent);align-items:flex-start">' +
+            '<div style="display:flex;flex-direction:column;align-items:center;">' +
+              '<div class="gd-cp-name" style="color:var(--gd-text);margin-bottom:0.5rem">Welcome back!</div>' +
+              '<div class="gd-cp-logomark" style="align-items:flex-start">' +
+                '<div style="color:#d77757;line-height:0.99;display:flex;flex-direction:column;align-items:center;letter-spacing:-0.5px">' +
+                  '<div style="white-space:pre">▐▛███▜▌</div>' +
+                  '<div style="white-space:pre">▝▜█████▛▘</div>' +
+                  '<div style="white-space:pre">▘▘ ▝▝</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="gd-cp-tagline" style="text-align:left;margin-bottom:0.25rem">I don\'t get tired.</div>' +
+              '<div class="gd-cp-tagline" style="text-align:left">~/glade-sh</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="gd-cp-meta claude"><span>  Welcome to Opus 4.6</span></div>' +
+          '<div class="gd-cp-rule"></div>' +
+          '<div class="gd-cp-input"><span class="gd-cp-arrow" style="color:var(--gd-text)">❯</span><span class="gd-cursor"></span><span class="gd-cp-hint"> Try "edit <filepath> to..."</span></div>' +
+          '<div class="gd-cp-rule"></div>' +
+        '</div>';
+      return;
+    }
     if (s.copilotOpen) {
       el.innerHTML = '<div class="gd-line gd-line-cmd">gh copilot</div>' +
         '<div class="gd-copilot">' +
@@ -793,11 +854,11 @@
               '<div class="gd-cp-bar-row" style="color:#f5c2e7"> ▔▔▔ </div>' +
             '</div>' +
             '<div class="gd-cp-name">GitHub Copilot</div>' +
-            '<div class="gd-cp-tagline">What are we breaking today?</div>' +
+            '<div class="gd-cp-tagline">sudo make me a sandwich</div>' +
           '</div>' +
           '<div class="gd-cp-meta"><span>~/glade-sh</span><span>claude-opus-4.6</span></div>' +
           '<div class="gd-cp-rule"></div>' +
-          '<div class="gd-cp-input"><span class="gd-cp-arrow">›</span><span class="gd-cursor"></span><span class="gd-cp-hint"> Type @ to mention files, / for commands, or ? for shortcuts</span></div>' +
+          '<div class="gd-cp-input"><span class="gd-cp-arrow" style="color:#8d93ac">›</span><span class="gd-cursor"></span><span class="gd-cp-hint"> Type @ to mention files</span></div>' +
           '<div class="gd-cp-rule"></div>' +
           '<div class="gd-cp-footer"><strong>shift+tab</strong> switch mode</div>' +
         '</div>';
@@ -912,7 +973,7 @@
         <h3>A natural home for AI agents</h3>
       </div>
       <div class="feat-ai-right">
-        <p>Glade was built so sessions survive — whether you're switching devices at midnight or letting Claude Code grind through a refactor while you sleep. The agent runs in Docker, isolated from your local machine. It only sees what's in the container. Start the job. Walk away. Pick it back up from anywhere.</p>
+        <p>Glade was built so sessions survive — whether you're switching devices at midnight or letting Claude Code grind through a refactor while you sleep. The agent runs in Docker, isolated from your local machine. It only sees what's in the container. Claude Code and GitHub Copilot auth survive container rebuilds. Start the job. Walk away. Pick it back up from anywhere.</p>
       </div>
     </div>
     <div class="features-grid">
@@ -934,7 +995,7 @@
       <div class="feat">
         <div class="feat-icon">🪟</div>
         <h3>Project isolation</h3>
-        <p>Each project gets its own tmux session and ttyd instance. Multiple shell tabs per project. Switch without losing context.</p>
+        <p>Each project gets its own tmux session and ttyd instance. Multiple shell tabs per project. Each device tracks its own tab independently — switching on your phone never moves the view on your laptop.</p>
       </div>
       <div class="feat">
         <div class="feat-icon">📜</div>
