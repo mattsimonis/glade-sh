@@ -935,26 +935,8 @@
         }
         #focus-exit-btn:active { background:var(--surface1); color:var(--text); }
 
-        /* ── Text selection mode button (mobile only) ───────────────────── */
-        #sel-mode-btn {
-            position:fixed; bottom:calc(20px + env(safe-area-inset-bottom)); left:16px;
-            height:36px; padding:0 14px; border-radius:18px;
-            background:color-mix(in srgb, var(--surface0) 95%, transparent);
-            backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-            border:1.5px solid var(--surface2); color:var(--subtext0);
-            display:none; align-items:center; justify-content:center; gap:6px;
-            font-size:12px; font-family:var(--font-mono); font-weight:600;
-            cursor:pointer; z-index:9998;
-            box-shadow:0 2px 12px rgba(0,0,0,0.4);
-            -webkit-tap-highlight-color:transparent;
-            transition:background 100ms, color 100ms, border-color 100ms;
-        }
-        #sel-mode-btn:active { background:var(--surface1); }
-        body.sel-mode #sel-mode-btn {
-            background:color-mix(in srgb, var(--mauve) 20%, transparent);
-            border-color:var(--mauve); color:var(--mauve);
-        }
-        body.sel-mode #gesture-overlay { pointer-events:none !important; }
+        /* ── Text selection mode button (in nav bar, mobile only) ──────── */
+        body.sel-mode #sel-mode-btn { color:var(--mauve) !important; }
 
         /* ── Command Palette ─────────────────────────────────────────── */
         #cmd-palette-backdrop {
@@ -1859,6 +1841,10 @@
             <button class="nav-btn" data-panel="history" aria-label="History">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             </button>
+            <!-- i-beam = text selection mode (mobile only; nav bar is hidden on desktop) -->
+            <button class="nav-btn" id="sel-mode-btn" aria-label="Text selection mode">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            </button>
             <!-- bot = copilot tab removed; AI toggle is in the shortcut bar -->
             <div class="nav-divider"></div>
             <!-- settings gear -->
@@ -1877,9 +1863,6 @@
     <button id="focus-exit-btn" aria-label="Exit focus mode">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15 3 9l6-6"/><path d="M3 9h12a6 6 0 0 1 0 12h-3"/></svg>
     </button>
-
-    <!-- Text selection mode toggle — mobile only, wired in JS -->
-    <button id="sel-mode-btn" aria-label="Toggle text selection mode"></button>
 
     <!-- Arrow D-pad — shown when joystick is active -->
     <div id="arrow-pad" role="group" aria-label="Arrow keys">
@@ -2400,6 +2383,7 @@
         let ctrlActive = false, altActive = false;
         let sbCtrlBtn = null, sbAltBtn = null; // shortcut bar ctrl/alt refs
         let selListenerAdded = false;          // xterm selection listener guard
+        let selDragAnchor    = null;           // {row,col} anchor when drag-selecting in sel mode
         let connectionState = 'connected';
         let statusFadeTimer = null;
         let xtermTextarea = null, terminalInstance = null;
@@ -6443,7 +6427,45 @@
             } catch(e) {}
         }
         // Returns the URL string at a given outer-document position, or null.
-        // outerX/Y are in the outer viewport's coordinate space.
+        // Converts outer-doc touch coordinates to a {col, row} terminal cell.
+        function touchToTermCell(cx, cy) {
+            if (!terminalInstance) findTerminal();
+            if (!terminalInstance) return null;
+            try {
+                const iDoc = iframe.contentDocument;
+                const screen = iDoc && iDoc.querySelector('.xterm-screen');
+                if (!screen) return null;
+                const iframeRect = iframe.getBoundingClientRect();
+                const screenRect = screen.getBoundingClientRect();
+                const relX = cx - iframeRect.left - screenRect.left;
+                const relY = cy - iframeRect.top  - screenRect.top;
+                let cellW = 8, cellH = 16;
+                try {
+                    const dims = terminalInstance._core._renderService.dimensions;
+                    if (dims.actualCellWidth)  { cellW = dims.actualCellWidth;  cellH = dims.actualCellHeight; }
+                    else if (dims.css && dims.css.cell) { cellW = dims.css.cell.width; cellH = dims.css.cell.height; }
+                } catch(_) {}
+                return {
+                    col: Math.max(0, Math.min(Math.floor(relX / cellW), terminalInstance.cols - 1)),
+                    row: Math.max(0, Math.min(Math.floor(relY / cellH), terminalInstance.rows - 1))
+                };
+            } catch(e) { return null; }
+        }
+        // Calls terminalInstance.select() from anchor to cur, handling backward drags.
+        function updateDragSelection(anchor, cur) {
+            if (!terminalInstance) return;
+            let sc, sr, ec, er;
+            if (cur.row < anchor.row || (cur.row === anchor.row && cur.col < anchor.col)) {
+                sc = cur.col;    sr = cur.row;
+                ec = anchor.col; er = anchor.row;
+            } else {
+                sc = anchor.col; sr = anchor.row;
+                ec = cur.col;    er = cur.row;
+            }
+            const cols = terminalInstance.cols;
+            const len = Math.max(1, (er - sr) * cols + (ec - sc + 1));
+            try { terminalInstance.select(sc, sr, len); } catch(e) {}
+        }
         function findUrlAtTerminalPos(outerX, outerY) {
             try {
                 if (!terminalInstance) return null;
@@ -7075,6 +7097,13 @@
             if (e.touches.length !== 1) return;
             e.preventDefault(); // prevent iOS from focusing underlying xterm on any hold/tap
             const t = e.touches[0];
+            // In selection mode, record the drag anchor and skip all normal gesture handling.
+            if (document.body.classList.contains('sel-mode')) {
+                gestureStartX = t.clientX; gestureStartY = t.clientY;
+                gestureStartTime = Date.now(); gestureMoved = false;
+                selDragAnchor = touchToTermCell(t.clientX, t.clientY);
+                return;
+            }
             gestureStartX = t.clientX; gestureStartY = t.clientY;
             gestureStartTime = Date.now(); gestureMoved = false;
             gestureScrolling = false; gesturePrevY = t.clientY;
@@ -7100,6 +7129,17 @@
             }
             if (e.touches.length !== 1) return;
             const t = e.touches[0];
+            // In selection mode, update drag selection instead of scrolling/trackpad.
+            if (document.body.classList.contains('sel-mode')) {
+                e.preventDefault();
+                const dist = Math.hypot(t.clientX - gestureStartX, t.clientY - gestureStartY);
+                if (!gestureMoved && dist > 8) gestureMoved = true;
+                if (gestureMoved && selDragAnchor && terminalInstance) {
+                    const cur = touchToTermCell(t.clientX, t.clientY);
+                    if (cur) updateDragSelection(selDragAnchor, cur);
+                }
+                return;
+            }
             const dist = Math.sqrt(Math.pow(t.clientX - gestureStartX, 2) + Math.pow(t.clientY - gestureStartY, 2));
             if (!gestureMoved && dist > 22) {
                 gestureMoved = true;
@@ -7133,6 +7173,19 @@
                 return;
             }
             clearTimeout(trackpadLongPressTimer); trackpadLongPressTimer = null;
+            // In selection mode: show copy pill if text was dragged; single tap exits mode.
+            if (document.body.classList.contains('sel-mode')) {
+                const t = e.changedTouches[0];
+                if (gestureMoved && terminalInstance && terminalInstance.getSelection().length > 0) {
+                    haptic(8);
+                    if (window._showCopyPill) window._showCopyPill(t.clientX, t.clientY);
+                } else {
+                    if (terminalInstance) try { terminalInstance.clearSelection(); } catch(_) {}
+                    if (window._exitSelMode) window._exitSelMode();
+                }
+                selDragAnchor = null;
+                return;
+            }
             if (trackpadActive) {
                 e.preventDefault();
                 const wasUsed = trackpadUsed;
@@ -7197,14 +7250,14 @@
             pinchActive = false;
             clearTimeout(trackpadLongPressTimer); trackpadLongPressTimer = null;
             if (trackpadActive) deactivateTrackpad();
+            selDragAnchor = null;
         }, { passive: true });
 
-        // ── Selection pill + selection mode (native iOS text selection) ────────────
+        // ── Selection pill + selection mode ────────────────────────────────────
         (function () {
             const selLayer   = document.getElementById('sel-layer');
             const selPill    = document.getElementById('sel-pill');
             const selModeBtn = document.getElementById('sel-mode-btn');
-            const SEL_ICON   = '<svg width="11" height="13" viewBox="0 0 11 13" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M2 1h7M2 12h7M5.5 1v11"/></svg>';
 
             // ── Quick-copy pill ──────────────────────────────────────────────────
             // Shown after a long-press word/line selection in normal mode.
@@ -7237,43 +7290,28 @@
             });
 
             // ── Selection mode ───────────────────────────────────────────────────
-            // Disables the gesture overlay so iOS can handle text selection natively.
-            // The xterm.js accessibility layer (.xterm-rows) carries real DOM text —
-            // with user-select:text injected and pointer-events restored, iOS long-press
-            // activates its native drag handles and Copy toolbar.
+            // Entering sel mode changes the gesture overlay touchstart/touchmove/
+            // touchend handlers to perform drag-selection via terminalInstance.select()
+            // instead of the usual scroll/trackpad/swipe behaviours.  The sel-mode-btn
+            // lives in the nav bar; body.sel-mode CSS turns it mauve while active.
 
             let selModeActive = false;
 
             function enterSelMode() {
                 selModeActive = true;
                 document.body.classList.add('sel-mode');
-                selModeBtn.innerHTML = '<span>Done</span>';
-                try {
-                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (iDoc) {
-                        let s = iDoc.getElementById('glade-sel-css');
-                        if (!s) { s = iDoc.createElement('style'); s.id = 'glade-sel-css'; iDoc.head.appendChild(s); }
-                        s.textContent = '.xterm-rows,.xterm-rows *{user-select:text!important;-webkit-user-select:text!important;pointer-events:auto!important}';
-                    }
-                } catch(e) {}
             }
 
             function exitSelMode() {
                 selModeActive = false;
                 document.body.classList.remove('sel-mode');
-                selModeBtn.innerHTML = SEL_ICON + '<span>Select</span>';
-                try {
-                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (iDoc) { const s = iDoc.getElementById('glade-sel-css'); if (s) s.remove(); }
-                } catch(e) {}
-                if (terminalInstance) try { terminalInstance.clearSelection(); } catch(e) {}
+                selDragAnchor = null;
+                if (terminalInstance) try { terminalInstance.clearSelection(); } catch(_) {}
                 hideCopyPill();
             }
             window._exitSelMode = exitSelMode;
 
-            if (selModeBtn && !window.matchMedia('(pointer: fine)').matches) {
-                selModeBtn.style.display = 'flex';
-                selModeBtn.innerHTML = SEL_ICON + '<span>Select</span>';
+            if (selModeBtn) {
                 selModeBtn.addEventListener('click', function () {
                     if (selModeActive) exitSelMode(); else enterSelMode();
                 });
