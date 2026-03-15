@@ -1392,9 +1392,9 @@
         body.is-desktop .toast-spacer { display:none; }
         /* Actual content row — icon + text */
         .toast-body {
-            flex:1; display:flex; align-items:center; padding:0 20px; gap:14px;
+            flex:1; display:flex; align-items:center; justify-content:center; padding:0 20px; gap:14px;
         }
-        body.is-desktop .toast-body { padding:0; gap:12px; flex:none; }
+        body.is-desktop .toast-body { padding:0; gap:12px; flex:none; justify-content:flex-start; }
         /* Icon */
         .toast-icon-wrap {
             flex-shrink:0;
@@ -1431,7 +1431,8 @@
         }
         @keyframes toast-path-draw { to { stroke-dashoffset:0; } }
         /* Text */
-        .toast-text { display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
+        .toast-text { display:flex; flex-direction:column; gap:3px; min-width:0; max-width:210px; }
+        body.is-desktop .toast-text { flex:1; max-width:none; }
         .toast-label-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .toast-label {
             font-size:13px; font-family:var(--font-mono); font-weight:600;
@@ -8226,8 +8227,14 @@
             document.getElementById('dbg-toast-long').onclick      = function () { toast('This is a really quite long toast message to test wrapping', 'success'); };
             document.getElementById('dbg-toast-sticky').onclick    = function () { toast('Tap me to close', 'success', 0); };
             document.getElementById('dbg-toast-many').onclick      = function () {
-                ['Alpha', 'Bravo', 'Charlie', 'Delta'].forEach(function (n, i) {
-                    setTimeout(function () { toast(n, i % 2 === 0 ? 'success' : 'error'); }, i * 350);
+                var items = [
+                    { msg: 'Snippet copied',    type: 'success' },
+                    { msg: 'Upload failed',     type: 'error'   },
+                    { msg: 'Project saved',     type: 'success' },
+                    { msg: 'GitHub connected',  type: 'success' },
+                ];
+                items.forEach(function (t, i) {
+                    setTimeout(function () { toast(t.msg, t.type); }, i * 350);
                 });
             };
 
