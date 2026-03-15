@@ -527,14 +527,6 @@
             opacity:0; transition:opacity 150ms ease;
         }
         #sel-layer.sel-active { opacity:1; }
-        .sel-handle {
-            position:absolute; width:26px; height:26px; border-radius:50%;
-            background:var(--mauve); pointer-events:auto; cursor:grab;
-            box-shadow:0 2px 10px color-mix(in srgb, var(--mauve) 55%, transparent);
-            border:2px solid rgba(255,255,255,0.25);
-            transform:translate(-50%,-50%);
-            -webkit-tap-highlight-color:transparent;
-        }
         #sel-pill {
             position:absolute; display:flex; align-items:center; gap:0;
             background:color-mix(in srgb, var(--base) 96%, transparent); border:1px solid var(--mauve);
@@ -942,6 +934,27 @@
             50% { box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 0 8px color-mix(in srgb, var(--blue) 0%, transparent); }
         }
         #focus-exit-btn:active { background:var(--surface1); color:var(--text); }
+
+        /* ── Text selection mode button (mobile only) ───────────────────── */
+        #sel-mode-btn {
+            position:fixed; bottom:calc(20px + env(safe-area-inset-bottom)); left:16px;
+            height:36px; padding:0 14px; border-radius:18px;
+            background:color-mix(in srgb, var(--surface0) 95%, transparent);
+            backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+            border:1.5px solid var(--surface2); color:var(--subtext0);
+            display:none; align-items:center; justify-content:center; gap:6px;
+            font-size:12px; font-family:var(--font-mono); font-weight:600;
+            cursor:pointer; z-index:9998;
+            box-shadow:0 2px 12px rgba(0,0,0,0.4);
+            -webkit-tap-highlight-color:transparent;
+            transition:background 100ms, color 100ms, border-color 100ms;
+        }
+        #sel-mode-btn:active { background:var(--surface1); }
+        body.sel-mode #sel-mode-btn {
+            background:color-mix(in srgb, var(--mauve) 20%, transparent);
+            border-color:var(--mauve); color:var(--mauve);
+        }
+        body.sel-mode #gesture-overlay { pointer-events:none !important; }
 
         /* ── Command Palette ─────────────────────────────────────────── */
         #cmd-palette-backdrop {
@@ -1750,8 +1763,6 @@
             </div>
             <div id="gesture-overlay"></div>
             <div id="sel-layer">
-                <div id="sel-handle-start" class="sel-handle"></div>
-                <div id="sel-handle-end" class="sel-handle"></div>
                 <div id="sel-pill">
                     <button id="sel-copy-btn">Copy</button>
                     <span class="sel-pill-sep"></span>
@@ -1866,6 +1877,9 @@
     <button id="focus-exit-btn" aria-label="Exit focus mode">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15 3 9l6-6"/><path d="M3 9h12a6 6 0 0 1 0 12h-3"/></svg>
     </button>
+
+    <!-- Text selection mode toggle — mobile only, wired in JS -->
+    <button id="sel-mode-btn" aria-label="Toggle text selection mode"></button>
 
     <!-- Arrow D-pad — shown when joystick is active -->
     <div id="arrow-pad" role="group" aria-label="Arrow keys">
@@ -5137,6 +5151,7 @@
             try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
             terminalInstance = null; xtermTextarea = null;
             window._osc7Wired = false; _osc7WiredSocket = null;
+            if (window._exitSelMode) window._exitSelMode();
             // Hide immediately so the new page never renders into a visible iframe.
             // The load handler fades back in after the optional Ctrl+L.
             iframe.style.transition = '';
@@ -6416,17 +6431,15 @@
                 while (end < lineText.length && isWordChar(lineText[end])) end++;
                 if (end <= start) { // tapped whitespace — select trimmed line
                     const trimmed = lineText.trimEnd().length;
-                    if (trimmed > 0) {
-                        terminalInstance.select(0, row, trimmed);
-                        if (window._setLastSelBounds) window._setLastSelBounds({sc:0, sr:row+buf.viewportY, ec:trimmed-1, er:row+buf.viewportY});
-                    }
+                    if (trimmed > 0) terminalInstance.select(0, row, trimmed);
                 } else {
                     terminalInstance.select(start, row, end - start);
-                    if (window._setLastSelBounds) window._setLastSelBounds({sc:start, sr:row+buf.viewportY, ec:end-1, er:row+buf.viewportY});
                 }
-                // Light haptic confirms selection started — the sel-layer handles + Copy pill
-                // are now visible so the user can adjust the selection before copying.
-                if (terminalInstance.getSelection().length > 0) haptic(8);
+                // Light haptic + show quick-copy pill above the touch point.
+                if (terminalInstance.getSelection().length > 0) {
+                    haptic(8);
+                    if (window._showCopyPill) window._showCopyPill(cx, cy);
+                }
             } catch(e) {}
         }
         // Returns the URL string at a given outer-document position, or null.
@@ -7186,150 +7199,92 @@
             if (trackpadActive) deactivateTrackpad();
         }, { passive: true });
 
-        // ── Selection handles ───────────────────────────────────────────────────
+        // ── Selection pill + selection mode (native iOS text selection) ────────────
         (function () {
-            const selLayer  = document.getElementById('sel-layer');
-            const hStart    = document.getElementById('sel-handle-start');
-            const hEnd      = document.getElementById('sel-handle-end');
-            const selPill   = document.getElementById('sel-pill');
+            const selLayer   = document.getElementById('sel-layer');
+            const selPill    = document.getElementById('sel-pill');
+            const selModeBtn = document.getElementById('sel-mode-btn');
+            const SEL_ICON   = '<svg width="11" height="13" viewBox="0 0 11 13" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M2 1h7M2 12h7M5.5 1v11"/></svg>';
 
-            let lastSelBounds = null; // {sc, sr, ec, er} in buffer-row coords
-            // Called from selectWordAtTouch (outside this IIFE) to record selection bounds
-            // so positionHandles() doesn't have to rely on a private xterm.js API.
-            window._setLastSelBounds = function (b) { lastSelBounds = b; };
+            // ── Quick-copy pill ──────────────────────────────────────────────────
+            // Shown after a long-press word/line selection in normal mode.
+            // Positioned at the touch point; user taps Copy or All.
 
-            function getTermCellSize() {
-                try {
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    const screenEl  = iframeDoc.querySelector('.xterm-screen');
-                    if (!screenEl || !terminalInstance) return null;
-                    const rect = screenEl.getBoundingClientRect();
-                    return { rect, cellW: rect.width / terminalInstance.cols, cellH: rect.height / terminalInstance.rows };
-                } catch (e) { return null; }
-            }
-            function getSelModel() {
-                try {
-                    const core = terminalInstance._core;
-                    const svc  = core._selectionService || core.selectionService;
-                    return (svc && (svc.model || svc._model)) || null;
-                } catch (e) { return null; }
-            }
-            function viewportY() {
-                try { return terminalInstance.buffer.active.viewportY || 0; } catch (e) { return 0; }
-            }
-            function positionHandles() {
-                if (isPointerDevice) return; // desktop: native text selection; no drag handles
-                if (!terminalInstance) return hideSelHandles();
-                // Use stored bounds set by selectWordAtTouch / applySelect; fall back to
-                // private selection-model API only for the selectAll path.
-                let sc, sr, ec, er;
-                if (lastSelBounds) {
-                    ({sc, sr, ec, er} = lastSelBounds);
-                } else {
-                    const m = getSelModel();
-                    if (!m || !m.selectionStart || !m.selectionEnd) return hideSelHandles();
-                    [sc, sr] = m.selectionStart;
-                    [ec, er] = m.selectionEnd;
-                }
-                const cs = getTermCellSize();
-                if (!cs) return;
-                const { rect, cellW, cellH } = cs;
-                const tc     = document.getElementById('terminal-container');
+            function showCopyPill(cx, cy) {
+                if (!selLayer || !selPill) return;
+                const tc = document.getElementById('terminal-container');
                 const tcRect = tc.getBoundingClientRect();
-                const vy = viewportY();
-                // Screen-relative row (clamped to visible rows)
-                const sRow = sr - vy, eRow = er - vy;
-                // Handle positions relative to terminal-container
-                const sx = rect.left - tcRect.left + sc * cellW;
-                const sy = rect.top  - tcRect.top  + sRow * cellH;
-                const ex = rect.left - tcRect.left + (ec + 1) * cellW;
-                const ey = rect.top  - tcRect.top  + (eRow + 1) * cellH;
-                hStart.style.left = sx + 'px';
-                hStart.style.top  = sy + 'px';
-                hEnd.style.left   = ex + 'px';
-                hEnd.style.top    = ey + 'px';
-                // Pill: centered above selection top
-                const midX = (sx + ex) / 2;
-                const topY = Math.min(sy, ey);
-                selPill.style.left = midX + 'px';
-                selPill.style.top  = topY + 'px';
+                selPill.style.left = (cx - tcRect.left) + 'px';
+                selPill.style.top  = (cy - tcRect.top)  + 'px';
                 selLayer.classList.add('sel-active');
             }
-            function hideSelHandles() {
-                selLayer.classList.remove('sel-active');
+            function hideCopyPill() {
+                if (selLayer) selLayer.classList.remove('sel-active');
             }
-            function applySelect(sc, sr, ec, er) {
-                if (sr > er || (sr === er && sc > ec)) {
-                    // Swap so start is always before end
-                    [sc, sr, ec, er] = [ec, er, sc, sr];
-                }
-                lastSelBounds = {sc, sr, ec, er};
-                const cols = terminalInstance.cols;
-                const length = (er - sr) * cols + (ec - sc + 1);
-                try { terminalInstance.select(sc, sr, Math.max(1, length)); } catch (e) {}
-                positionHandles();
-            }
-            function handleDrag(handle, isStart) {
-                let dragging = false;
-                let otherSc, otherSr, otherEc, otherEr;
-                handle.addEventListener('touchstart', function (e) {
-                    e.stopPropagation(); e.preventDefault();
-                    dragging = true;
-                    const m = getSelModel();
-                    if (m && m.selectionStart && m.selectionEnd) {
-                        otherSc = m.selectionStart[0]; otherSr = m.selectionStart[1];
-                        otherEc = m.selectionEnd[0];   otherEr = m.selectionEnd[1];
-                    }
-                }, { passive: false });
-                handle.addEventListener('touchmove', function (e) {
-                    if (!dragging) return;
-                    e.stopPropagation(); e.preventDefault();
-                    const cs = getTermCellSize();
-                    if (!cs || !terminalInstance) return;
-                    const t = e.touches[0];
-                    const col    = Math.max(0, Math.min(terminalInstance.cols - 1, Math.floor((t.clientX - cs.rect.left) / cs.cellW)));
-                    const bufRow = Math.max(0, viewportY() + Math.floor((t.clientY - cs.rect.top) / cs.cellH));
-                    if (isStart) {
-                        applySelect(col, bufRow, otherEc, otherEr);
-                    } else {
-                        applySelect(otherSc, otherSr, col, bufRow);
-                    }
-                }, { passive: false });
-                handle.addEventListener('touchend', function (e) {
-                    e.stopPropagation();
-                    dragging = false;
-                    positionHandles();
-                }, { passive: false });
-            }
-            handleDrag(hStart, true);
-            handleDrag(hEnd, false);
+            window._showCopyPill = showCopyPill;
+            window._hideCopyPill = hideCopyPill;
 
             document.getElementById('sel-copy-btn').addEventListener('click', function () {
                 if (!terminalInstance) return;
                 const text = terminalInstance.getSelection();
                 if (text) { copyText(text).catch(function () {}); haptic(10); }
                 terminalInstance.clearSelection();
-                hideSelHandles();
+                hideCopyPill();
             });
             document.getElementById('sel-all-btn').addEventListener('click', function () {
                 if (!terminalInstance) return;
                 terminalInstance.selectAll();
-                try {
-                    const b = terminalInstance.buffer.active;
-                    lastSelBounds = {sc:0, sr:0, ec:terminalInstance.cols-1, er:b.length-1};
-                } catch(e) { lastSelBounds = null; }
-                setTimeout(positionHandles, 30);
             });
+
+            // ── Selection mode ───────────────────────────────────────────────────
+            // Disables the gesture overlay so iOS can handle text selection natively.
+            // The xterm.js accessibility layer (.xterm-rows) carries real DOM text —
+            // with user-select:text injected and pointer-events restored, iOS long-press
+            // activates its native drag handles and Copy toolbar.
+
+            let selModeActive = false;
+
+            function enterSelMode() {
+                selModeActive = true;
+                document.body.classList.add('sel-mode');
+                selModeBtn.innerHTML = '<span>Done</span>';
+                try {
+                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iDoc) {
+                        let s = iDoc.getElementById('glade-sel-css');
+                        if (!s) { s = iDoc.createElement('style'); s.id = 'glade-sel-css'; iDoc.head.appendChild(s); }
+                        s.textContent = '.xterm-rows,.xterm-rows *{user-select:text!important;-webkit-user-select:text!important;pointer-events:auto!important}';
+                    }
+                } catch(e) {}
+            }
+
+            function exitSelMode() {
+                selModeActive = false;
+                document.body.classList.remove('sel-mode');
+                selModeBtn.innerHTML = SEL_ICON + '<span>Select</span>';
+                try {
+                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iDoc) { const s = iDoc.getElementById('glade-sel-css'); if (s) s.remove(); }
+                } catch(e) {}
+                if (terminalInstance) try { terminalInstance.clearSelection(); } catch(e) {}
+                hideCopyPill();
+            }
+            window._exitSelMode = exitSelMode;
+
+            if (selModeBtn && !window.matchMedia('(pointer: fine)').matches) {
+                selModeBtn.style.display = 'flex';
+                selModeBtn.innerHTML = SEL_ICON + '<span>Select</span>';
+                selModeBtn.addEventListener('click', function () {
+                    if (selModeActive) exitSelMode(); else enterSelMode();
+                });
+            }
 
             window._setupSelHandles = function () {
                 if (selListenerAdded || !terminalInstance) return;
                 try {
                     terminalInstance.onSelectionChange(function () {
-                        if (terminalInstance && terminalInstance.getSelection().length > 0) {
-                            positionHandles();
-                        } else {
-                            lastSelBounds = null;
-                            hideSelHandles();
+                        if (!terminalInstance || terminalInstance.getSelection().length === 0) {
+                            hideCopyPill();
                         }
                     });
                     selListenerAdded = true;
