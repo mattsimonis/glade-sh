@@ -70,7 +70,7 @@ REBUILD_LOCK    = os.path.join(GLADE_DIR, ".rebuild-running")
 REBUILD_LOG     = os.path.join(GLADE_DIR, "rebuild.log")
 PROJECTS_DIR    = os.path.join(GLADE_DIR, "projects")
 
-PORT_POOL = list(range(7690, 7700))
+PORT_POOL = list(range(7690, 7730))  # 40 slots — one per active window across all projects
 
 _gh_auth_proc = None
 _gh_auth_lock = threading.Lock()
@@ -284,8 +284,10 @@ def list_shells_tmux(sname):
 
 
 def new_shell_tmux(sname, directory):
-    # Without -d, tmux auto-selects the new window so the shared project ttyd
-    # immediately shows it — no iframe reload required.
+    # Without -d, tmux auto-selects the new window in the source session.
+    # With per-window linked sessions, the source session's active window
+    # doesn't affect any client (all clients attach via their linked session),
+    # but -d is cleaner and avoids any tmux state churn.
     effective_dir = directory if (directory and os.path.isdir(directory)) else "/root"
     # Find the current last window index so we can append after it
     ls = subprocess.run(
@@ -295,7 +297,7 @@ def new_shell_tmux(sname, directory):
     indices = [int(x) for x in ls.stdout.split() if x.isdigit()]
     last_idx = max(indices) if indices else 0
     r = subprocess.run(
-        ["tmux", "new-window", "-a", "-t", f"{sname}:{last_idx}",
+        ["tmux", "new-window", "-d", "-a", "-t", f"{sname}:{last_idx}",
          "-c", effective_dir, "-P", "-F", "#{window_index}"],
         capture_output=True, text=True
     )
@@ -329,19 +331,18 @@ def get_free_port():
     return None
 
 
-def _ttyd_shell_key(sname, window_idx=None):
-    # One ttyd per project (attaches to the session, not a specific window).
-    # window_idx is kept in the signature for call-site compatibility but ignored.
-    return sname
+def _ttyd_shell_key(sname, window_idx=0):
+    # One ttyd per window, keyed by sname:window_idx.
+    return f"{sname}:{window_idx}"
 
 
 def _recover_shell_procs():
     """Scan /proc to rebuild _ttyd_procs after an API restart.
 
     ttyd processes survive API restarts; we reconstruct the mapping by
-    parsing each process's cmdline for:  ttyd -p PORT ... tmux attach-session -t SNAME
-    Both the new session-level format (proj-XXXX) and the old per-window format
-    (proj-XXXX:N) are recognised for backward compatibility.
+    parsing each process's cmdline for:  ttyd -p PORT ... tmux attach-session -t LINKED
+    Linked session names use the format proj-XXXX-wN, which maps to key proj-XXXX:N.
+    Legacy session-level and old per-window entries are silently ignored.
     """
     for pid in os.listdir('/proc'):
         if not pid.isdigit():
@@ -365,10 +366,13 @@ def _recover_shell_procs():
                     for j in range(i + 1, min(i + 4, len(parts))):
                         if parts[j] == b'-t' and j + 1 < len(parts):
                             t = parts[j + 1].decode('utf-8', errors='ignore')
-                            if t.startswith('proj-'):
-                                # Session-level key: strip any ":window" suffix so old
-                                # per-window ttyd processes are stored under the session key.
-                                target = t.split(':')[0]
+                            # New linked-session format: proj-XXXX-wN → key proj-XXXX:N
+                            m = re.match(r'^(proj-[0-9a-f]{8})-w(\d+)$', t)
+                            if m:
+                                target = f"{m.group(1)}:{m.group(2)}"
+                            elif t.startswith('proj-'):
+                                # Legacy session-level or old per-window — ignore
+                                pass
                             break
                 i += 1
             if port and target:
@@ -403,13 +407,21 @@ def _shell_proc_alive(info):
     return False
 
 
-def _start_shell_ttyd(sname, port):
-    """Start a ttyd instance attached to the tmux session sname and return the Popen.
+def _start_shell_ttyd(sname, port, window_idx=0):
+    """Start a ttyd instance for one tmux window via a linked (grouped) session.
 
-    Attaching to the session (not a specific window) means a single ttyd serves
-    all shell tabs for the project — switching tabs uses tmux select-window and
-    never requires an iframe reload, eliminating SIGWINCH/stray-prompt artifacts.
+    Each window gets its own linked session so multiple browser clients can
+    independently select which tab to view.  Linked sessions share all windows
+    with the source session but each has an independent current-window pointer,
+    so switching tabs on one device never affects another.
     """
+    linked = f"{sname}-w{window_idx}"
+    # Create the linked session (ignore error if it already exists)
+    subprocess.run(["tmux", "new-session", "-d", "-s", linked, "-t", sname],
+                   capture_output=True)
+    # Pin the linked session's current window to this index
+    subprocess.run(["tmux", "select-window", "-t", f"{linked}:{window_idx}"],
+                   capture_output=True)
     proc = subprocess.Popen([
         "ttyd", "-p", str(port), "--writable", "--max-clients", "5",
         "-t", "theme=" + _get_term_theme(),
@@ -419,17 +431,39 @@ def _start_shell_ttyd(sname, port):
         "-t", "cursorStyle=block",
         "-t", "cursorBlink=true",
         "-t", "scrollback=0",
-        "tmux", "attach-session", "-t", sname,
+        "tmux", "attach-session", "-t", linked,
     ])
     return proc
 
 
+def _ensure_window_ttyd(sname, window_idx):
+    """Ensure a dedicated ttyd is running for sname:window_idx. Returns port or None."""
+    key = _ttyd_shell_key(sname, window_idx)
+    with _lock:
+        info = _ttyd_procs.get(key)
+        if info and _shell_proc_alive(info):
+            return info["port"]
+        if info:
+            del _ttyd_procs[key]
+        port = get_free_port()
+        if port is None:
+            return None
+        proc = _start_shell_ttyd(sname, port, window_idx)
+        _ttyd_procs[key] = {"process": proc, "port": port}
+        return port
+
+
 def _kill_shell_ttyd(shell_key):
-    """Kill the ttyd process for a shell key (sname:widx) and remove from registry."""
+    """Kill the ttyd process (and its linked tmux session) for a per-window key."""
     with _lock:
         info = _ttyd_procs.pop(shell_key, None)
     if not info:
         return
+    # Kill the linked session if this is a per-window key (sname:N)
+    m = re.match(r'^(proj-[0-9a-f]{8}):(\d+)$', shell_key)
+    if m:
+        linked = f"{m.group(1)}-w{m.group(2)}"
+        subprocess.run(["tmux", "kill-session", "-t", linked], capture_output=True)
     proc = info.get("process")
     if proc is not None:
         try:
@@ -458,7 +492,7 @@ def _kill_shell_ttyd(shell_key):
 
 
 def ensure_project_running(project_id, directory, project_name=""):
-    """Ensure the tmux session exists and window-0's ttyd is running.
+    """Ensure the tmux session exists and each window has a dedicated ttyd running.
 
     Returns the port for window 0, or None if no ports are available.
     """
@@ -466,39 +500,23 @@ def ensure_project_running(project_id, directory, project_name=""):
     log_slug = slugify(project_name) if project_name else project_id[:8]
     create_tmux_session(sname, directory, log_slug=log_slug)
 
-    key0 = _ttyd_shell_key(sname, 0)
-    with _lock:
-        info = _ttyd_procs.get(key0)
-        if info and _shell_proc_alive(info):
-            return info["port"]
-        if info:
-            del _ttyd_procs[key0]
-
-    # Try to recover from /proc before starting a new process
     _recover_shell_procs()
-    with _lock:
-        info = _ttyd_procs.get(key0)
-        if info and _shell_proc_alive(info):
-            return info["port"]
-
-    with _lock:
-        port = get_free_port()
-        if port is None:
-            return None
-        proc = _start_shell_ttyd(sname, port)
-        _ttyd_procs[key0] = {"process": proc, "port": port}
-        return port
+    shells = list_shells_tmux(sname)
+    port0 = None
+    for sh in shells:
+        p = _ensure_window_ttyd(sname, sh["index"])
+        if sh["index"] == 0:
+            port0 = p
+    return port0
 
 
 def stop_project_proc(project_id):
-    """Kill all ttyd processes belonging to this project."""
+    """Kill all per-window ttyd processes belonging to this project."""
     sname = session_name(project_id)
-    # Recover any orphaned procs from /proc first (e.g. after API restart)
-    # so we don't miss ttyd processes that weren't registered in this run.
     _recover_shell_procs()
     with _lock:
-        keys = [k for k in list(_ttyd_procs.keys())
-                if k == sname or k.startswith(sname + ":")]
+        # Match per-window keys: sname:0, sname:1, etc.
+        keys = [k for k in list(_ttyd_procs.keys()) if k.startswith(sname + ":")]
     for key in keys:
         _kill_shell_ttyd(key)
 
@@ -842,20 +860,23 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, {"ok": True})
 
     def _shells_with_ports(self, pid, sname=None):
-        """Return shell list from tmux, enriched with the project's shared ttyd port."""
+        """Return shell list from tmux enriched with per-window ttyd ports."""
         if sname is None:
             sname = session_name(pid)
-        # Rebuild proc map from /proc if we have no entry for this session
+        # Rebuild proc map from /proc if we have no entries for this session
         with _lock:
-            has_entries = any(k == sname or k.startswith(sname + ":") for k in _ttyd_procs)
+            has_entries = any(k.startswith(sname + ":") for k in _ttyd_procs)
         if not has_entries:
             _recover_shell_procs()
         shells = list_shells_tmux(sname)
         with _lock:
-            info = _ttyd_procs.get(sname)
-            project_port = info["port"] if info else None
+            for sh in shells:
+                info = _ttyd_procs.get(_ttyd_shell_key(sname, sh["index"]))
+                sh["port"] = info["port"] if info else None
+        # Lazily start ttyd for any window that doesn't have one yet
         for sh in shells:
-            sh["port"] = project_port
+            if sh["port"] is None:
+                sh["port"] = _ensure_window_ttyd(sname, sh["index"])
         return shells
 
     def _list_shells(self, pid):
@@ -989,26 +1010,23 @@ class Handler(BaseHTTPRequestHandler):
         idx = new_shell_tmux(sname, row["directory"])
         if idx is None:
             return self.send_json(500, {"error": "tmux new-window failed"})
-        # All shells in a project share the single project-level ttyd port.
-        with _lock:
-            info = _ttyd_procs.get(sname)
-        port = info["port"] if info else None
+        port = _ensure_window_ttyd(sname, idx)
         self.send_json(201, {"index": idx, "port": port})
 
     def _select_shell(self, pid, index):
-        sname = session_name(pid)
-        select_shell_tmux(sname, index)
+        # Tab switching is now handled client-side via per-window ttyd ports.
+        # No server-side tmux select-window needed — each client loads its own
+        # linked session independently.
         self.send_json(200, {"ok": True})
 
     def _kill_shell(self, pid, index):
         sname = session_name(pid)
+        # Tear down the per-window ttyd + linked session first
+        _kill_shell_ttyd(_ttyd_shell_key(sname, index))
         subprocess.run(["tmux", "kill-window", "-t", f"{sname}:{index}"],
                        capture_output=True)
-        # If the session was destroyed (last window killed), clean up the ttyd too.
-        # Recover from /proc first in case the API restarted since this ttyd started.
         if not tmux_session_exists(sname):
-            _recover_shell_procs()
-            _kill_shell_ttyd(sname)
+            stop_project_proc(pid)
         self.send_json(200, {"ok": True})
 
     def _get_activity(self):

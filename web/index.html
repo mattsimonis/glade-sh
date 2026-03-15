@@ -5181,10 +5181,12 @@
                     t.classList.toggle('active', currentShells[i] && currentShells[i].index === idx);
                 });
             }
-            // Switch tmux window via API — no iframe reload needed since all shell tabs
-            // in a project share one ttyd process attached to the whole session.
-            fetch('/api/projects/' + currentProjectId + '/shells/' + idx + '/select', { method: 'PUT' })
-                .catch(function(e) { console.warn('selectShell failed', e); });
+            // Each window has its own ttyd port — load it directly in the iframe.
+            // No server-side tmux select-window: switching tabs on one device
+            // never affects another client viewing the same project.
+            if (shell.port) {
+                loadShellUrl('/ttyd/' + shell.port + '/');
+            }
         }
 
         async function addShell() {
