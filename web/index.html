@@ -6394,12 +6394,9 @@
                 } else {
                     terminalInstance.select(start, row, end - start);
                 }
-                const sel = terminalInstance.getSelection().trim();
-                if (sel) {
-                    copyText(sel).catch(function(){});
-                    haptic([20, 15, 20]);
-                    showCopyToast(sel);
-                }
+                // Light haptic confirms selection started — the sel-layer handles + Copy pill
+                // are now visible so the user can adjust the selection before copying.
+                if (terminalInstance.getSelection().length > 0) haptic(8);
             } catch(e) {}
         }
         // Returns the URL string at a given outer-document position, or null.
