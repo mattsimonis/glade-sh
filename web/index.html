@@ -1371,21 +1371,30 @@
             transform:translateY(0) translateZ(0);
             opacity:1;
         }
-        /* Content layer — absolute overlay on mobile, inline on desktop */
+        /* Content layer — column on mobile so content sits below the pill zone */
         .toast-content {
             position:absolute; inset:0;
-            display:flex; align-items:center;
-            padding:0 20px; gap:14px;
+            display:flex; flex-direction:column;
+            padding:0;
             opacity:0; transform:translateY(5px);
             transition: opacity 200ms ease, transform 300ms cubic-bezier(0.2,0.8,0.2,1);
         }
         body.is-desktop .toast-content {
-            position:static; inset:auto; padding:0; gap:12px;
+            position:static; inset:auto; flex-direction:row; align-items:center;
+            padding:0; gap:12px;
             opacity:1; transform:none; transition:none;
         }
         .toast.t-content-in .toast-content {
             opacity:1; transform:translateY(0);
         }
+        /* Reserves the pill-top zone on mobile; hidden on desktop */
+        .toast-spacer { height:37px; flex-shrink:0; }
+        body.is-desktop .toast-spacer { display:none; }
+        /* Actual content row — icon + text */
+        .toast-body {
+            flex:1; display:flex; align-items:center; padding:0 20px; gap:14px;
+        }
+        body.is-desktop .toast-body { padding:0; gap:12px; flex:none; }
         /* Icon */
         .toast-icon-wrap {
             flex-shrink:0;
@@ -4154,6 +4163,10 @@
             var c = document.getElementById('toast-container');
             if (!c) return;
             var nt = getNotchType();
+            if (!c.classList.contains(nt)) {
+                c.classList.remove('dynamic-island', 'notch', 'none');
+                c.classList.add(nt);
+            }
             c.style.top = nt === 'dynamic-island' ? '14px' : nt === 'notch' ? '54px' : '11px';
         }
 
@@ -4225,8 +4238,14 @@
 
             var contentEl = document.createElement('div');
             contentEl.className = 'toast-content';
-            contentEl.appendChild(iconWrap);
-            contentEl.appendChild(textEl);
+            var spacerEl = document.createElement('div');
+            spacerEl.className = 'toast-spacer';
+            var bodyEl = document.createElement('div');
+            bodyEl.className = 'toast-body';
+            bodyEl.appendChild(iconWrap);
+            bodyEl.appendChild(textEl);
+            contentEl.appendChild(spacerEl);
+            contentEl.appendChild(bodyEl);
             el.appendChild(contentEl);
             c.appendChild(el);
 
@@ -4290,7 +4309,7 @@
                 document.body.appendChild(probe);
                 var probeH = probe.offsetHeight;
                 document.body.removeChild(probe);
-                el.style.setProperty('--toast-h', Math.max(84, Math.ceil(probeH) + 40) + 'px');
+                el.style.setProperty('--toast-h', Math.max(84, 37 + Math.ceil(probeH) + 28) + 'px');
             }
 
             // Enter: shape expands, then content fades in
