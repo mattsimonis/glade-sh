@@ -6,6 +6,25 @@ All notable changes to Glade are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Multi-client tab sync** — switching shell tabs on desktop no longer moves the active window on other connected devices (phone, second browser). Each tmux window now gets its own linked (grouped) session and a dedicated ttyd process; tab switching is purely client-side (iframe URL swap). `PUT .../shells/:n/select` is now a no-op.
+- **PWA icon on iOS home screen** — all 15 PNG icons were RGBA with near-fully-transparent pixels; SpringBoard rendered an invisible icon and fell back to the "G" letter. Icons are now flattened to RGB with a solid `#1e1e2e` (Catppuccin Mocha base) background.
+- **Toast text overflow** — long toast messages were clipped due to `white-space:nowrap` and a fixed `height:78px`. Toasts now wrap with `word-break:break-word`, and mobile toast height is measured at runtime before the animation fires.
+- **Arrow keys / Enter in interactive TUI prompts** — keys were dropped by xterm.js focus handling when tools like `gh copilot suggest` displayed interactive menus. Arrow keys and Enter are now intercepted at the iframe capture phase and forwarded directly to the terminal WebSocket.
+- **Empty terminal space after connect** — the `nudgeFit()` resize guard prevented a re-dispatch when container dimensions hadn't changed yet. A forced `resize` event is now dispatched on the iframe after connection, ensuring tmux always gets the correct window size.
+
+### Added
+
+- **Shell tab keyboard navigation** — Ctrl+Tab / Ctrl+Shift+Tab cycle through shell tabs in the current project on desktop.
+- **Project keyboard shortcuts** — Cmd+1–9 on desktop switches to the Nth project card.
+- **Zsh history persistence** — `HISTFILE` is set to `~/.glade/config/zsh_history` (on the host bind-mount); 50 000 entries, deduplication, shared history. Survives container rebuilds.
+- **GitHub Copilot CLI + Claude session persistence** — `~/.glade/config/github-copilot/` and `~/.glade/config/claude/` are bind-mounted into the container at `/root/.config/github-copilot` and `/root/.claude` respectively. Copilot CLI and Claude auth/sessions survive `make build`.
+
+---
+
+## [Unreleased — previous]
+
 ### Changed
 - **Commit Mono replaces Berkeley Mono** as the default font; variable font (`CommitMonoV143-VF.woff2`) is now bundled in the repo (`web/assets/fonts/`, `docs/assets/fonts/`); no user setup required
 - **iOS 18+ haptic feedback** — `haptic()` now detects iOS via userAgent and fires a light haptic using a hidden `<input type="checkbox" switch>` + `<label>` trick; Android still uses `navigator.vibrate`; older browsers silent no-op

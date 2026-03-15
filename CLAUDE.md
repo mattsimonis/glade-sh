@@ -30,7 +30,7 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        │    /api/*    → glade-ttyd:7683       │
        │    /assets/* → fonts                 │
        │                                      │
-       │  glade-ttyd (:7681, :7683, :7690–99) │
+       │  glade-ttyd (:7681, :7683, :7690–7729) │
        │    api.py    — REST API              │
        │    ttyd      — terminal WebSocket    │
        │    tmux      — session multiplexer   │
@@ -51,7 +51,7 @@ Two Docker services defined in `docker-compose.yml`:
 
 **glade-ttyd** — the application container (Debian bookworm-slim):
 - Python API on port 7683
-- ttyd instances on ports 7681 (main) and 7690–7699 (per-project)
+- ttyd instances on ports 7681 (main) and 7690–7729 (per-window, one per tmux window)
 - tmux for session management and pipe-pane recording
 - gh CLI (official Debian apt repo, architecture-aware: amd64/arm64/armhf)
 - Zsh + Oh My Zsh (`ZSH_THEME=""` — no theme; prompt set in `config/zshrc`, personalised via `zshrc.local`)
@@ -79,7 +79,7 @@ Two Docker services defined in `docker-compose.yml`:
 2. PWA calls `POST /api/projects/:id/start`
 3. API creates tmux session (if not running) via `create_tmux_session()`
 4. API starts `tmux pipe-pane` to record output to `~/.glade/logs/{slug}/{timestamp}.log`
-5. API spawns ttyd on a free port (7690–7699) attached to the tmux session
+5. API spawns a ttyd per window via a **linked (grouped) tmux session** (`{sname}-w{idx}`) on a free port (7690–7729)
 6. API returns `{port}` to PWA
 7. PWA loads `https://glade.home/ttyd/{port}/` in an iframe
 8. User types; input flows through iframe → WebSocket → ttyd → tmux → zsh
@@ -109,13 +109,14 @@ Two Docker services defined in `docker-compose.yml`:
 |---|---|---|
 | Session recording | `tmux pipe-pane` to flat files | Zero overhead, always on, no daemon |
 | Log storage | Flat files, not SQLite | Faster writes, simpler grep, cheaper |
-| Frontend | Single-file PWA (~8200 lines) | No build step, instant deploy via git pull |
+| Frontend | Single-file PWA (~8500 lines) | No build step, instant deploy via git pull |
 | API framework | Python stdlib `BaseHTTPRequestHandler` | Zero dependencies, runs on any Python |
 | CSS approach | CSS custom properties on `:root`; Catppuccin flavors via class swap; Base16 via inline `style.setProperty`; no framework | Instant theme switching; both app UI and xterm.js terminal update together |
 | Auth | Tailscale (network-level) | No passwords, no tokens, no sessions |
 | Package installs | `config/packages.sh` build-time hook | Image ships lean; user adds what they need |
 | Reverse proxy | Caddy (standalone container) | Shared with other `*.home` services |
 | Font | Commit Mono (variable font, bundled in repo; custom upload via Settings) | Licensed beautifully; variable font ships in repo; user can override |
+| Tab isolation | Per-window ttyd via linked tmux sessions (`{sname}-w{idx}`) | Each browser client independently controls which tab it views; switching tabs on one device never affects another |
 
 ---
 
@@ -144,8 +145,8 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 
 | File | Lines | Purpose |
 |---|---|---|
-| `web/index.html` | ~8200 | Single-file PWA: CSS, HTML, JavaScript inline |
-| `api/api.py` | ~1480 | REST API: projects, snippets, logs, uploads, GitHub auth |
+| `web/index.html` | ~8500 | Single-file PWA: CSS, HTML, JavaScript inline |
+| `api/api.py` | ~1510 | REST API: projects, snippets, logs, uploads, GitHub auth |
 | `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
 | `docker-compose.yml` | ~65 | Two services: ttyd + web |
@@ -170,6 +171,9 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 | `uploads/` | Pasted images (temporary storage) |
 | `assets/fonts/` | Custom font uploads (user-supplied via Settings UI) |
 | `config/zshrc.local` | User shell overrides: `PROMPT`, `RPROMPT`, aliases, extra sources. Sourced last in container `.zshrc`. Edit on host — no rebuild needed. |
+| `config/zsh_history` | Persisted zsh history (`HISTFILE`); survives container rebuilds |
+| `config/github-copilot/` | GitHub Copilot CLI auth + sessions; bind-mounted to `/root/.config/github-copilot` |
+| `config/claude/` | Claude CLI auth + sessions; bind-mounted to `/root/.claude` |
 
 ---
 
@@ -180,7 +184,7 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 | 7681 | ttyd — main/default terminal shell |
 | 7682 | glade-web — Caddy serving index.html, assets, API proxy |
 | 7683 | api.py — REST API |
-| 7690–7699 | Per-project ttyd instances (allocated dynamically) |
+| 7690–7729 | Per-window ttyd instances (one per tmux window, allocated dynamically) |
 
 ---
 

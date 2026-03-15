@@ -6,9 +6,9 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 ## Quick Context
 
-**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.home`. The frontend is a single-file PWA (`web/index.html`, ~8200 lines). The backend is a stdlib Python API (`api/api.py`, ~1480 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
+**Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.home`. The frontend is a single-file PWA (`web/index.html`, ~8500 lines). The backend is a stdlib Python API (`api/api.py`, ~1510 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
-GitHub integration is built in — `gh` CLI ships in the image, auth state persists via a named Docker volume (`gh-config`), and projects can be created directly from GitHub repos.
+GitHub integration is built in — `gh` CLI ships in the image, GitHub auth state persists via a named Docker volume (`gh-config`), Copilot CLI auth/sessions persist via `~/.glade/config/github-copilot/`, and Claude auth/sessions persist via `~/.glade/config/claude/`. Projects can be created directly from GitHub repos.
 
 ---
 
@@ -35,10 +35,13 @@ install.sh                  ← Host-side installer (copies files, initialises D
 ### Runtime data (not in repo, lives at `~/.glade/` on host)
 
 ```
-db/history.db           ← SQLite: projects, snippets, settings
-logs/{project-slug}/    ← Session log files (flat, one per tmux session)
-uploads/                ← Pasted images
-assets/fonts/           ← Custom font uploads (user-supplied via Settings)
+db/history.db             ← SQLite: projects, snippets, settings
+logs/{project-slug}/      ← Session log files (flat, one per tmux session)
+uploads/                  ← Pasted images
+assets/fonts/             ← Custom font uploads (user-supplied via Settings)
+config/github-copilot/    ← Copilot CLI auth + sessions (bind-mounted to /root/.config/github-copilot)
+config/claude/            ← Claude CLI auth + sessions (bind-mounted to /root/.claude)
+config/zsh_history        ← Persisted zsh history (HISTFILE); survives container rebuilds
 ```
 
 ---
@@ -55,7 +58,7 @@ assets/fonts/           ← Custom font uploads (user-supplied via Settings)
 - `POST /api/projects/:id/stop` — kill ttyd (keep tmux)
 - `GET /api/projects/:id/shells` — list tmux windows
 - `POST /api/projects/:id/shells` — new window → `{index}`
-- `PUT /api/projects/:id/shells/:n/select` — switch active window
+- `PUT /api/projects/:id/shells/:n/select` — switch active window *(no-op: tab switching is now client-side)*
 - `DELETE /api/projects/:id/shells/:n` — kill window
 - `GET /api/projects/activity` — activity status for badge polling
 - `PUT /api/projects/:id/viewed` — clear activity badge
@@ -244,7 +247,7 @@ make shell
 
 3. **Project slug → log directory** — Project "My App" becomes `my-app/` in `~/.glade/logs/`. The `slugify()` function handles this.
 
-4. **Port pool is finite** — Only 10 project ports (7690–7699). `get_free_port()` finds the first unused one.
+4. **Port pool is finite** — 40 per-window ports (7690–7729). `get_free_port()` finds the first unused one. Each tmux window gets its own ttyd process on its own port.
 
 5. **Caddy-proxy is external** — It's a standalone container on the `shared_web` network. Its config lives in `services/Caddyfile` but must be copied into the actual caddy-proxy container's config.
 
@@ -297,3 +300,7 @@ make shell
 29. **Deleting a project does not auto-delete the cloned directory** — `DELETE /api/projects/:id` only removes the DB record and kills ttyd by default. Pass `{delete_dir: true}` in the JSON body to also `shutil.rmtree` the `directory` field from the DB. The API resolves `os.path.realpath()` on both `PROJECTS_DIR` and the target path before deleting — it will refuse to delete anything outside `~/.glade/projects/`. If the directory is not removed, re-creating a GitHub project from the same repo will increment the clone path counter (`my-project-2`, `-3`, etc.).
 
 30. **Smart GitHub repo input: two modes** — In the new-project sheet, the repo input field has two behaviors. Typing plain text debounces a `/api/github/repos?q=` search and shows a dropdown. Typing `owner/repo` or a GitHub URL (contains `/` or `github.com`) hides the dropdown and skips the search; on blur it auto-fills the project name from the repo slug. Do not revert to auto-open-on-focus — it caused noise on every tap.
+
+31. **Per-window ttyd via linked tmux sessions** — Each tmux window gets its own dedicated ttyd process on its own port. The ttyd attaches to a *linked (grouped) session* named `{sname}-w{idx}` rather than the source session. Linked sessions share all windows but track the current window independently — switching tabs on one device never moves the other device's active window. `_ttyd_shell_key(sname, idx)` returns `"sname:idx"`. `_ensure_window_ttyd(sname, idx)` is the idempotent entry point. `switchShell()` in the client just loads the new port in the iframe — no API call. `PUT /api/.../shells/:n/select` is kept for backward compatibility but is a no-op.
+
+32. **Keyboard shortcuts on desktop** — Ctrl+Tab / Ctrl+Shift+Tab cycle shell tabs within the current project. Cmd+1–9 switch to the Nth project. Arrow keys (Up/Down/Left/Right) and Enter without modifiers are intercepted at the iframe capture-phase and forwarded directly to the terminal WebSocket — bypassing xterm.js focus handling so interactive TUI tools (gh copilot suggest, Go prompts) receive them reliably.

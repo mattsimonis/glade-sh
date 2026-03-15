@@ -227,7 +227,7 @@ Glade includes a `gh` CLI and can connect to your GitHub account. This is entire
 - Create projects directly from a GitHub repo (clone happens automatically)
 - Use `gh` commands, `gh copilot`, and authenticated git operations inside the terminal
 
-**One-time setup:** `docker-compose.yml` mounts `~/.config/gh` from the host by default — auth persists across container restarts.
+**One-time setup:** `docker-compose.yml` uses a named Docker volume (`gh-config`) for `gh` auth — it lives inside Docker, separate from the host's `~/.config/gh`, and persists across container restarts and rebuilds.
 
 **To connect:**
 1. Open the Glade UI → tap the ⚙️ icon → **Settings**
