@@ -935,8 +935,8 @@
         }
         #focus-exit-btn:active { background:var(--surface1); color:var(--text); }
 
-        /* ── Text selection mode button (in nav bar, mobile only) ──────── */
-        body.sel-mode #sel-mode-btn { color:var(--mauve) !important; }
+        /* ── Text selection mode ─────────────────────────────────────────── */
+        body.sel-mode #gesture-overlay { pointer-events:none !important; }
 
         /* ── Command Palette ─────────────────────────────────────────── */
         #cmd-palette-backdrop {
@@ -1841,10 +1841,6 @@
             <button class="nav-btn" data-panel="history" aria-label="History">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             </button>
-            <!-- i-beam = text selection mode (mobile only; nav bar is hidden on desktop) -->
-            <button class="nav-btn" id="sel-mode-btn" aria-label="Text selection mode">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-            </button>
             <!-- bot = copilot tab removed; AI toggle is in the shortcut bar -->
             <div class="nav-divider"></div>
             <!-- settings gear -->
@@ -2383,7 +2379,6 @@
         let ctrlActive = false, altActive = false;
         let sbCtrlBtn = null, sbAltBtn = null; // shortcut bar ctrl/alt refs
         let selListenerAdded = false;          // xterm selection listener guard
-        let selDragAnchor    = null;           // {row,col} anchor when drag-selecting in sel mode
         let connectionState = 'connected';
         let statusFadeTimer = null;
         let xtermTextarea = null, terminalInstance = null;
@@ -3443,6 +3438,15 @@
 
             // Image paste
             sbBtn(IC.imagePaste, 'Paste image', function () { pasteImageFromClipboard(); });
+
+            // Text selection mode — lets iOS native long-press / drag handles work
+            const selActive = document.body.classList.contains('sel-mode');
+            const selModeBtn = sbBtn(
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+                'Text selection mode',
+                function () { if (window._toggleSelMode) { window._toggleSelMode(); haptic(5); selModeBtn.classList.toggle('active', document.body.classList.contains('sel-mode')); } }
+            );
+            if (selActive) selModeBtn.classList.add('active');
 
             sbSep();
 
@@ -7097,13 +7101,6 @@
             if (e.touches.length !== 1) return;
             e.preventDefault(); // prevent iOS from focusing underlying xterm on any hold/tap
             const t = e.touches[0];
-            // In selection mode, record the drag anchor and skip all normal gesture handling.
-            if (document.body.classList.contains('sel-mode')) {
-                gestureStartX = t.clientX; gestureStartY = t.clientY;
-                gestureStartTime = Date.now(); gestureMoved = false;
-                selDragAnchor = touchToTermCell(t.clientX, t.clientY);
-                return;
-            }
             gestureStartX = t.clientX; gestureStartY = t.clientY;
             gestureStartTime = Date.now(); gestureMoved = false;
             gestureScrolling = false; gesturePrevY = t.clientY;
@@ -7129,17 +7126,6 @@
             }
             if (e.touches.length !== 1) return;
             const t = e.touches[0];
-            // In selection mode, update drag selection instead of scrolling/trackpad.
-            if (document.body.classList.contains('sel-mode')) {
-                e.preventDefault();
-                const dist = Math.hypot(t.clientX - gestureStartX, t.clientY - gestureStartY);
-                if (!gestureMoved && dist > 8) gestureMoved = true;
-                if (gestureMoved && selDragAnchor && terminalInstance) {
-                    const cur = touchToTermCell(t.clientX, t.clientY);
-                    if (cur) updateDragSelection(selDragAnchor, cur);
-                }
-                return;
-            }
             const dist = Math.sqrt(Math.pow(t.clientX - gestureStartX, 2) + Math.pow(t.clientY - gestureStartY, 2));
             if (!gestureMoved && dist > 22) {
                 gestureMoved = true;
@@ -7173,19 +7159,6 @@
                 return;
             }
             clearTimeout(trackpadLongPressTimer); trackpadLongPressTimer = null;
-            // In selection mode: show copy pill if text was dragged; single tap exits mode.
-            if (document.body.classList.contains('sel-mode')) {
-                const t = e.changedTouches[0];
-                if (gestureMoved && terminalInstance && terminalInstance.getSelection().length > 0) {
-                    haptic(8);
-                    if (window._showCopyPill) window._showCopyPill(t.clientX, t.clientY);
-                } else {
-                    if (terminalInstance) try { terminalInstance.clearSelection(); } catch(_) {}
-                    if (window._exitSelMode) window._exitSelMode();
-                }
-                selDragAnchor = null;
-                return;
-            }
             if (trackpadActive) {
                 e.preventDefault();
                 const wasUsed = trackpadUsed;
@@ -7250,14 +7223,12 @@
             pinchActive = false;
             clearTimeout(trackpadLongPressTimer); trackpadLongPressTimer = null;
             if (trackpadActive) deactivateTrackpad();
-            selDragAnchor = null;
         }, { passive: true });
 
         // ── Selection pill + selection mode ────────────────────────────────────
         (function () {
-            const selLayer   = document.getElementById('sel-layer');
-            const selPill    = document.getElementById('sel-pill');
-            const selModeBtn = document.getElementById('sel-mode-btn');
+            const selLayer = document.getElementById('sel-layer');
+            const selPill  = document.getElementById('sel-pill');
 
             // ── Quick-copy pill ──────────────────────────────────────────────────
             // Shown after a long-press word/line selection in normal mode.
@@ -7290,32 +7261,50 @@
             });
 
             // ── Selection mode ───────────────────────────────────────────────────
-            // Entering sel mode changes the gesture overlay touchstart/touchmove/
-            // touchend handlers to perform drag-selection via terminalInstance.select()
-            // instead of the usual scroll/trackpad/swipe behaviours.  The sel-mode-btn
-            // lives in the nav bar; body.sel-mode CSS turns it mauve while active.
+            // Disables the gesture overlay (pointer-events:none via CSS class) so
+            // touches reach the iframe.  Inside the iframe, injects CSS to make the
+            // xterm.js accessibility layer (.xterm-rows) interactive and text-selectable.
+            // iOS then handles selection natively: long-press → loupe → drag handles → Copy.
 
             let selModeActive = false;
 
             function enterSelMode() {
                 selModeActive = true;
                 document.body.classList.add('sel-mode');
+                try {
+                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iDoc) {
+                        let s = iDoc.getElementById('glade-sel-css');
+                        if (!s) { s = iDoc.createElement('style'); s.id = 'glade-sel-css'; iDoc.head.appendChild(s); }
+                        // Override xterm.js defaults: push .xterm-rows above canvas, make it
+                        // pointer-interactive and text-selectable.  Disable canvas and textarea
+                        // pointer events so they don't intercept the touch.
+                        s.textContent = [
+                            '.xterm,.xterm-screen{-webkit-user-select:text!important;user-select:text!important}',
+                            '.xterm-rows{-webkit-user-select:text!important;user-select:text!important;',
+                            '  pointer-events:auto!important;z-index:10!important;position:relative!important}',
+                            '.xterm-rows>div,.xterm-rows>div>span{-webkit-user-select:text!important;',
+                            '  user-select:text!important;pointer-events:auto!important}',
+                            '.xterm-helper-textarea{pointer-events:none!important}',
+                            'canvas{pointer-events:none!important}',
+                        ].join('');
+                    }
+                } catch(e) {}
             }
 
             function exitSelMode() {
                 selModeActive = false;
                 document.body.classList.remove('sel-mode');
-                selDragAnchor = null;
+                try {
+                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iDoc) { const s = iDoc.getElementById('glade-sel-css'); if (s) s.remove(); }
+                } catch(e) {}
                 if (terminalInstance) try { terminalInstance.clearSelection(); } catch(_) {}
                 hideCopyPill();
             }
-            window._exitSelMode = exitSelMode;
-
-            if (selModeBtn) {
-                selModeBtn.addEventListener('click', function () {
-                    if (selModeActive) exitSelMode(); else enterSelMode();
-                });
-            }
+            window._exitSelMode   = exitSelMode;
+            window._toggleSelMode = function () { if (selModeActive) exitSelMode(); else enterSelMode(); };
+            window._isSelModeActive = function () { return selModeActive; };
 
             window._setupSelHandles = function () {
                 if (selListenerAdded || !terminalInstance) return;
