@@ -18,6 +18,24 @@
 		file_server
 	}
 
+	# Icons — serve directly without try_files fallback.
+	# try_files would return index.html (200) for missing icons, which iOS and
+	# the service worker would cache as a valid response — silently breaking
+	# the home screen icon forever until the SW cache is manually cleared.
+	handle /icons/* {
+		root * /srv/web
+		file_server
+	}
+
+	# Bare apple-touch-icon URLs that iOS Safari checks as a fallback
+	# before giving up (no <link> tags needed).
+	handle /apple-touch-icon.png {
+		redir /icons/icon-180.png 302
+	}
+	handle /apple-touch-icon-precomposed.png {
+		redir /icons/icon-180.png 302
+	}
+
 	# HTML wrapper — never cache so mobile browsers always get latest
 	handle {
 		root * /srv/web

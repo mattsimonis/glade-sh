@@ -2,7 +2,7 @@
 // Gives the app a proper "offline" screen instead of a blank error when the
 // server is unreachable.  Does NOT cache API calls or ttyd terminal streams.
 
-const CACHE = 'glade-shell-v3';
+const CACHE = 'glade-shell-v4';
 const SHELL  = ['/'];   // just the app shell; manifest is versioned by URL
 
 self.addEventListener('install', function (e) {
