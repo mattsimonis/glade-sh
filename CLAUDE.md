@@ -117,6 +117,8 @@ Two Docker services defined in `docker-compose.yml`:
 | Reverse proxy | Caddy (standalone container) | Shared with other `*.home` services |
 | Font | Commit Mono (variable font, bundled in repo; custom upload via Settings) | Licensed beautifully; variable font ships in repo; user can override |
 | Tab isolation | Per-window ttyd via linked tmux sessions (`{sname}-w{idx}`) | Each browser client independently controls which tab it views; switching tabs on one device never affects another |
+| Mobile text selection | Transparent `#sel-text-overlay` div in outer page filled with terminal buffer text | iOS WKWebView blocks `user-select:text` inside iframes entirely; outer-page overlay lets iOS long-press → handles → native Copy menu work |
+| Terminal links on mobile | `findUrlAtTerminalPos()` → native action sheet | WebLinksAddon only fires on Ctrl+click inside the iframe canvas; outer-page tap detection + `showUrlActionSheet()` is the only reliable path |
 
 ---
 
@@ -145,7 +147,7 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 
 | File | Lines | Purpose |
 |---|---|---|
-| `web/index.html` | ~8500 | Single-file PWA: CSS, HTML, JavaScript inline |
+| `web/index.html` | ~8600 | Single-file PWA: CSS, HTML, JavaScript inline |
 | `api/api.py` | ~1510 | REST API: projects, snippets, logs, uploads, GitHub auth |
 | `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
@@ -228,6 +230,7 @@ Both handle: CSI sequences (including `?` intermediates like bracketed paste), O
 - Container restarts don't re-attach pipe-pane to existing sessions
 - `_main/` log directory exists but main shell recording is not wired up
 - The `sessions` and `interactions` tables in schema.sql are legacy (from the copilot-focused era); not used by current code
+- iOS WKWebView blocks `user-select:text` inside iframes — mobile text selection uses a transparent outer-page overlay (`#sel-text-overlay`) instead; the selected text is a snapshot of the buffer at sel-mode entry, not live
 
 ## Shell Customisation
 
