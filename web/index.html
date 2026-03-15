@@ -521,28 +521,6 @@
         .fb-btn:active { background:var(--surface0); }
         .fb-btn:disabled { color:var(--surface1); cursor:default; }
 
-        /* ── Selection handles ────────────────────────────────── */
-        #sel-layer {
-            position:absolute; inset:0; z-index:26; pointer-events:none;
-            opacity:0; transition:opacity 150ms ease;
-        }
-        #sel-layer.sel-active { opacity:1; }
-        #sel-pill {
-            position:absolute; display:flex; align-items:center; gap:0;
-            background:color-mix(in srgb, var(--base) 96%, transparent); border:1px solid var(--mauve);
-            border-radius:9999px; padding:0 2px;
-            box-shadow:0 4px 20px rgba(0,0,0,0.55);
-            backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-            transform:translate(-50%, calc(-100% - 10px));
-            pointer-events:auto; white-space:nowrap;
-        }
-        #sel-pill button {
-            background:none; border:none; color:var(--text); padding:7px 16px;
-            font-size:13px; font-family:var(--font-mono); font-weight:500;
-            cursor:pointer; border-radius:9999px; -webkit-tap-highlight-color:transparent;
-        }
-        #sel-pill button:active { background:var(--surface0); }
-        .sel-pill-sep { width:1px; height:18px; background:var(--surface2); flex-shrink:0; }
 
         /* ── Settings overlay ─────────────────────────────────── */
         #settings-overlay {
@@ -1761,13 +1739,7 @@
                 <button class="fb-btn" id="fb-next" title="Next match" aria-label="Next match" disabled>▼</button>
             </div>
             <div id="gesture-overlay"></div>
-            <div id="sel-layer">
-                <div id="sel-pill">
-                    <button id="sel-copy-btn">Copy</button>
-                    <span class="sel-pill-sep"></span>
-                    <button id="sel-all-btn">All</button>
-                </div>
-            </div>
+            <div id="sel-layer"></div>
             <!-- Transparent text overlay for native iOS text selection in sel mode -->
             <div id="sel-text-overlay"></div>
             <div id="trackpad-ring"></div>
@@ -2397,7 +2369,6 @@
         // ── State ───────────────────────────────────────────────────────────────
         let ctrlActive = false, altActive = false;
         let sbCtrlBtn = null, sbAltBtn = null; // shortcut bar ctrl/alt refs
-        let selListenerAdded = false;          // xterm selection listener guard
         let connectionState = 'connected';
         let statusFadeTimer = null;
         let xtermTextarea = null, terminalInstance = null;
@@ -6442,10 +6413,8 @@
                 } else {
                     terminalInstance.select(start, row, end - start);
                 }
-                // Light haptic + show quick-copy pill above the touch point.
                 if (terminalInstance.getSelection().length > 0) {
                     haptic(8);
-                    if (window._showCopyPill) window._showCopyPill(cx, cy);
                 }
             } catch(e) {}
         }
@@ -7285,42 +7254,8 @@
             if (trackpadActive) deactivateTrackpad();
         }, { passive: true });
 
-        // ── Selection pill + selection mode ────────────────────────────────────
+        // ── Selection mode ────────────────────────────────────────────────────
         (function () {
-            const selLayer = document.getElementById('sel-layer');
-            const selPill  = document.getElementById('sel-pill');
-
-            // ── Quick-copy pill ──────────────────────────────────────────────────
-            // Shown after a long-press word/line selection in normal mode.
-            // Positioned at the touch point; user taps Copy or All.
-
-            function showCopyPill(cx, cy) {
-                if (!selLayer || !selPill) return;
-                const tc = document.getElementById('terminal-container');
-                const tcRect = tc.getBoundingClientRect();
-                selPill.style.left = (cx - tcRect.left) + 'px';
-                selPill.style.top  = (cy - tcRect.top)  + 'px';
-                selLayer.classList.add('sel-active');
-            }
-            function hideCopyPill() {
-                if (selLayer) selLayer.classList.remove('sel-active');
-            }
-            window._showCopyPill = showCopyPill;
-            window._hideCopyPill = hideCopyPill;
-
-            document.getElementById('sel-copy-btn').addEventListener('click', function () {
-                if (!terminalInstance) return;
-                const text = terminalInstance.getSelection();
-                if (text) { copyText(text).catch(function () {}); haptic(10); }
-                terminalInstance.clearSelection();
-                hideCopyPill();
-            });
-            document.getElementById('sel-all-btn').addEventListener('click', function () {
-                if (!terminalInstance) return;
-                terminalInstance.selectAll();
-            });
-
-            // ── Selection mode ───────────────────────────────────────────────────
             // body.sel-mode CSS: gesture overlay gets pointer-events:none so touches
             // reach the outer-page #sel-text-overlay instead of the iframe.
             // updateSelOverlay() fills the overlay with terminal buffer text — iOS
@@ -7339,23 +7274,10 @@
                 document.body.classList.remove('sel-mode');
                 const ov = document.getElementById('sel-text-overlay');
                 if (ov) ov.textContent = '';
-                hideCopyPill();
             }
             window._exitSelMode   = exitSelMode;
             window._toggleSelMode = function () { if (selModeActive) exitSelMode(); else enterSelMode(); };
             window._isSelModeActive = function () { return selModeActive; };
-
-            window._setupSelHandles = function () {
-                if (selListenerAdded || !terminalInstance) return;
-                try {
-                    terminalInstance.onSelectionChange(function () {
-                        if (!terminalInstance || terminalInstance.getSelection().length === 0) {
-                            hideCopyPill();
-                        }
-                    });
-                    selListenerAdded = true;
-                } catch (e) {}
-            };
         })();
 
         // ── Connection monitoring ───────────────────────────────────────────────
@@ -7473,7 +7395,7 @@
             const pid = currentProjectId || localStorage.getItem('lastProjectId');
             if (!pid) { reconnectInProgress = false; location.reload(); return; }
             if (reconnectTitle) reconnectTitle.textContent = 'Reconnecting\u2026';
-            terminalInstance = null; xtermTextarea = null; selListenerAdded = false;
+            terminalInstance = null; xtermTextarea = null;
             // Call /start (idempotent) to ensure all ttyd processes are alive.
             // /start returns the port for window 0 AND a full shell list with per-shell ports.
             // We reconnect to whichever shell was last active.
