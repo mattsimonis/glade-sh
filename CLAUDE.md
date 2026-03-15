@@ -158,7 +158,7 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 | `config/packages.sh` | — | Build-time hook: user-defined package installs (empty by default) |
 | `config/packages.sh.example` | — | Recipe examples: gh CLI, Node.js, pip, Rust, apt |
 | `services/Caddyfile` | 61 | Caddy-proxy config for glade.home |
-| `services/web.Caddyfile` | 42 | Inner Caddy config for glade-web container |
+| `services/web.Caddyfile` | 54 | Inner Caddy config for glade-web container |
 
 ### Runtime (outside repo, on host at `~/.glade/`)
 
@@ -198,6 +198,7 @@ The container clones the repo from GitHub on first start and polls `origin/main`
 | `api/api.py` | Auto-pulled; PWA shows "Update available" banner → user taps Restart |
 | `Dockerfile`, `entrypoint.sh`, `config/` | Auto-pulled but can't apply without rebuild; banner shows "run `make build`" |
 | `docker-compose.yml` | `make down && make up` on the host |
+| `services/web.Caddyfile` | Bind-mounted from host — auto-pull updates the file, but Caddy won't pick it up until `docker exec glade-web caddy reload` or `make restart` |
 
 ---
 
