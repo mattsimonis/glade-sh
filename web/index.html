@@ -655,7 +655,7 @@
         .kb-btn.active  { background:var(--blue); color:var(--base); border-color:var(--blue); font-weight:700; }
         .kb-btn.flash-green { background:var(--green) !important; color:var(--base) !important; transition:none; }
         .kb-btn.flash-blue  { background:var(--blue) !important; color:var(--base) !important; transition:none; }
-        .kb-btn svg { pointer-events:none; }
+        .kb-btn svg { pointer-events:none; width:14px; height:14px; }
 
         /* Edit mode */
         #panel.edit-mode .kb-btn:not(.modifier-btn):not(.action-btn) {
@@ -902,8 +902,8 @@
         #shortcut-bar::-webkit-scrollbar { display:none; }
         #shortcut-bar.sb-visible { transform:translateY(0); pointer-events:auto; }
         .sb-btn {
-            flex-shrink:0; height:32px; min-width:36px; padding:0 8px;
-            background:var(--surface0); color:var(--text); border:none; border-radius:6px;
+            flex-shrink:0; height:36px; min-width:38px; padding:0 9px;
+            background:var(--surface0); color:var(--text); border:none; border-radius:7px;
             font-family:var(--font-mono); font-size:12px; font-weight:500;
             cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent;
             transition:background 80ms; display:flex; align-items:center;
@@ -911,11 +911,12 @@
         }
         .sb-btn:active { background:var(--surface1); }
         .sb-btn.active { background:var(--blue); color:var(--base); }
+        .sb-btn svg { pointer-events:none; width:15px; height:15px; flex-shrink:0; }
         .sb-back {
             color:var(--blue); border:1px solid color-mix(in srgb, var(--blue) 25%, transparent);
-            width:48px; min-width:48px; padding:0;
+            width:44px; min-width:44px; padding:0;
         }
-        .sb-separator { width:1px; height:20px; background:var(--surface0); flex-shrink:0; margin:0 2px; }
+        .sb-separator { width:1px; height:22px; background:var(--surface0); flex-shrink:0; margin:0 1px; }
         .sb-space { min-width:48px; letter-spacing:1px; }
 
         /* ── Focus mode ──────────────────────────────────────────── */
@@ -2614,26 +2615,27 @@
         // ── Default layout ──────────────────────────────────────────────────────
         const DEFAULT_LAYOUT = {
             rows: [
-                // Row 0: core keys — Enter, Esc, Tab, Shift+Tab, modifiers, Backspace
+                // Row 0: core keys — Enter, Esc, Tab, Shift+Tab, ^C, modifiers, Backspace
                 [
                     { type: 'key',      label: '\u21b5',       value: 'Enter'     },
                     { type: 'key',      label: 'Esc',          value: 'Escape'    },
                     { type: 'key',      label: 'Tab',          value: 'Tab'       },
                     { type: 'key',      label: '\u21e7\u21b9', value: 'ShiftTab'  },
+                    { type: 'combo',    label: '^C',           value: 'c'         },
                     { type: 'modifier', label: 'Ctrl',         value: 'ctrl'      },
                     { type: 'modifier', label: 'Alt',          value: 'alt'       },
                     { type: 'key',      label: '\u232b',       value: 'Backspace' },
                 ],
-                // Row 1: arrow keys + primary CLI combos (^C cancel, ^D exit, ^L clear, ^R history)
+                // Row 1: arrow keys + ^D exit, ^L clear, ^R history, ^T task/thinking
                 [
                     { type: 'key',   label: '\u25c0', value: 'ArrowLeft'  },
                     { type: 'key',   label: '\u25b2', value: 'ArrowUp'    },
                     { type: 'key',   label: '\u25bc', value: 'ArrowDown'  },
                     { type: 'key',   label: '\u25b6', value: 'ArrowRight' },
-                    { type: 'combo', label: '^C',     value: 'c'          },
                     { type: 'combo', label: '^D',     value: 'd'          },
                     { type: 'combo', label: '^L',     value: 'l'          },
                     { type: 'combo', label: '^R',     value: 'r'          },
+                    { type: 'combo', label: '^T',     value: 't'          },
                 ],
                 // Row 2: line-editing combos + copy/paste
                 [
@@ -3402,17 +3404,29 @@
 
             sbSep();
 
-            // Image paste — left of palette
-            sbBtn(IC.imagePaste, 'Paste image', function () { pasteImageFromClipboard(); });
+            // Shift+Tab — mode cycling in both Copilot CLI (standard/plan/autopilot) and Claude Code
+            sbBtn('\u21e7\u21b9', 'Shift+Tab', function () { sendKey('ShiftTab', {}); haptic(5); });
 
-            // Palette (search / command history)
-            sbBtn(IC.search, 'Command palette', function () { openPalette(); });
+            // Enter (with repeat)
+            const enterBtn = sbBtn(IC.enter, 'Enter', function () { sendKey('Enter', {}); haptic(5); });
+            sbRepeat(enterBtn, function () { sendKey('Enter', {}); });
+
+            // Arrow keys (SVG icons, with repeat)
+            var arrowDefs = [
+                { key: 'ArrowLeft',  icon: IC.kbArrowLeft,  label: 'Arrow Left'  },
+                { key: 'ArrowUp',    icon: IC.kbArrowUp,    label: 'Arrow Up'    },
+                { key: 'ArrowDown',  icon: IC.kbArrowDown,  label: 'Arrow Down'  },
+                { key: 'ArrowRight', icon: IC.kbArrowRight, label: 'Arrow Right' },
+            ];
+            arrowDefs.forEach(function (def) {
+                var btn = sbBtn(def.icon, def.label, function () { sendKey(def.key, {}); });
+                sbRepeat(btn, function () { sendKey(def.key, {}); });
+            });
 
             sbSep();
 
-            // Enter
-            const enterBtn = sbBtn('↵', 'Enter', function () { sendKey('Enter', {}); haptic(5); });
-            sbRepeat(enterBtn, function () { sendKey('Enter', {}); });
+            // ^C — cancel/interrupt
+            sbBtn('^C', 'Ctrl+C', function () { sendKey('c', { ctrl: true }); haptic(8); });
 
             // Ctrl toggle
             sbCtrlBtn = sbBtn('Ctrl', 'Ctrl modifier');
@@ -3424,17 +3438,13 @@
             sbAltBtn.classList.toggle('active', altActive);
             sbAltBtn.addEventListener('click', function () { setAlt(!altActive); haptic(5); });
 
-            // ^C
-            sbBtn('^C', 'Ctrl+C', function () { sendKey('c', { ctrl: true }); haptic(8); });
-
             sbSep();
 
-            // Arrow keys
-            ['\u25c0\u00a0ArrowLeft', '\u25b2\u00a0ArrowUp', '\u25bc\u00a0ArrowDown', '\u25b6\u00a0ArrowRight'].forEach(function (pair) {
-                const [label, key] = pair.split('\u00a0');
-                const btn = sbBtn(label, key, function () { sendKey(key, {}); });
-                sbRepeat(btn, function () { sendKey(key, {}); });
-            });
+            // Palette (search / command history)
+            sbBtn(IC.search, 'Command palette', function () { openPalette(); });
+
+            // Image paste
+            sbBtn(IC.imagePaste, 'Paste image', function () { pasteImageFromClipboard(); });
 
             sbSep();
 
