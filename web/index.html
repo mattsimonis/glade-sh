@@ -2540,6 +2540,12 @@
         const snippetSaveBtn    = document.getElementById('snippet-save-btn');
         const kbRows            = document.getElementById('kb-rows');
         const shortcutBar       = document.getElementById('shortcut-bar');
+        // Prevent shortcut-bar buttons from stealing focus from kbRelay while the
+        // standard keyboard is open.  mousedown preventDefault stops the blur without
+        // suppressing the click event, so buttons still fire their actions.
+        shortcutBar.addEventListener('mousedown', function(e) {
+            if (keyboardState === 'standard') e.preventDefault();
+        });
         const navPanelToggleBtn = document.getElementById('nav-panel-toggle');
         const kbRelay           = document.getElementById('kb-relay');
         const swipeIndicator    = document.getElementById('swipe-indicator');
@@ -2608,21 +2614,35 @@
         // ── Default layout ──────────────────────────────────────────────────────
         const DEFAULT_LAYOUT = {
             rows: [
+                // Row 0: core keys — Enter, Esc, Tab, Shift+Tab, modifiers, Backspace
                 [
-                    { type: 'key',      label: '\u21b5', value: 'Enter'    },
-                    { type: 'key',      label: 'Esc',    value: 'Escape'  },
-                    { type: 'key',      label: 'Tab',    value: 'Tab'     },
-                    { type: 'modifier', label: 'Ctrl',   value: 'ctrl'    },
-                    { type: 'modifier', label: 'Alt',    value: 'alt'     },
-                    { type: 'key',      label: '\u232b', value: 'Backspace' },
+                    { type: 'key',      label: '\u21b5',       value: 'Enter'     },
+                    { type: 'key',      label: 'Esc',          value: 'Escape'    },
+                    { type: 'key',      label: 'Tab',          value: 'Tab'       },
+                    { type: 'key',      label: '\u21e7\u21b9', value: 'ShiftTab'  },
+                    { type: 'modifier', label: 'Ctrl',         value: 'ctrl'      },
+                    { type: 'modifier', label: 'Alt',          value: 'alt'       },
+                    { type: 'key',      label: '\u232b',       value: 'Backspace' },
                 ],
+                // Row 1: arrow keys + primary CLI combos (^C cancel, ^D exit, ^L clear, ^R history)
                 [
-                    { type: 'combo',  label: '^C', value: 'c' },
-                    { type: 'combo',  label: '^D', value: 'd' },
-                    { type: 'combo',  label: '^R', value: 'r' },
-                    { type: 'combo',  label: '^Z', value: 'z' },
-                    { type: 'combo',  label: '^L', value: 'l' },
-                    { type: 'combo',  label: '^S', value: 's' },
+                    { type: 'key',   label: '\u25c0', value: 'ArrowLeft'  },
+                    { type: 'key',   label: '\u25b2', value: 'ArrowUp'    },
+                    { type: 'key',   label: '\u25bc', value: 'ArrowDown'  },
+                    { type: 'key',   label: '\u25b6', value: 'ArrowRight' },
+                    { type: 'combo', label: '^C',     value: 'c'          },
+                    { type: 'combo', label: '^D',     value: 'd'          },
+                    { type: 'combo', label: '^L',     value: 'l'          },
+                    { type: 'combo', label: '^R',     value: 'r'          },
+                ],
+                // Row 2: line-editing combos + copy/paste
+                [
+                    { type: 'combo',  label: '^K',    value: 'k'     },
+                    { type: 'combo',  label: '^U',    value: 'u'     },
+                    { type: 'combo',  label: '^W',    value: 'w'     },
+                    { type: 'combo',  label: '^A',    value: 'a'     },
+                    { type: 'combo',  label: '^E',    value: 'e'     },
+                    { type: 'combo',  label: '^O',    value: 'o'     },
                     { type: 'action', label: 'copy',  value: 'copy'  },
                     { type: 'action', label: 'paste', value: 'paste' },
                 ],
@@ -2666,41 +2686,31 @@
                     { type: 'key', label: 'F7', value: 'F7' },
                     { type: 'key', label: 'F8', value: 'F8' },
                 ],
-                [
-                    { type: 'key', label: '\u25c0', value: 'ArrowLeft'  },
-                    { type: 'key', label: '\u25b2', value: 'ArrowUp'    },
-                    { type: 'key', label: '\u25bc', value: 'ArrowDown'  },
-                    { type: 'key', label: '\u25b6', value: 'ArrowRight' },
-                    { type: 'key', label: 'F9',  value: 'F9'  },
-                    { type: 'key', label: 'F10', value: 'F10' },
-                    { type: 'key', label: 'F11', value: 'F11' },
-                    { type: 'key', label: 'F12', value: 'F12' },
-                ],
             ],
         };
 
         // ── Compact layout default (4 rows × 8 cols, Row 0 = 6 wide) ─────────────
         const DEFAULT_COMPACT_LAYOUT = {
             rows: [
-                // Row 0: 6 wide keys — full Copilot CLI interaction loop
+                // Row 0: 6 wide — the six keys used most in copilot/claude interactive sessions
                 [
-                    { type: 'key',   label: 'Esc',        value: 'Escape'    },
-                    { type: 'key',   label: '\u21e7\u21b9', value: 'ShiftTab' },
-                    { type: 'key',   label: '\u25b2',      value: 'ArrowUp'   },
-                    { type: 'key',   label: '\u25bc',      value: 'ArrowDown' },
-                    { type: 'key',   label: '\u21b5',      value: 'Enter'     },
-                    { type: 'key',   label: '\u232b',      value: 'Backspace' },
+                    { type: 'key', label: '\u25c0',       value: 'ArrowLeft'  },
+                    { type: 'key', label: '\u25b2',       value: 'ArrowUp'    },
+                    { type: 'key', label: '\u25bc',       value: 'ArrowDown'  },
+                    { type: 'key', label: '\u25b6',       value: 'ArrowRight' },
+                    { type: 'key', label: '\u21b5',       value: 'Enter'      },
+                    { type: 'key', label: '\u21e7\u21b9', value: 'ShiftTab'   },
                 ],
-                // Row 1: navigation + line-editing combos
+                // Row 1: Esc, Tab, Backspace + line-editing combos
                 [
-                    { type: 'key',   label: 'Tab',   value: 'Tab'        },
-                    { type: 'key',   label: '\u25c0', value: 'ArrowLeft'  },
-                    { type: 'key',   label: '\u25b6', value: 'ArrowRight' },
-                    { type: 'combo', label: '^A',    value: 'a'           },
-                    { type: 'combo', label: '^E',    value: 'e'           },
-                    { type: 'combo', label: '^K',    value: 'k'           },
-                    { type: 'combo', label: '^U',    value: 'u'           },
-                    { type: 'combo', label: '^W',    value: 'w'           },
+                    { type: 'key',   label: 'Esc',    value: 'Escape'    },
+                    { type: 'key',   label: 'Tab',    value: 'Tab'       },
+                    { type: 'key',   label: '\u232b', value: 'Backspace' },
+                    { type: 'combo', label: '^A',     value: 'a'         },
+                    { type: 'combo', label: '^E',     value: 'e'         },
+                    { type: 'combo', label: '^K',     value: 'k'         },
+                    { type: 'combo', label: '^U',     value: 'u'         },
+                    { type: 'combo', label: '^W',     value: 'w'         },
                 ],
                 // Row 2: Copilot CLI combos + slash/@ triggers
                 [
@@ -2844,11 +2854,11 @@
                         if (key.type === 'action' && key.label && key.label.length > 5) return true;
                     }
                 }
-                // Check if row 0 is missing Backspace or still has ShiftTab (old layouts)
+                // Check if row 0 is missing Backspace or ShiftTab (old layouts)
                 const row0 = lay.rows && lay.rows[0];
                 if (row0 && row0.some(function(k) { return k.value === '?' || k.value === '/'; })) return true;
                 if (row0 && !row0.some(function(k) { return k.value === 'Backspace'; })) return true;
-                if (row0 && row0.some(function(k) { return k.value === 'ShiftTab'; })) return true;
+                if (row0 && !row0.some(function(k) { return k.value === 'ShiftTab'; })) return true;
             } catch (e) {}
             return false;
         }
@@ -8191,7 +8201,15 @@
                 }
             }
             if (serverCompactLayout) {
-                compactLayout = serverCompactLayout;
+                // Migrate compact layouts missing all four arrow keys in row 0.
+                const cRow0 = serverCompactLayout.rows && serverCompactLayout.rows[0];
+                const compactIsStale = cRow0 && !cRow0.some(function(k) { return k.value === 'ArrowLeft'; });
+                if (compactIsStale) {
+                    compactLayout = JSON.parse(JSON.stringify(DEFAULT_COMPACT_LAYOUT));
+                    await saveCompactLayout(compactLayout);
+                } else {
+                    compactLayout = serverCompactLayout;
+                }
             }
             renderKeyboard();
             snippets = serverSnippets;
