@@ -1319,170 +1319,47 @@
          * hardware at any width). Content lives in bottom ~41px, always below cutout.
          */
         #toast-container {
-            position:fixed; top:14px; left:50%; transform:translateX(-50%);
-            z-index:9999; display:flex; flex-direction:column; align-items:center; gap:0; pointer-events:none;
+            position:fixed; top:14px; left:50%;
+            z-index:9999; pointer-events:none;
+            width:0; height:0;
         }
-        /* Mobile: DI-style morphing pill */
-        body:not(.is-desktop) .toast {
-            position:relative;
-            width:126px; height:37px;
-            background:#000;
-            border-radius:18.5px;
-            overflow:hidden;
+        .toast {
+            position:absolute; top:0; left:0;
+            transform:translateX(-50%) translateY(-30px) scale(0.9);
             opacity:0;
-            margin-bottom:8px;
+            background:rgba(30,30,46,0.82);
+            backdrop-filter:blur(20px) saturate(180%);
+            -webkit-backdrop-filter:blur(20px) saturate(180%);
+            border-radius:20px;
+            padding:12px 18px;
+            display:flex; align-items:center; gap:14px;
+            box-shadow:0 10px 40px rgba(0,0,0,0.35);
             pointer-events:auto;
-            will-change:width,height,opacity,border-radius;
-            transform:translateZ(0);
-            transition:
-                opacity       60ms  ease,
-                width        520ms cubic-bezier(0.25,1,0.5,1) 60ms,
-                height       520ms cubic-bezier(0.25,1,0.5,1) 60ms,
-                border-radius 520ms cubic-bezier(0.25,1,0.5,1) 60ms;
-        }
-        body:not(.is-desktop) .toast.t-expanded {
-            width:min(371px, calc(100vw - 28px));
-            height:var(--toast-h, 84px);
-            opacity:1;
-            border-radius:44px;
-        }
-        /* Desktop: compact slide-down pill */
-        body.is-desktop .toast {
-            display:flex; align-items:center;
-            width:auto; max-width:calc(100vw - 32px); min-width:200px;
-            height:auto; min-height:40px;
-            background:#000;
-            border-radius:40px;
-            padding:10px 18px; gap:12px;
-            opacity:0; transform:translateY(-52px) translateZ(0);
-            margin-bottom:8px;
-            pointer-events:auto;
+            width:max-content; max-width:min(340px, calc(100vw - 28px));
+            box-sizing:border-box;
+            transition:transform 0.6s cubic-bezier(0.35,1.2,0.5,1.15), opacity 0.4s ease;
             will-change:transform,opacity;
-            transition: transform 360ms cubic-bezier(0.34,1.12,0.64,1),
-                        opacity   160ms ease;
         }
-        body.is-desktop .toast.t-expanded {
-            transform:translateY(0) translateZ(0);
-            opacity:1;
-        }
-        /* Content layer — column on mobile so content sits below the pill zone */
-        .toast-content {
-            position:absolute; inset:0;
-            display:flex; flex-direction:column;
-            padding:0;
-            opacity:0; transform:translateY(5px);
-            transition: opacity 200ms ease, transform 300ms cubic-bezier(0.2,0.8,0.2,1);
-        }
-        body.is-desktop .toast-content {
-            position:static; inset:auto; flex-direction:row; align-items:center;
-            padding:0; gap:12px;
-            opacity:1; transform:none; transition:none;
-        }
-        .toast.t-content-in .toast-content {
-            opacity:1; transform:translateY(0);
-        }
-        /* Reserves the pill-top zone on mobile; hidden on desktop */
-        .toast-spacer { height:37px; flex-shrink:0; }
-        body.is-desktop .toast-spacer { display:none; }
-        /* Actual content row — icon + text */
-        .toast-body {
-            flex:1; display:flex; align-items:center; justify-content:center; padding:0 20px; gap:14px;
-        }
-        body.is-desktop .toast-body { padding:0; gap:12px; flex:none; justify-content:flex-start; }
-        /* Icon */
         .toast-icon-wrap {
-            flex-shrink:0;
-            width:26px; height:26px;
-            position:relative;
+            flex-shrink:0; width:22px; height:22px;
             display:flex; align-items:center; justify-content:center;
         }
-        .toast-icon-bg {
-            position:absolute; inset:-3px;
-            border-radius:50%;
-            background:var(--toast-color,#89b4fa);
-            opacity:0.15;
-            transform:scale(0);
-            transition: transform 200ms ease;
-        }
-        .toast.t-content-in .toast-icon-bg {
-            transform:scale(1);
-            transition: transform 400ms cubic-bezier(0.2,0.8,0.2,1) 80ms;
-        }
-        body.is-desktop .toast-icon-bg { transform:scale(1); transition:none; }
         .toast-icon-svg {
-            width:100%; height:100%;
+            width:22px; height:22px;
             stroke:var(--toast-color,#89b4fa);
-            stroke-width:2.5;
-            fill:none;
+            stroke-width:2.5; fill:none;
             stroke-linecap:round; stroke-linejoin:round;
-            filter:drop-shadow(0 0 3px var(--toast-color,#89b4fa));
-            position:relative; z-index:2;
         }
-        .toast-path { stroke-dasharray:50; stroke-dashoffset:50; }
-        body.is-desktop .toast-path { stroke-dashoffset:0; }
-        .toast.t-content-in .toast-path {
-            animation: toast-path-draw 350ms cubic-bezier(0.4,0,0.2,1) forwards 180ms;
-        }
-        @keyframes toast-path-draw { to { stroke-dashoffset:0; } }
-        /* Text */
-        .toast-text { display:flex; flex-direction:column; gap:3px; min-width:0; max-width:210px; }
-        body.is-desktop .toast-text { flex:1; max-width:none; }
-        .toast-label-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-        .toast-label {
-            font-size:13px; font-family:var(--font-mono); font-weight:600;
-            color:#fff; line-height:1; letter-spacing:-0.2px;
-        }
-        .toast-queue-badge {
-            font-size:10px; font-family:var(--font-mono); font-weight:700;
-            color:#fff; background:rgba(255,255,255,0.15);
-            padding:2px 6px; border-radius:8px; line-height:1;
-            opacity:0; transform:scale(0.8);
-            transition: opacity 300ms ease, transform 300ms cubic-bezier(0.2,0.8,0.2,1);
-            white-space:nowrap;
-        }
-        .toast-queue-badge.t-badge-visible { opacity:1; transform:scale(1); }
         .toast-msg {
-            font-size:11px; font-family:var(--font-mono); font-weight:400;
-            color:rgba(255,255,255,0.6);
-            line-height:1.35; word-break:break-word; overflow-wrap:break-word; min-width:0;
+            font-size:13px; font-family:var(--font-mono);
+            color:var(--text,#cdd6f4);
+            letter-spacing:-0.2px; line-height:1.35;
+            word-break:break-word; overflow-wrap:break-word;
         }
-        /* Type accent colors */
         .toast                { --toast-color:#89b4fa; }
         .toast.t-success      { --toast-color:#a6e3a1; }
         .toast.t-error        { --toast-color:#f38ba8; }
         .toast.t-warning      { --toast-color:#fab387; }
-        /* Warning: draw then pulse */
-        .toast.t-warning.t-content-in .toast-path {
-            animation: toast-path-draw 350ms cubic-bezier(0.4,0,0.2,1) forwards 180ms,
-                       toast-icon-pulse 1.4s ease-in-out 600ms infinite;
-        }
-        @keyframes toast-icon-pulse {
-            0%, 100% { opacity:1; }
-            50%       { opacity:0.3; }
-        }
-        @keyframes di-dot-pulse {
-            0%, 100% { opacity:1; transform:scale(1); }
-            50%       { opacity:0.3; transform:scale(0.65); }
-        }
-        /* Exit: collapse back to pill */
-        body:not(.is-desktop) .toast.t-collapsing {
-            height:37px; width:126px; opacity:0; border-radius:18.5px;
-            transition:
-                height       200ms cubic-bezier(0.55,0,0.45,1),
-                width        240ms cubic-bezier(0.55,0,0.45,1) 180ms,
-                border-radius 240ms cubic-bezier(0.55,0,0.45,1) 180ms,
-                opacity       80ms  ease 420ms;
-        }
-        body:not(.is-desktop) .toast.t-layout-collapse {
-            height:0; margin-bottom:0;
-            transition: height 100ms ease, margin-bottom 100ms ease;
-        }
-        body.is-desktop .toast.t-collapsing {
-            transform:translateY(-52px) translateZ(0); opacity:0;
-            transition: transform 220ms cubic-bezier(0.55,0,0.45,1),
-                        opacity   160ms ease;
-        }
-        .toast.t-swiping { transition:none !important; }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid var(--surface0); }
@@ -4159,13 +4036,10 @@
 
         // ── Toast ───────────────────────────────────────────────────────────────
         const TOAST_ICONS = {
-            success: '<path class="toast-path" d="M4.5 12 L9.5 17 L19.5 7"/>',
-            error:   '<path class="toast-path" d="M6 6 L18 18 M18 6 L6 18"/>',
-            warning: '<path class="toast-path" d="M12 6.5 L12 14 M12 17.2 L12 17.8"/>',
-            _default:'<path class="toast-path" d="M12 11 L12 17 M12 7 L12 7.8"/>',
-        };
-        const TOAST_LABELS = {
-            success: 'OK', error: 'ERR', warning: 'WARN', _default: 'SYS',
+            success: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+            error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+            warning: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+            _default:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
         };
 
         var _notchType = null;
@@ -4188,39 +4062,25 @@
             c.style.top = nt === 'dynamic-island' ? '14px' : nt === 'notch' ? '54px' : '11px';
         }
 
-        // Queue: only one toast visible at a time; extras line up behind
-        var _toastQueue   = [];
-        var _toastBusy    = false;
-        var _toastBadgeEl = null;
-        var _toastDismiss = null;
+        // Stack: all toasts visible simultaneously, newest on top
+        var _toastStack = [];
 
-        function _updateToastBadge() {
-            if (!_toastBadgeEl) return;
-            var n = _toastQueue.length;
-            _toastBadgeEl.textContent = '+' + n;
-            _toastBadgeEl.classList.toggle('t-badge-visible', n > 0);
+        function _updateToastPositions() {
+            var y = 0;
+            for (var i = 0; i < _toastStack.length; i++) {
+                var t = _toastStack[i];
+                t.lastY = y;
+                t.el.style.opacity = i > 3 ? '0' : '1';
+                t.el.style.transform = 'translateX(-50%) translateY(' + y + 'px) scale(1)';
+                t.el.style.zIndex = 1000 - i;
+                y += t.height + 12;
+            }
         }
 
-        function _nextToast() {
-            if (_toastQueue.length === 0) {
-                _toastBusy = false; _toastBadgeEl = null; _toastDismiss = null;
-                return;
-            }
-            _toastBusy = true;
-            var item = _toastQueue.shift();
-            _updateToastBadge();
-            // Accelerate read time when backlog builds
-            var dur = item.duration;
-            if (dur > 0) {
-                if (_toastQueue.length > 3)      dur = Math.min(dur, 1000);
-                else if (_toastQueue.length > 0) dur = Math.min(dur, 1500);
-            }
-            _showToast(item.msg, item.type, dur, function() { setTimeout(_nextToast, 650); });
-        }
-
-        function _showToast(msg, type, duration, onComplete) {
+        function toast(msg, type, duration) {
+            if (duration === undefined) duration = 3000;
             var c = document.getElementById('toast-container');
-            if (!c) { if (onComplete) onComplete(); return; }
+            if (!c) return function(){};
             positionToastContainer();
 
             var el = document.createElement('div');
@@ -4228,135 +4088,70 @@
 
             var iconWrap = document.createElement('div');
             iconWrap.className = 'toast-icon-wrap';
-            var iconBg = document.createElement('div');
-            iconBg.className = 'toast-icon-bg';
             var iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             iconSvg.setAttribute('class', 'toast-icon-svg');
             iconSvg.setAttribute('viewBox', '0 0 24 24');
             iconSvg.innerHTML = TOAST_ICONS[type] || TOAST_ICONS._default;
-            iconWrap.appendChild(iconBg);
             iconWrap.appendChild(iconSvg);
 
-            var textEl = document.createElement('div');
-            textEl.className = 'toast-text';
-            var labelRowEl = document.createElement('div');
-            labelRowEl.className = 'toast-label-row';
-            var labelEl = document.createElement('div');
-            labelEl.className = 'toast-label';
-            labelEl.textContent = TOAST_LABELS[type] || TOAST_LABELS._default;
-            var badgeEl = document.createElement('div');
-            badgeEl.className = 'toast-queue-badge';
-            labelRowEl.appendChild(labelEl);
-            labelRowEl.appendChild(badgeEl);
-            var msgEl = document.createElement('div');
+            var msgEl = document.createElement('span');
             msgEl.className = 'toast-msg';
             msgEl.textContent = msg;
-            textEl.appendChild(labelRowEl);
-            textEl.appendChild(msgEl);
 
-            var contentEl = document.createElement('div');
-            contentEl.className = 'toast-content';
-            var spacerEl = document.createElement('div');
-            spacerEl.className = 'toast-spacer';
-            var bodyEl = document.createElement('div');
-            bodyEl.className = 'toast-body';
-            bodyEl.appendChild(iconWrap);
-            bodyEl.appendChild(textEl);
-            contentEl.appendChild(spacerEl);
-            contentEl.appendChild(bodyEl);
-            el.appendChild(contentEl);
+            el.appendChild(iconWrap);
+            el.appendChild(msgEl);
+
+            // Measure height while hidden so stacking math is exact
+            el.style.visibility = 'hidden';
             c.appendChild(el);
+            var h = el.offsetHeight;
+            el.style.visibility = '';
 
-            _toastBadgeEl = badgeEl;
-            _updateToastBadge();
+            var obj = { el: el, height: h, lastY: 0 };
+            _toastStack.push(obj);
 
-            // Swipe-up to dismiss
-            var _swipeStartY = 0, _swipeDragging = false;
-            el.addEventListener('touchstart', function(e) {
-                _swipeStartY = e.touches[0].clientY;
-                _swipeDragging = true;
-                el.classList.add('t-swiping');
-            }, { passive: true });
-            el.addEventListener('touchmove', function(e) {
-                if (!_swipeDragging) return;
-                var dy = e.touches[0].clientY - _swipeStartY;
-                if (dy < 0) el.style.transform = 'translateY(' + dy + 'px)';
-            }, { passive: true });
-            el.addEventListener('touchend', function(e) {
-                _swipeDragging = false;
-                el.classList.remove('t-swiping');
-                var endY = e.changedTouches[0].clientY;
-                el.style.transform = '';
-                if ((_swipeStartY - endY) > 40) dismissToast();
-            }, { passive: true });
+            void el.offsetWidth; // force reflow before transition starts
+            _updateToastPositions();
+
+            if (navigator.vibrate) navigator.vibrate(50);
 
             var dismissed = false;
-            function dismissToast() {
+            function dismiss() {
                 if (dismissed) return;
                 dismissed = true;
-                _toastDismiss = null;
-                _toastBadgeEl = null;
-                el.classList.remove('t-content-in');
-                el.classList.add('t-collapsing');
-                setTimeout(function() {
-                    el.classList.add('t-layout-collapse');
-                    setTimeout(function() { el.remove(); if (onComplete) onComplete(); }, 120);
-                }, 560);
-            }
-            _toastDismiss = dismissToast;
-
-            // Mobile: probe natural text height so --toast-h sizes the pill correctly.
-            if (!document.body.classList.contains('is-desktop')) {
-                var pillW = Math.min(371, window.innerWidth - 28);
-                var textW = pillW - 40 - 26 - 14; // 40px h-pad + 26px icon + 14px gap
-                var probe = document.createElement('div');
-                probe.style.cssText =
-                    'position:fixed;top:-9999px;left:0;pointer-events:none;visibility:hidden;' +
-                    'display:flex;flex-direction:column;gap:3px;width:' + textW + 'px;';
-                var pLabel = document.createElement('div');
-                pLabel.style.cssText =
-                    'font-size:13px;font-family:var(--font-mono);font-weight:600;line-height:1;';
-                pLabel.textContent = TOAST_LABELS[type] || TOAST_LABELS._default;
-                var pMsg = document.createElement('div');
-                pMsg.style.cssText =
-                    'font-size:11px;font-family:var(--font-mono);font-weight:400;' +
-                    'line-height:1.35;word-break:break-word;white-space:normal;';
-                pMsg.textContent = msg;
-                probe.appendChild(pLabel);
-                probe.appendChild(pMsg);
-                document.body.appendChild(probe);
-                var probeH = probe.offsetHeight;
-                document.body.removeChild(probe);
-                el.style.setProperty('--toast-h', Math.max(84, 37 + Math.ceil(probeH) + 28) + 'px');
+                var idx = _toastStack.indexOf(obj);
+                if (idx !== -1) _toastStack.splice(idx, 1);
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(-50%) translateY(' + (obj.lastY - 20) + 'px) scale(0.8)';
+                _updateToastPositions();
+                setTimeout(function() { el.remove(); }, 600);
             }
 
-            // Enter: shape expands, then content fades in
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    el.classList.add('t-expanded');
-                    setTimeout(function() { el.classList.add('t-content-in'); }, 350);
-                });
-            });
+            // Swipe-up to dismiss
+            var _swipeStartY = 0;
+            el.addEventListener('touchstart', function(e) {
+                _swipeStartY = e.touches[0].clientY;
+            }, { passive: true });
+            el.addEventListener('touchmove', function(e) {
+                var dy = e.touches[0].clientY - _swipeStartY;
+                if (dy < 0) {
+                    el.style.transition = 'none';
+                    el.style.transform = 'translateX(-50%) translateY(' + (obj.lastY + dy) + 'px) scale(1)';
+                }
+            }, { passive: true });
+            el.addEventListener('touchend', function(e) {
+                el.style.transition = '';
+                if ((_swipeStartY - e.changedTouches[0].clientY) > 40) dismiss();
+                else _updateToastPositions();
+            }, { passive: true });
 
             if (duration === 0) {
                 el.style.cursor = 'pointer';
-                el.addEventListener('click', dismissToast, { once: true });
+                el.addEventListener('click', dismiss, { once: true });
             } else {
-                setTimeout(dismissToast, duration);
+                setTimeout(dismiss, duration);
             }
-        }
-
-        function toast(msg, type, duration) {
-            if (duration === undefined) duration = 2500;
-            var item = { msg: msg, type: type, duration: duration };
-            _toastQueue.push(item);
-            _updateToastBadge();
-            if (!_toastBusy) _nextToast();
-            return function cancel() {
-                var i = _toastQueue.indexOf(item);
-                if (i !== -1) { _toastQueue.splice(i, 1); _updateToastBadge(); }
-                else if (_toastDismiss) _toastDismiss();
-            };
+            return dismiss;
         }
 
         // ── Terminal text injection ─────────────────────────────────────────────
