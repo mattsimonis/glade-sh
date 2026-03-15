@@ -929,6 +929,8 @@
             -webkit-user-select:text !important; user-select:text !important;
             -webkit-touch-callout:default !important;
             touch-action:auto;
+            caret-color:transparent;
+            outline:none;
             z-index:9999;
         }
         body.sel-mode #sel-text-overlay { display:block; pointer-events:auto; }
@@ -1740,8 +1742,10 @@
             </div>
             <div id="gesture-overlay"></div>
             <div id="sel-layer"></div>
-            <!-- Transparent text overlay for native iOS text selection in sel mode -->
-            <div id="sel-text-overlay"></div>
+            <!-- Transparent text overlay for native iOS text selection in sel mode.
+                 contenteditable="false" is a WebKit trick: iOS gives contenteditable
+                 elements full native selection-handle support even without editable content. -->
+            <div id="sel-text-overlay" contenteditable="false"></div>
             <div id="trackpad-ring"></div>
             <div id="trackpad-hint" role="tooltip">
                 <div id="trackpad-hint-icon"></div>
@@ -7266,12 +7270,21 @@
             function enterSelMode() {
                 selModeActive = true;
                 document.body.classList.add('sel-mode');
+                // html,body both have touch-action:none globally. CSS body.sel-mode
+                // only overrides body — UIKit reads touch-action from the root html
+                // element for the viewport, so body's override alone is not enough.
+                // Directly lift touch-action on the root element so UIKit's selection
+                // handle pan recognizer is allowed to fire.
+                document.documentElement.style.touchAction = 'auto';
+                document.documentElement.style.webkitTouchCallout = 'default';
                 updateSelOverlay();
             }
 
             function exitSelMode() {
                 selModeActive = false;
                 document.body.classList.remove('sel-mode');
+                document.documentElement.style.touchAction = '';
+                document.documentElement.style.webkitTouchCallout = '';
                 const ov = document.getElementById('sel-text-overlay');
                 if (ov) ov.textContent = '';
             }
