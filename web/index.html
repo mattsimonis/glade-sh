@@ -45,6 +45,7 @@
         :root {
             --font-mono: 'Commit Mono','JetBrains Mono','Fira Code',ui-monospace,'Menlo',monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            --sat: env(safe-area-inset-top, 0px);
             /* Catppuccin Mocha (dark — default) */
             --base:     #1e1e2e;
             --mantle:   #181825;
@@ -1327,116 +1328,139 @@
             position:fixed; top:14px; left:50%; transform:translateX(-50%);
             z-index:9999; display:flex; flex-direction:column; align-items:center; gap:0; pointer-events:none;
         }
-        /* Base pill — column flex so content anchors to bottom */
-        .toast {
+        /* Mobile: DI-style morphing pill */
+        body:not(.is-desktop) .toast {
             position:relative;
             width:126px; height:37px;
             background:#000;
-            border-radius:46px;
+            border-radius:18.5px;
             overflow:hidden;
             opacity:0;
-            display:flex; flex-direction:column;
-            align-items:center; justify-content:flex-end;
-            padding:0 0 10px;
-            /* spacing between stacked toasts — on margin so it can animate to 0 on exit */
             margin-bottom:8px;
             pointer-events:auto;
-            will-change:width, height, opacity;
+            will-change:width,height,opacity,border-radius;
             transform:translateZ(0);
-            /*
-             * IN — three sequential steps:
-             *   1. fade in behind DI           opacity  80ms
-             *   2. expand width outward        width   260ms  delay 80ms
-             *   3. expand height downward      height  220ms  delay 340ms
-             */
             transition:
-                opacity 80ms  ease,
-                width   260ms cubic-bezier(0.34,1.12,0.64,1) 80ms,
-                height  220ms cubic-bezier(0.34,1.12,0.64,1) 340ms;
+                opacity       60ms  ease,
+                width        520ms cubic-bezier(0.25,1,0.5,1) 60ms,
+                height       520ms cubic-bezier(0.25,1,0.5,1) 60ms,
+                border-radius 520ms cubic-bezier(0.25,1,0.5,1) 60ms;
         }
-        /* Desktop: compact slide-down only — no morphing */
+        body:not(.is-desktop) .toast.t-expanded {
+            width:min(371px, calc(100vw - 28px));
+            height:var(--toast-h, 84px);
+            opacity:1;
+            border-radius:44px;
+        }
+        /* Desktop: compact slide-down pill */
         body.is-desktop .toast {
-            flex-direction:row;
+            display:flex; align-items:center;
             width:auto; max-width:calc(100vw - 32px); min-width:200px;
-            height:auto; min-height:40px; padding:10px 18px;
-            align-items:center; justify-content:flex-start; gap:10px;
+            height:auto; min-height:40px;
+            background:#000;
+            border-radius:40px;
+            padding:10px 18px; gap:12px;
             opacity:0; transform:translateY(-52px) translateZ(0);
-            will-change:transform, opacity;
+            margin-bottom:8px;
+            pointer-events:auto;
+            will-change:transform,opacity;
             transition: transform 360ms cubic-bezier(0.34,1.12,0.64,1),
                         opacity   160ms ease;
         }
-        /* Mobile expanded — 14px each side (slightly inside screen edge, visually balanced) */
-        body:not(.is-desktop) .toast.t-expanded {
-            width:min(440px, calc(100vw - 28px));
-            height:var(--toast-h, 78px);
-            opacity:1;
-            justify-content:center; padding:0;
-        }
-        /* Give the inner row a bounded width so text wraps, 20px breathing room each side */
-        body:not(.is-desktop) .toast.t-expanded .toast-inner {
-            width:calc(100% - 40px);
-        }
-        /* Desktop visible */
         body.is-desktop .toast.t-expanded {
             transform:translateY(0) translateZ(0);
             opacity:1;
         }
-        /* Inner row: dot + text, anchored to bottom content zone */
-        .toast-inner {
-            display:flex; align-items:center; gap:9px; min-width:0;
-            opacity:0; transform:translateY(6px);
-            transition: opacity 180ms ease, transform 220ms cubic-bezier(0.34,1.12,0.64,1);
+        /* Content layer — absolute overlay on mobile, inline on desktop */
+        .toast-content {
+            position:absolute; inset:0;
+            display:flex; align-items:center;
+            padding:0 20px; gap:14px;
+            opacity:0; transform:translateY(5px);
+            transition: opacity 200ms ease, transform 300ms cubic-bezier(0.2,0.8,0.2,1);
         }
-        /* Dot indicator */
-        .toast-dot {
-            flex-shrink:0;
-            width:7px; height:7px;
-            border-radius:50%;
-            background:#89b4fa;
-            transform:scale(0.4);
-            transition: transform 280ms cubic-bezier(0.34,1.12,0.64,1);
+        body.is-desktop .toast-content {
+            position:static; inset:auto; padding:0; gap:12px;
+            opacity:1; transform:none; transition:none;
         }
-        .toast.t-success .toast-dot  { background:#a6e3a1; }
-        .toast.t-error   .toast-dot  { background:#f38ba8; }
-        .toast.t-warning .toast-dot  { background:#fab387; }
-        /* Message text */
-        .toast-msg {
-            font-size:11px; font-family:var(--font-mono); font-weight:500;
-            color:var(--text); line-height:1.45;
-            word-break:break-word; overflow-wrap:break-word; min-width:0;
-        }
-        /* Content reveal — fires after shape is ~70% expanded */
-        .toast.t-content-in .toast-inner {
+        .toast.t-content-in .toast-content {
             opacity:1; transform:translateY(0);
         }
-        .toast.t-content-in .toast-dot {
-            transform:scale(1);
+        /* Icon */
+        .toast-icon-wrap {
+            flex-shrink:0;
+            width:26px; height:26px;
+            position:relative;
+            display:flex; align-items:center; justify-content:center;
         }
-        /* Reconnecting: pulse the dot */
-        .toast.t-warning.t-content-in .toast-dot {
-            animation:di-dot-pulse 1.4s ease-in-out infinite;
+        .toast-icon-bg {
+            position:absolute; inset:-3px;
+            border-radius:50%;
+            background:var(--toast-color,#89b4fa);
+            opacity:0.15;
+            transform:scale(0);
+            transition: transform 200ms ease;
+        }
+        .toast.t-content-in .toast-icon-bg {
+            transform:scale(1);
+            transition: transform 400ms cubic-bezier(0.2,0.8,0.2,1) 80ms;
+        }
+        body.is-desktop .toast-icon-bg { transform:scale(1); transition:none; }
+        .toast-icon-svg {
+            width:100%; height:100%;
+            stroke:var(--toast-color,#89b4fa);
+            stroke-width:2.5;
+            fill:none;
+            stroke-linecap:round; stroke-linejoin:round;
+            filter:drop-shadow(0 0 3px var(--toast-color,#89b4fa));
+            position:relative; z-index:2;
+        }
+        .toast-path { stroke-dasharray:50; stroke-dashoffset:50; }
+        body.is-desktop .toast-path { stroke-dashoffset:0; }
+        .toast.t-content-in .toast-path {
+            animation: toast-path-draw 350ms cubic-bezier(0.4,0,0.2,1) forwards 180ms;
+        }
+        @keyframes toast-path-draw { to { stroke-dashoffset:0; } }
+        /* Text */
+        .toast-text { display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
+        .toast-label {
+            font-size:13px; font-family:var(--font-mono); font-weight:600;
+            color:#fff; line-height:1; letter-spacing:-0.2px;
+        }
+        .toast-msg {
+            font-size:11px; font-family:var(--font-mono); font-weight:400;
+            color:rgba(255,255,255,0.6);
+            line-height:1.35; word-break:break-word; overflow-wrap:break-word; min-width:0;
+        }
+        /* Type accent colors */
+        .toast                { --toast-color:#89b4fa; }
+        .toast.t-success      { --toast-color:#a6e3a1; }
+        .toast.t-error        { --toast-color:#f38ba8; }
+        .toast.t-warning      { --toast-color:#fab387; }
+        /* Warning: draw then pulse */
+        .toast.t-warning.t-content-in .toast-path {
+            animation: toast-path-draw 350ms cubic-bezier(0.4,0,0.2,1) forwards 180ms,
+                       toast-icon-pulse 1.4s ease-in-out 600ms infinite;
+        }
+        @keyframes toast-icon-pulse {
+            0%, 100% { opacity:1; }
+            50%       { opacity:0.3; }
         }
         @keyframes di-dot-pulse {
             0%, 100% { opacity:1; transform:scale(1); }
             50%       { opacity:0.3; transform:scale(0.65); }
         }
-        /* Exit: height → width → fade (reverse of entry, three sequential steps) */
+        /* Exit: collapse back to pill */
         body:not(.is-desktop) .toast.t-collapsing {
-            height:37px;      /* step 1: rise back to DI pill height */
-            width:126px;      /* step 2: collapse inward to DI pill width */
-            opacity:0;        /* step 3: fade out behind DI */
-            /* margin-bottom intentionally untouched here — stays at 8px
-               so stacked toasts don't shift during the visible animation */
+            height:37px; width:126px; opacity:0; border-radius:18.5px;
             transition:
-                height        200ms cubic-bezier(0.55,0,0.45,1),
-                width         240ms cubic-bezier(0.55,0,0.45,1) 200ms,
-                opacity       100ms ease 440ms;
+                height       200ms cubic-bezier(0.55,0,0.45,1),
+                width        240ms cubic-bezier(0.55,0,0.45,1) 180ms,
+                border-radius 240ms cubic-bezier(0.55,0,0.45,1) 180ms,
+                opacity       80ms  ease 420ms;
         }
-        /* After the toast is invisible, collapse its layout footprint so any
-           stacked toasts slide up smoothly rather than snapping on el.remove() */
         body:not(.is-desktop) .toast.t-layout-collapse {
-            height:0;
-            margin-bottom:0;
+            height:0; margin-bottom:0;
             transition: height 100ms ease, margin-bottom 100ms ease;
         }
         body.is-desktop .toast.t-collapsing {
@@ -1444,7 +1468,6 @@
             transition: transform 220ms cubic-bezier(0.55,0,0.45,1),
                         opacity   160ms ease;
         }
-        /* Suppress transitions during swipe */
         .toast.t-swiping { transition:none !important; }
 
         /* ── Settings sections ───────────────────────────────── */
@@ -4098,26 +4121,69 @@
         }
 
         // ── Toast ───────────────────────────────────────────────────────────────
+        const TOAST_ICONS = {
+            success: '<path class="toast-path" d="M4.5 12 L9.5 17 L19.5 7"/>',
+            error:   '<path class="toast-path" d="M6 6 L18 18 M18 6 L6 18"/>',
+            warning: '<path class="toast-path" d="M12 6.5 L12 14 M12 17.2 L12 17.8"/>',
+            _default:'<path class="toast-path" d="M12 11 L12 17 M12 7 L12 7.8"/>',
+        };
+        const TOAST_LABELS = {
+            success: 'OK', error: 'ERR', warning: 'WARN', _default: 'SYS',
+        };
+
+        var _notchType = null;
+        function getNotchType() {
+            if (_notchType !== null) return _notchType;
+            if (document.body.classList.contains('is-desktop')) { _notchType = 'none'; return _notchType; }
+            if (!/iPhone/.test(navigator.userAgent)) { _notchType = 'none'; return _notchType; }
+            var sat = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+            _notchType = sat >= 59 ? 'dynamic-island' : sat >= 44 ? 'notch' : 'none';
+            return _notchType;
+        }
+        function positionToastContainer() {
+            var c = document.getElementById('toast-container');
+            if (!c) return;
+            var nt = getNotchType();
+            c.style.top = nt === 'dynamic-island' ? '11px' : nt === 'notch' ? '54px' : '14px';
+        }
+
         function toast(msg, type, duration) {
             duration = (duration === undefined) ? 2500 : duration;
             const c = document.getElementById('toast-container');
             if (!c) return;
 
+            positionToastContainer();
+
             const el = document.createElement('div');
             el.className = 'toast' + (type ? ' t-' + type : '');
 
-            const dotEl = document.createElement('div');
-            dotEl.className = 'toast-dot';
+            const iconWrap = document.createElement('div');
+            iconWrap.className = 'toast-icon-wrap';
+            const iconBg = document.createElement('div');
+            iconBg.className = 'toast-icon-bg';
+            const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            iconSvg.setAttribute('class', 'toast-icon-svg');
+            iconSvg.setAttribute('viewBox', '0 0 24 24');
+            iconSvg.innerHTML = TOAST_ICONS[type] || TOAST_ICONS._default;
+            iconWrap.appendChild(iconBg);
+            iconWrap.appendChild(iconSvg);
 
+            const textEl = document.createElement('div');
+            textEl.className = 'toast-text';
+            const labelEl = document.createElement('div');
+            labelEl.className = 'toast-label';
+            labelEl.textContent = TOAST_LABELS[type] || TOAST_LABELS._default;
             const msgEl = document.createElement('div');
             msgEl.className = 'toast-msg';
             msgEl.textContent = msg;
+            textEl.appendChild(labelEl);
+            textEl.appendChild(msgEl);
 
-            const innerEl = document.createElement('div');
-            innerEl.className = 'toast-inner';
-            innerEl.appendChild(dotEl);
-            innerEl.appendChild(msgEl);
-            el.appendChild(innerEl);
+            const contentEl = document.createElement('div');
+            contentEl.className = 'toast-content';
+            contentEl.appendChild(iconWrap);
+            contentEl.appendChild(textEl);
+            el.appendChild(contentEl);
             c.appendChild(el);
 
             // Swipe-up to dismiss
@@ -4180,7 +4246,6 @@
                 if (prev.classList.contains('t-layout-collapse')) {
                     awaitHeightEnd();
                 } else {
-                    // t-layout-collapse hasn't been added yet — watch for it
                     var obs = new MutationObserver(function() {
                         if (prev.classList.contains('t-layout-collapse')) {
                             obs.disconnect();
@@ -4191,28 +4256,36 @@
                 }
             }
 
-            // Enter: fade → width → height (sequential)
-            // Mobile: probe the natural text height so --toast-h sizes the pill to fit wrapped text.
+            // Mobile: probe natural text height so --toast-h sizes the pill correctly.
             if (!document.body.classList.contains('is-desktop')) {
-                var pillW = Math.min(440, window.innerWidth - 28);
-                var textW = pillW - 40 - 7 - 9; // 40px h-padding + 7px dot + 9px gap
+                var pillW = Math.min(371, window.innerWidth - 28);
+                var textW = pillW - 40 - 26 - 14; // 40px h-pad + 26px icon + 14px gap
                 var probe = document.createElement('div');
                 probe.style.cssText =
                     'position:fixed;top:-9999px;left:0;pointer-events:none;visibility:hidden;' +
-                    'font-size:11px;font-family:var(--font-mono);font-weight:500;' +
-                    'line-height:1.45;word-break:break-word;white-space:normal;' +
-                    'width:' + textW + 'px;';
-                probe.textContent = msg;
+                    'display:flex;flex-direction:column;gap:3px;width:' + textW + 'px;';
+                var pLabel = document.createElement('div');
+                pLabel.style.cssText =
+                    'font-size:13px;font-family:var(--font-mono);font-weight:600;line-height:1;';
+                pLabel.textContent = TOAST_LABELS[type] || TOAST_LABELS._default;
+                var pMsg = document.createElement('div');
+                pMsg.style.cssText =
+                    'font-size:11px;font-family:var(--font-mono);font-weight:400;' +
+                    'line-height:1.35;word-break:break-word;white-space:normal;';
+                pMsg.textContent = msg;
+                probe.appendChild(pLabel);
+                probe.appendChild(pMsg);
                 document.body.appendChild(probe);
                 var probeH = probe.offsetHeight;
                 document.body.removeChild(probe);
-                el.style.setProperty('--toast-h', Math.max(78, Math.ceil(probeH) + 40) + 'px');
+                el.style.setProperty('--toast-h', Math.max(84, Math.ceil(probeH) + 40) + 'px');
             }
-            // Content fires at 400ms — shape is full width, height is ~30% grown
+
+            // Enter: shape expands, then content fades in
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
                     el.classList.add('t-expanded');
-                    setTimeout(function() { el.classList.add('t-content-in'); }, 400);
+                    setTimeout(function() { el.classList.add('t-content-in'); }, 350);
                 });
             });
 
