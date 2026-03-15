@@ -4914,9 +4914,15 @@
 
         // ── API helpers ────────────────────────────────────────────────────────
         async function apiJson(path, opts) {
-            const r = await fetch(path, opts);
-            if (!r.ok) throw new Error(r.status);
-            return r.json();
+            const ctrl = new AbortController();
+            const timer = setTimeout(function() { ctrl.abort(); }, 8000);
+            try {
+                const r = await fetch(path, Object.assign({ signal: ctrl.signal }, opts));
+                if (!r.ok) throw new Error(r.status);
+                return r.json();
+            } finally {
+                clearTimeout(timer);
+            }
         }
 
         // ── Load & render project tabs ─────────────────────────────────────────
@@ -7303,7 +7309,8 @@
         let _disconnectedElapsedTimer = null;
 
         function isNetworkError(e) {
-            return e instanceof TypeError;
+            return e instanceof TypeError ||
+                   (e instanceof DOMException && e.name === 'AbortError');
         }
 
         function formatElapsed(ms) {
@@ -7320,7 +7327,9 @@
             if (!_huElapsedTimer) _huElapsedTimer = setInterval(updateHuElapsed, 1000);
             if (!huPollTimer) {
                 huPollTimer = setInterval(function() {
-                    fetch('/api/health').then(function(r) {
+                    var hc = new AbortController();
+                    setTimeout(function() { hc.abort(); }, 4000);
+                    fetch('/api/health', { signal: hc.signal }).then(function(r) {
                         if (r.ok) {
                             hideHostUnreachable();
                             reconnectInProgress = false;
@@ -7349,7 +7358,9 @@
         function probeAndReconnect() {
             if (reconnectInProgress) return;
             if (huOverlay && huOverlay.classList.contains('visible')) return;
-            fetch('/api/health').then(function(r) {
+            var hc = new AbortController();
+            setTimeout(function() { hc.abort(); }, 4000);
+            fetch('/api/health', { signal: hc.signal }).then(function(r) {
                 if (r.ok) forceReconnect();
             }).catch(function() {
                 showHostUnreachable();
