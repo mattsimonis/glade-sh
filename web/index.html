@@ -1423,10 +1423,20 @@
         @keyframes toast-path-draw { to { stroke-dashoffset:0; } }
         /* Text */
         .toast-text { display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
+        .toast-label-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .toast-label {
             font-size:13px; font-family:var(--font-mono); font-weight:600;
             color:#fff; line-height:1; letter-spacing:-0.2px;
         }
+        .toast-queue-badge {
+            font-size:10px; font-family:var(--font-mono); font-weight:700;
+            color:#fff; background:rgba(255,255,255,0.15);
+            padding:2px 6px; border-radius:8px; line-height:1;
+            opacity:0; transform:scale(0.8);
+            transition: opacity 300ms ease, transform 300ms cubic-bezier(0.2,0.8,0.2,1);
+            white-space:nowrap;
+        }
+        .toast-queue-badge.t-badge-visible { opacity:1; transform:scale(1); }
         .toast-msg {
             font-size:11px; font-family:var(--font-mono); font-weight:400;
             color:rgba(255,255,255,0.6);
@@ -4147,44 +4157,81 @@
             c.style.top = nt === 'dynamic-island' ? '11px' : nt === 'notch' ? '54px' : '14px';
         }
 
-        function toast(msg, type, duration) {
-            duration = (duration === undefined) ? 2500 : duration;
-            const c = document.getElementById('toast-container');
-            if (!c) return;
+        // Queue: only one toast visible at a time; extras line up behind
+        var _toastQueue   = [];
+        var _toastBusy    = false;
+        var _toastBadgeEl = null;
+        var _toastDismiss = null;
 
+        function _updateToastBadge() {
+            if (!_toastBadgeEl) return;
+            var n = _toastQueue.length;
+            _toastBadgeEl.textContent = '+' + n;
+            _toastBadgeEl.classList.toggle('t-badge-visible', n > 0);
+        }
+
+        function _nextToast() {
+            if (_toastQueue.length === 0) {
+                _toastBusy = false; _toastBadgeEl = null; _toastDismiss = null;
+                return;
+            }
+            _toastBusy = true;
+            var item = _toastQueue.shift();
+            _updateToastBadge();
+            // Accelerate read time when backlog builds
+            var dur = item.duration;
+            if (dur > 0) {
+                if (_toastQueue.length > 3)      dur = Math.min(dur, 1000);
+                else if (_toastQueue.length > 0) dur = Math.min(dur, 1500);
+            }
+            _showToast(item.msg, item.type, dur, function() { setTimeout(_nextToast, 650); });
+        }
+
+        function _showToast(msg, type, duration, onComplete) {
+            var c = document.getElementById('toast-container');
+            if (!c) { if (onComplete) onComplete(); return; }
             positionToastContainer();
 
-            const el = document.createElement('div');
+            var el = document.createElement('div');
             el.className = 'toast' + (type ? ' t-' + type : '');
 
-            const iconWrap = document.createElement('div');
+            var iconWrap = document.createElement('div');
             iconWrap.className = 'toast-icon-wrap';
-            const iconBg = document.createElement('div');
+            var iconBg = document.createElement('div');
             iconBg.className = 'toast-icon-bg';
-            const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            var iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             iconSvg.setAttribute('class', 'toast-icon-svg');
             iconSvg.setAttribute('viewBox', '0 0 24 24');
             iconSvg.innerHTML = TOAST_ICONS[type] || TOAST_ICONS._default;
             iconWrap.appendChild(iconBg);
             iconWrap.appendChild(iconSvg);
 
-            const textEl = document.createElement('div');
+            var textEl = document.createElement('div');
             textEl.className = 'toast-text';
-            const labelEl = document.createElement('div');
+            var labelRowEl = document.createElement('div');
+            labelRowEl.className = 'toast-label-row';
+            var labelEl = document.createElement('div');
             labelEl.className = 'toast-label';
             labelEl.textContent = TOAST_LABELS[type] || TOAST_LABELS._default;
-            const msgEl = document.createElement('div');
+            var badgeEl = document.createElement('div');
+            badgeEl.className = 'toast-queue-badge';
+            labelRowEl.appendChild(labelEl);
+            labelRowEl.appendChild(badgeEl);
+            var msgEl = document.createElement('div');
             msgEl.className = 'toast-msg';
             msgEl.textContent = msg;
-            textEl.appendChild(labelEl);
+            textEl.appendChild(labelRowEl);
             textEl.appendChild(msgEl);
 
-            const contentEl = document.createElement('div');
+            var contentEl = document.createElement('div');
             contentEl.className = 'toast-content';
             contentEl.appendChild(iconWrap);
             contentEl.appendChild(textEl);
             el.appendChild(contentEl);
             c.appendChild(el);
+
+            _toastBadgeEl = badgeEl;
+            _updateToastBadge();
 
             // Swipe-up to dismiss
             var _swipeStartY = 0, _swipeDragging = false;
@@ -4210,51 +4257,16 @@
             function dismissToast() {
                 if (dismissed) return;
                 dismissed = true;
-
-                var started = false;
-                function startCollapse() {
-                    if (started) return;
-                    started = true;
-                    el.classList.remove('t-content-in');
-                    el.classList.add('t-collapsing');
-                    setTimeout(function() {
-                        el.classList.add('t-layout-collapse');
-                        setTimeout(function() { el.remove(); }, 120);
-                    }, 560);
-                }
-
-                // If a preceding toast is still dismissing it will slide us upward —
-                // wait for its layout footprint to vanish before we start shrinking.
-                var prev = el.previousElementSibling;
-                if (!prev || !prev.classList.contains('t-collapsing')) {
-                    startCollapse();
-                    return;
-                }
-
-                var safeguard = setTimeout(startCollapse, 800);
-
-                function awaitHeightEnd() {
-                    prev.addEventListener('transitionend', function onHeightEnd(e) {
-                        if (e.propertyName === 'height') {
-                            prev.removeEventListener('transitionend', onHeightEnd);
-                            clearTimeout(safeguard);
-                            startCollapse();
-                        }
-                    });
-                }
-
-                if (prev.classList.contains('t-layout-collapse')) {
-                    awaitHeightEnd();
-                } else {
-                    var obs = new MutationObserver(function() {
-                        if (prev.classList.contains('t-layout-collapse')) {
-                            obs.disconnect();
-                            awaitHeightEnd();
-                        }
-                    });
-                    obs.observe(prev, { attributes: true, attributeFilter: ['class'] });
-                }
+                _toastDismiss = null;
+                _toastBadgeEl = null;
+                el.classList.remove('t-content-in');
+                el.classList.add('t-collapsing');
+                setTimeout(function() {
+                    el.classList.add('t-layout-collapse');
+                    setTimeout(function() { el.remove(); if (onComplete) onComplete(); }, 120);
+                }, 560);
             }
+            _toastDismiss = dismissToast;
 
             // Mobile: probe natural text height so --toast-h sizes the pill correctly.
             if (!document.body.classList.contains('is-desktop')) {
@@ -4295,8 +4307,19 @@
             } else {
                 setTimeout(dismissToast, duration);
             }
+        }
 
-            return dismissToast;
+        function toast(msg, type, duration) {
+            if (duration === undefined) duration = 2500;
+            var item = { msg: msg, type: type, duration: duration };
+            _toastQueue.push(item);
+            _updateToastBadge();
+            if (!_toastBusy) _nextToast();
+            return function cancel() {
+                var i = _toastQueue.indexOf(item);
+                if (i !== -1) { _toastQueue.splice(i, 1); _updateToastBadge(); }
+                else if (_toastDismiss) _toastDismiss();
+            };
         }
 
         // ── Terminal text injection ─────────────────────────────────────────────
