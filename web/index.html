@@ -938,13 +938,15 @@
         /* ── Text selection mode ─────────────────────────────────────────── */
         body.sel-mode #gesture-overlay { pointer-events:none !important; }
         /* Transparent text overlay — filled with terminal buffer content so iOS
-           can perform native long-press / drag-handle selection in the outer page. */
+           can perform native long-press / drag-handle selection in the outer page.
+           position:fixed (not absolute) so it sits outside #terminal-container's
+           overflow:hidden stacking context — iOS handle hit-testing needs this. */
         #sel-text-overlay {
-            position:absolute; display:none; pointer-events:none; overflow:hidden;
+            position:fixed; display:none; pointer-events:none; overflow:visible;
             font-family:var(--font-mono); white-space:pre; color:transparent;
-            -webkit-user-select:text; user-select:text;
+            -webkit-user-select:text !important; user-select:text !important;
             -webkit-tap-highlight-color:transparent;
-            z-index:21;
+            z-index:9999;
         }
         body.sel-mode #sel-text-overlay { display:block; pointer-events:auto; }
 
@@ -6496,9 +6498,9 @@
                 if (!screen) return;
                 const iframeRect = iframe.getBoundingClientRect();
                 const screenRect = screen.getBoundingClientRect();
-                const tcRect = document.getElementById('terminal-container').getBoundingClientRect();
-                overlay.style.left   = Math.round(iframeRect.left + screenRect.left - tcRect.left) + 'px';
-                overlay.style.top    = Math.round(iframeRect.top  + screenRect.top  - tcRect.top)  + 'px';
+                // position:fixed — coords are viewport-relative (no parent offset needed)
+                overlay.style.left   = Math.round(iframeRect.left + screenRect.left) + 'px';
+                overlay.style.top    = Math.round(iframeRect.top  + screenRect.top)  + 'px';
                 overlay.style.width  = Math.round(screenRect.width)  + 'px';
                 overlay.style.height = Math.round(screenRect.height) + 'px';
                 // Cell dimensions for row/col alignment
