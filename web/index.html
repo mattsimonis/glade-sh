@@ -6064,8 +6064,13 @@
                         terminalInstance.options.cursorInactiveStyle = 'block';
                     } catch(e) {}
                     // On desktop: auto-copy to clipboard when text is selected.
+                    // On mobile: explicitly disable — ttyd defaults it to true, which would
+                    // auto-copy on every selection and bypass the handles/Copy UI.
                     if (terminalInstance && isDesktop) try {
                         terminalInstance.options.copyOnSelect = true;
+                    } catch(e) {}
+                    if (terminalInstance && !isDesktop) try {
+                        terminalInstance.options.copyOnSelect = false;
                     } catch(e) {}
                     // Apply saved theme as soon as the instance is found — don't wait for
                     // setConnectionState, which fires after a settle delay during which the
@@ -6391,9 +6396,13 @@
                 while (end < lineText.length && isWordChar(lineText[end])) end++;
                 if (end <= start) { // tapped whitespace — select trimmed line
                     const trimmed = lineText.trimEnd().length;
-                    if (trimmed > 0) terminalInstance.select(0, row, trimmed);
+                    if (trimmed > 0) {
+                        terminalInstance.select(0, row, trimmed);
+                        if (window._setLastSelBounds) window._setLastSelBounds({sc:0, sr:row+buf.viewportY, ec:trimmed-1, er:row+buf.viewportY});
+                    }
                 } else {
                     terminalInstance.select(start, row, end - start);
+                    if (window._setLastSelBounds) window._setLastSelBounds({sc:start, sr:row+buf.viewportY, ec:end-1, er:row+buf.viewportY});
                 }
                 // Light haptic confirms selection started — the sel-layer handles + Copy pill
                 // are now visible so the user can adjust the selection before copying.
@@ -7164,6 +7173,11 @@
             const hEnd      = document.getElementById('sel-handle-end');
             const selPill   = document.getElementById('sel-pill');
 
+            let lastSelBounds = null; // {sc, sr, ec, er} in buffer-row coords
+            // Called from selectWordAtTouch (outside this IIFE) to record selection bounds
+            // so positionHandles() doesn't have to rely on a private xterm.js API.
+            window._setLastSelBounds = function (b) { lastSelBounds = b; };
+
             function getTermCellSize() {
                 try {
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -7184,16 +7198,24 @@
                 try { return terminalInstance.buffer.active.viewportY || 0; } catch (e) { return 0; }
             }
             function positionHandles() {
+                if (isPointerDevice) return; // desktop: native text selection; no drag handles
                 if (!terminalInstance) return hideSelHandles();
-                const m  = getSelModel();
-                if (!m || !m.selectionStart || !m.selectionEnd) return hideSelHandles();
+                // Use stored bounds set by selectWordAtTouch / applySelect; fall back to
+                // private selection-model API only for the selectAll path.
+                let sc, sr, ec, er;
+                if (lastSelBounds) {
+                    ({sc, sr, ec, er} = lastSelBounds);
+                } else {
+                    const m = getSelModel();
+                    if (!m || !m.selectionStart || !m.selectionEnd) return hideSelHandles();
+                    [sc, sr] = m.selectionStart;
+                    [ec, er] = m.selectionEnd;
+                }
                 const cs = getTermCellSize();
                 if (!cs) return;
                 const { rect, cellW, cellH } = cs;
                 const tc     = document.getElementById('terminal-container');
                 const tcRect = tc.getBoundingClientRect();
-                const [sc, sr] = m.selectionStart;
-                const [ec, er] = m.selectionEnd;
                 const vy = viewportY();
                 // Screen-relative row (clamped to visible rows)
                 const sRow = sr - vy, eRow = er - vy;
@@ -7221,6 +7243,7 @@
                     // Swap so start is always before end
                     [sc, sr, ec, er] = [ec, er, sc, sr];
                 }
+                lastSelBounds = {sc, sr, ec, er};
                 const cols = terminalInstance.cols;
                 const length = (er - sr) * cols + (ec - sc + 1);
                 try { terminalInstance.select(sc, sr, Math.max(1, length)); } catch (e) {}
@@ -7271,6 +7294,10 @@
             document.getElementById('sel-all-btn').addEventListener('click', function () {
                 if (!terminalInstance) return;
                 terminalInstance.selectAll();
+                try {
+                    const b = terminalInstance.buffer.active;
+                    lastSelBounds = {sc:0, sr:0, ec:terminalInstance.cols-1, er:b.length-1};
+                } catch(e) { lastSelBounds = null; }
                 setTimeout(positionHandles, 30);
             });
 
@@ -7281,6 +7308,7 @@
                         if (terminalInstance && terminalInstance.getSelection().length > 0) {
                             positionHandles();
                         } else {
+                            lastSelBounds = null;
                             hideSelHandles();
                         }
                     });
