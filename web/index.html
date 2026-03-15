@@ -8152,6 +8152,9 @@
 
         // Document-level touchmove block — only scrollable inner areas pass through (iOS PWA fix)
         document.addEventListener('touchmove', function (e) {
+            // In sel mode, let #sel-text-overlay touchmoves pass unblocked so
+            // UIKit's selection handle pan recognizer isn't killed by preventDefault.
+            if (document.body.classList.contains('sel-mode') && e.target.closest('#sel-text-overlay')) return;
             if (!e.target.closest('#kb-rows, .panel-view, #cmd-palette-list, .settings-body, #debug-sheet')) e.preventDefault();
         }, { passive: false });
 
