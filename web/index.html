@@ -937,6 +937,16 @@
 
         /* ── Text selection mode ─────────────────────────────────────────── */
         body.sel-mode #gesture-overlay { pointer-events:none !important; }
+        /* Transparent text overlay — filled with terminal buffer content so iOS
+           can perform native long-press / drag-handle selection in the outer page. */
+        #sel-text-overlay {
+            position:absolute; display:none; pointer-events:none; overflow:hidden;
+            font-family:var(--font-mono); white-space:pre; color:transparent;
+            -webkit-user-select:text; user-select:text;
+            -webkit-tap-highlight-color:transparent;
+            z-index:21;
+        }
+        body.sel-mode #sel-text-overlay { display:block; pointer-events:auto; }
 
         /* ── Command Palette ─────────────────────────────────────────── */
         #cmd-palette-backdrop {
@@ -1751,6 +1761,8 @@
                     <button id="sel-all-btn">All</button>
                 </div>
             </div>
+            <!-- Transparent text overlay for native iOS text selection in sel mode -->
+            <div id="sel-text-overlay"></div>
             <div id="trackpad-ring"></div>
             <div id="trackpad-hint" role="tooltip">
                 <div id="trackpad-hint-icon"></div>
@@ -6470,6 +6482,47 @@
             const len = Math.max(1, (er - sr) * cols + (ec - sc + 1));
             try { terminalInstance.select(sc, sr, len); } catch(e) {}
         }
+        // Populates #sel-text-overlay with current terminal buffer content, positioned
+        // exactly over the xterm canvas.  Called on enterSelMode() so iOS native
+        // long-press / drag-handle text selection works in the outer document.
+        function updateSelOverlay() {
+            const overlay = document.getElementById('sel-text-overlay');
+            if (!overlay) return;
+            if (!terminalInstance) findTerminal();
+            if (!terminalInstance) { overlay.textContent = ''; return; }
+            try {
+                const iDoc = iframe.contentDocument;
+                const screen = iDoc && iDoc.querySelector('.xterm-screen');
+                if (!screen) return;
+                const iframeRect = iframe.getBoundingClientRect();
+                const screenRect = screen.getBoundingClientRect();
+                const tcRect = document.getElementById('terminal-container').getBoundingClientRect();
+                overlay.style.left   = Math.round(iframeRect.left + screenRect.left - tcRect.left) + 'px';
+                overlay.style.top    = Math.round(iframeRect.top  + screenRect.top  - tcRect.top)  + 'px';
+                overlay.style.width  = Math.round(screenRect.width)  + 'px';
+                overlay.style.height = Math.round(screenRect.height) + 'px';
+                // Cell dimensions for row/col alignment
+                let cellH = 16;
+                try {
+                    const dims = terminalInstance._core._renderService.dimensions;
+                    if (dims.actualCellHeight) cellH = dims.actualCellHeight;
+                    else if (dims.css && dims.css.cell) cellH = dims.css.cell.height;
+                } catch(_) {}
+                // Font size: use xterm's configured size × our scale factor
+                let fontSize = cellH * 0.72;
+                try { const fs = terminalInstance.options.fontSize; if (fs) fontSize = fs * termFontScale; } catch(_) {}
+                overlay.style.lineHeight = cellH + 'px';
+                overlay.style.fontSize   = fontSize + 'px';
+                // Fill with visible buffer content (one line per row)
+                const buf = terminalInstance.buffer.active;
+                const lines = [];
+                for (let r = 0; r < terminalInstance.rows; r++) {
+                    const line = buf.getLine(r + buf.viewportY);
+                    lines.push(line ? line.translateToString(false) : '');
+                }
+                overlay.textContent = lines.join('\n');
+            } catch(e) {}
+        }
         function findUrlAtTerminalPos(outerX, outerY) {
             try {
                 if (!terminalInstance) return null;
@@ -7261,45 +7314,24 @@
             });
 
             // ── Selection mode ───────────────────────────────────────────────────
-            // Disables the gesture overlay (pointer-events:none via CSS class) so
-            // touches reach the iframe.  Inside the iframe, injects CSS to make the
-            // xterm.js accessibility layer (.xterm-rows) interactive and text-selectable.
-            // iOS then handles selection natively: long-press → loupe → drag handles → Copy.
+            // body.sel-mode CSS: gesture overlay gets pointer-events:none so touches
+            // reach the outer-page #sel-text-overlay instead of the iframe.
+            // updateSelOverlay() fills the overlay with terminal buffer text — iOS
+            // can then long-press → loupe → native drag handles → native Copy menu.
 
             let selModeActive = false;
 
             function enterSelMode() {
                 selModeActive = true;
                 document.body.classList.add('sel-mode');
-                try {
-                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (iDoc) {
-                        let s = iDoc.getElementById('glade-sel-css');
-                        if (!s) { s = iDoc.createElement('style'); s.id = 'glade-sel-css'; iDoc.head.appendChild(s); }
-                        // Override xterm.js defaults: push .xterm-rows above canvas, make it
-                        // pointer-interactive and text-selectable.  Disable canvas and textarea
-                        // pointer events so they don't intercept the touch.
-                        s.textContent = [
-                            '.xterm,.xterm-screen{-webkit-user-select:text!important;user-select:text!important}',
-                            '.xterm-rows{-webkit-user-select:text!important;user-select:text!important;',
-                            '  pointer-events:auto!important;z-index:10!important;position:relative!important}',
-                            '.xterm-rows>div,.xterm-rows>div>span{-webkit-user-select:text!important;',
-                            '  user-select:text!important;pointer-events:auto!important}',
-                            '.xterm-helper-textarea{pointer-events:none!important}',
-                            'canvas{pointer-events:none!important}',
-                        ].join('');
-                    }
-                } catch(e) {}
+                updateSelOverlay();
             }
 
             function exitSelMode() {
                 selModeActive = false;
                 document.body.classList.remove('sel-mode');
-                try {
-                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (iDoc) { const s = iDoc.getElementById('glade-sel-css'); if (s) s.remove(); }
-                } catch(e) {}
-                if (terminalInstance) try { terminalInstance.clearSelection(); } catch(_) {}
+                const ov = document.getElementById('sel-text-overlay');
+                if (ov) ov.textContent = '';
                 hideCopyPill();
             }
             window._exitSelMode   = exitSelMode;
