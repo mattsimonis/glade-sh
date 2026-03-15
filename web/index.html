@@ -6062,6 +6062,10 @@
                         terminalInstance.options.cursorStyle = 'block';
                         terminalInstance.options.cursorInactiveStyle = 'block';
                     } catch(e) {}
+                    // On desktop: auto-copy to clipboard when text is selected.
+                    if (terminalInstance && isDesktop) try {
+                        terminalInstance.options.copyOnSelect = true;
+                    } catch(e) {}
                     // Apply saved theme as soon as the instance is found — don't wait for
                     // setConnectionState, which fires after a settle delay during which the
                     // xterm default (ttyd's hardcoded Mocha) may still be in effect.
@@ -6081,6 +6085,27 @@
                     if (terminalInstance && !terminalInstance._gladeLinkProviderRegistered) {
                         try { registerTermLinkProvider(terminalInstance); } catch(e) {}
                     }
+                    // Intercept link clicks inside the iframe for both desktop and any direct
+                    // click path. Runs capture-phase before xterm.js / WebLinksAddon so our
+                    // handler wins without needing Ctrl+Click.
+                    try {
+                        const iDoc = iframe.contentDocument;
+                        if (iDoc && !iDoc._gladeLinkClickAdded) {
+                            iDoc._gladeLinkClickAdded = true;
+                            iDoc.addEventListener('click', function(e) {
+                                if (!terminalInstance) return;
+                                const url = findUrlAtTerminalPos(
+                                    e.clientX + iframe.getBoundingClientRect().left,
+                                    e.clientY + iframe.getBoundingClientRect().top
+                                );
+                                if (url) {
+                                    e.preventDefault();
+                                    e.stopImmediatePropagation();
+                                    showUrlActionSheet(url);
+                                }
+                            }, true);
+                        }
+                    } catch(e) {}
                 }
                 return !!xtermTextarea;
             } catch (e) { return false; }
@@ -6304,9 +6329,13 @@
             try {
                 const rect = iframe.getBoundingClientRect(), doc = iframe.contentDocument;
                 if (!doc) return;
-                const el = doc.elementFromPoint(clientX - rect.left, clientY - rect.top);
+                // Translate to iframe-local coordinates for both hit-testing and event dispatch.
+                // xterm.js uses clientX/Y to compute which terminal cell was clicked — passing
+                // outer-document coordinates causes it to land on the wrong cell.
+                const iX = clientX - rect.left, iY = clientY - rect.top;
+                const el = doc.elementFromPoint(iX, iY);
                 if (!el) return;
-                const opts = { bubbles: true, cancelable: true, clientX, clientY, view: iframe.contentWindow };
+                const opts = { bubbles: true, cancelable: true, clientX: iX, clientY: iY, view: iframe.contentWindow };
                 el.dispatchEvent(new MouseEvent('mousedown', opts));
                 el.dispatchEvent(new MouseEvent('mouseup', opts));
                 el.dispatchEvent(new MouseEvent('click', opts));
@@ -6372,6 +6401,41 @@
                     showCopyToast(sel);
                 }
             } catch(e) {}
+        }
+        // Returns the URL string at a given outer-document position, or null.
+        // outerX/Y are in the outer viewport's coordinate space.
+        function findUrlAtTerminalPos(outerX, outerY) {
+            try {
+                if (!terminalInstance) return null;
+                const iDoc = iframe.contentDocument;
+                const screen = iDoc && iDoc.querySelector('.xterm-screen');
+                if (!screen) return null;
+                // iframeRect is in outer coords; screenRect is in inner (iframe) coords.
+                // Their sum gives the screen element's position in the outer viewport.
+                const iframeRect = iframe.getBoundingClientRect();
+                const screenRect = screen.getBoundingClientRect();
+                const relX = outerX - (iframeRect.left + screenRect.left);
+                const relY = outerY - (iframeRect.top  + screenRect.top);
+                if (relX < 0 || relY < 0) return null;
+                let cellW = 8, cellH = 16;
+                try {
+                    const dims = terminalInstance._core._renderService.dimensions;
+                    if (dims.actualCellWidth)  { cellW = dims.actualCellWidth;  cellH = dims.actualCellHeight; }
+                    else if (dims.css && dims.css.cell) { cellW = dims.css.cell.width; cellH = dims.css.cell.height; }
+                } catch(_) {}
+                const col = Math.max(0, Math.min(Math.floor(relX / cellW), terminalInstance.cols - 1));
+                const row = Math.max(0, Math.min(Math.floor(relY / cellH), terminalInstance.rows - 1));
+                const buf  = terminalInstance.buffer.active;
+                const line = buf.getLine(row + buf.viewportY);
+                if (!line) return null;
+                const lineText = line.translateToString(true);
+                const urlRe = /https?:\/\/[^\s\])"'>]{4,}/g;
+                let match;
+                while ((match = urlRe.exec(lineText)) !== null) {
+                    if (col >= match.index && col < match.index + match[0].length) return match[0];
+                }
+                return null;
+            } catch(e) { return null; }
         }
         function showCopyToast(text) {
             const preview = text.length > 32 ? text.slice(0, 32) + '\u2026' : text;
@@ -7034,7 +7098,7 @@
                 const wasUsed = trackpadUsed;
                 const holdMs = Date.now() - gestureStartTime;
                 deactivateTrackpad();
-                if (!wasUsed && holdMs > 550) selectWordAtTouch(gestureStartX, gestureStartY);
+            if (!wasUsed && holdMs > 320) selectWordAtTouch(gestureStartX, gestureStartY);
                 return;
             }
             if (gestureScrolling) { gestureScrolling = false; return; }
@@ -7050,7 +7114,14 @@
                     sendKey('Tab', {});
                 } else {
                     if (keyboardState !== 'standard') setKeyboardState('standard');
-                    forwardTapToIframe(gestureStartX, gestureStartY);
+                    // If the tap landed on a URL, show the action sheet directly rather
+                    // than forwarding through xterm.js (whose WebLinksAddon requires Ctrl+click).
+                    const tappedUrl = findUrlAtTerminalPos(gestureStartX, gestureStartY);
+                    if (tappedUrl) {
+                        showUrlActionSheet(tappedUrl);
+                    } else {
+                        forwardTapToIframe(gestureStartX, gestureStartY);
+                    }
                 }
                 lastTapTime = now;
             } else if (dt < 800) {
