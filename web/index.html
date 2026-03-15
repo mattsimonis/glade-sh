@@ -1319,7 +1319,7 @@
          * hardware at any width). Content lives in bottom ~41px, always below cutout.
          */
         #toast-container {
-            position:fixed; top:14px; left:50%;
+            position:fixed; top:16px; left:50%;
             z-index:9999; pointer-events:none;
             width:0; height:0;
         }
@@ -4059,7 +4059,7 @@
                 c.classList.remove('dynamic-island', 'notch', 'none');
                 c.classList.add(nt);
             }
-            c.style.top = nt === 'dynamic-island' ? '14px' : nt === 'notch' ? '54px' : '11px';
+            c.style.top = nt === 'dynamic-island' ? '58px' : nt === 'notch' ? '54px' : '16px';
         }
 
         // Stack: all toasts visible simultaneously, newest on top
