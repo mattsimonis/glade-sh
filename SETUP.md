@@ -151,6 +151,8 @@ Then open `https://glade.home` in a browser on the host to confirm the UI loads.
 
 To avoid cert warnings on iOS: import the mkcert root CA profile → Settings → General → VPN & Device Management → trust it.
 
+> **PWA icon on iOS:** Installing the CA profile alone is not enough for the home screen icon. iOS background processes (SpringBoard) require *full trust* to fetch icons over your local HTTPS cert. Without it, Add to Home Screen and Add Bookmark show a "G" monogram instead of the icon — even though Safari browsing works fine. After installing the profile, go to **Settings → General → About → Certificate Trust Settings** and toggle the mkcert root CA on.
+
 ---
 
 ## Optional: Attach Directly via tmux
@@ -251,7 +253,7 @@ If you tap "GitHub Repo" without being connected, the auth flow starts automatic
 |---|---|
 | Can't reach `https://glade.home` | Check Pi-hole has an A record for `glade.home` pointing to the host's **LAN IP** (`192.168.x.x`). Check Tailscale is running on the client. Check `caddy-proxy` is running: `docker ps`. Try the LAN IP directly to isolate DNS from routing. |
 | `glade.home` works on LAN but not on mobile | Tailscale's **Override DNS servers** toggle must be enabled — [Tailscale admin → DNS](https://login.tailscale.com/admin/dns) → Global nameservers → enable it. Without this, iOS/Android ignore Pi-hole and use carrier DNS. |
-| PWA icon is blank after adding to home screen | Safari fetches the icon at the moment you tap "Add to Home Screen". Remove the shortcut, let `https://glade.home` fully load, then re-add it. |
+| PWA icon is blank / shows letter monogram after adding to home screen | iOS background processes require *full trust* for local CA certs, not just a profile install. Go to **Settings → General → About → Certificate Trust Settings** and enable full trust for the mkcert root CA. Then remove and re-add the shortcut. |
 | Browser shows cert warning | Run `mkcert -install` on the client device to trust the local CA. |
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
 | Docker first build is slow | Normal — first build takes ~2 min. Watch with `docker compose logs -f ttyd` |
