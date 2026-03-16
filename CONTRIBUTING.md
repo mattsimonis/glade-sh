@@ -2,7 +2,6 @@
 
 ## What's most useful right now
 
-- **Screenshots and GIFs** — the README has a placeholder for visuals. If you run Glade and want to share a screenshot or screen recording, open a PR adding them to `assets/`.
 - **Bug reports** — use the issue template. Include your OS, Docker version, and the output of `docker compose logs`.
 - **Feature requests** — use the issue template. Describe the use case, not just the feature.
 
