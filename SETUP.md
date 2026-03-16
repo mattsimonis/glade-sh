@@ -125,7 +125,7 @@ make build
 ## Step 8: Verify
 
 ```bash
-curl -s http://localhost:7683/api/health | python3 -m json.tool
+curl -s https://glade.home/api/health | python3 -m json.tool
 ```
 
 Then open `https://glade.home` in a browser on the host to confirm the UI loads.

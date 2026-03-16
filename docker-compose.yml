@@ -10,7 +10,7 @@ name: glade-sh
 # Run `make build` only when Dockerfile/entrypoint.sh/config/ changes.
 #
 # Prerequisites:
-#   - ~/.glade/ must exist with assets/, db/ populated (run install.sh first)
+#   - ~/.glade/ is created automatically by the container on first start
 #   - Docker network 'shared_web' must exist: docker network create shared_web
 #   - glade.home DNS entry pointing to the host's IP (set in Pi-hole or /etc/hosts)
 #   - TLS cert for glade.home in your Caddy certs directory (see services/Caddyfile)
