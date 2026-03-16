@@ -12,8 +12,8 @@ name: glade-sh
 # Prerequisites:
 #   - ~/.glade/ must exist with assets/, db/ populated (run install.sh first)
 #   - Docker network 'shared_web' must exist: docker network create shared_web
-#   - glade.local DNS entry pointing to the Mac Mini's IP (set in Pi-hole)
-#   - TLS cert for glade.local in your Caddy certs directory (see services/Caddyfile)
+#   - glade.home DNS entry pointing to the host's IP (set in Pi-hole or /etc/hosts)
+#   - TLS cert for glade.home in your Caddy certs directory (see services/Caddyfile)
 #
 # Usage:
 #   make up        # start all services

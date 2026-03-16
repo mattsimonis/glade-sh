@@ -624,7 +624,7 @@
               <div class="gd-os-dot y"></div>
               <div class="gd-os-dot g"></div>
             </div>
-            <div id="gd-urlbar">glade.local</div>
+            <div id="gd-urlbar">glade.home</div>
             <div style="width:50px"></div>
           </div>
           <div id="gd-proj-tabbar">
@@ -1030,7 +1030,7 @@
         <div class="step-n">2</div>
         <div class="step-b">
           <h3>TLS and reverse proxy</h3>
-          <p>Generate a cert with <code>mkcert glade.local</code> and add the Caddyfile block to your reverse proxy. Add an A record for <code>glade.local</code> in Pi-hole or <code>/etc/hosts</code> pointing to your host's LAN IP.</p>
+          <p>Generate a cert with <code>mkcert glade.home</code> and add the Caddyfile block to your reverse proxy. Add an A record for <code>glade.home</code> in Pi-hole pointing to your host's Tailscale IP — this makes the same URL work on your LAN and remotely. Use <code>glade.local</code> instead if you only need local access.</p>
         </div>
       </div>
       <div class="step">
@@ -1038,7 +1038,7 @@
         <div class="step-b">
           <h3>Start everything</h3>
           <code class="step-cmd">make setup</code>
-          <p style="margin-top:0.5rem">Open <code>https://glade.local</code>. Tap Share → Add to Home Screen. Done.</p>
+          <p style="margin-top:0.5rem">Open <code>https://glade.home</code>. Tap Share → Add to Home Screen. Done.</p>
         </div>
       </div>
     </div>

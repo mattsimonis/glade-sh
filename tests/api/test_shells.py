@@ -54,7 +54,7 @@ def test_new_shell_returns_index_and_port(client, started_project):
     assert status == 201
     assert data["index"] == 1  # mock new-window returns "1"
     assert isinstance(data["port"], int)
-    assert data["port"] == 7690  # all windows share the single project-level ttyd port
+    assert 7690 <= data["port"] <= 7729  # per-window ttyd; each window gets its own port from the pool
     assert_cors(headers)
 
 

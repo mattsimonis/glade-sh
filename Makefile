@@ -7,7 +7,7 @@ ifneq (,$(wildcard .env))
 endif
 
 HOST    ?= mac-mini
-DOMAIN  ?= glade.local
+DOMAIN  ?= glade.home
 
 # ── First-time setup ──────────────────────────────────────────────────────────
 
