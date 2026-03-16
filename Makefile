@@ -1,4 +1,4 @@
-.PHONY: up down restart build logs shell deploy-web ps setup dev test test-cov test-e2e
+.PHONY: up down restart build logs shell deploy-web ps setup dev test test-cov test-e2e _ensure-packages
 
 # Load .env if present — provides HOST, DOMAIN, DEV_DIR, GLADE_DIR
 ifneq (,$(wildcard .env))
@@ -11,8 +11,12 @@ DOMAIN  ?= glade.home
 
 # ── First-time setup ──────────────────────────────────────────────────────────
 
+# Ensures config/packages.sh exists before any Docker build step.
+_ensure-packages:
+	@[ -f config/packages.sh ] || (echo "→ config/packages.sh not found — copying from packages.sh.example" && cp config/packages.sh.example config/packages.sh)
+
 # Run once on a new machine: creates the Docker network, starts services.
-setup:
+setup: _ensure-packages
 	@echo "→ Creating Docker network 'shared_web' (safe to ignore if it already exists)..."
 	docker network create shared_web 2>/dev/null || true
 	@echo "→ Starting services..."
@@ -35,7 +39,7 @@ restart:
 	docker compose restart ttyd
 
 # Full rebuild — only needed after Dockerfile, entrypoint.sh, or config/ changes
-build:
+build: _ensure-packages
 	docker compose build --build-arg BUILD_DATE=$(shell date +%Y%m%d%H%M%S) ttyd && docker compose up -d
 
 # Tail logs for all services (Ctrl-C to stop)
