@@ -7285,6 +7285,7 @@
                 const wasHiddenMs = hiddenAt ? Date.now() - hiddenAt : Infinity;
                 hiddenAt = 0;
                 reconnectInProgress = false; // any prior attempt is stale — timers were frozen
+                clearInterval(termPollTimer); termPollTimer = null; // kill any frozen poll timer
                 // Resume polls
                 startActivityPoll();
                 if (currentProjectId) startShellPoll(currentProjectId);
@@ -7344,16 +7345,18 @@
                 }
                 if (stateChanged) {
                     if (state === 'disconnected') { haptic([50,30,50]); startAutoReconnect(); }
-                    // Escape hatch: if still reconnecting after 15 s, the iframe loaded but
-                    // the terminal was never found. Retry rather than waiting forever.
-                    if (state === 'reconnecting') {
-                        clearTimeout(_reconnectingStuckTimer);
-                        _reconnectingStuckTimer = setTimeout(function() {
-                            if (connectionState === 'reconnecting') { reconnectInProgress = false; forceReconnect(); }
-                        }, 15000);
-                    }
                     releaseWakeLock();
                     setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
+                }
+                // Always reset stuck timer when entering/re-entering reconnecting state —
+                // even if stateChanged=false (e.g. second foreground while already reconnecting).
+                // The timer itself can freeze during background; resetting it here ensures it's
+                // always measured from the current attempt, not a prior frozen one.
+                if (state === 'reconnecting') {
+                    clearTimeout(_reconnectingStuckTimer);
+                    _reconnectingStuckTimer = setTimeout(function() {
+                        if (connectionState === 'reconnecting') { reconnectInProgress = false; forceReconnect(); }
+                    }, 20000);
                 }
             } else if (stateChanged) {
                 reconnectOverlay.classList.remove('visible', 'disconnected');
@@ -7422,6 +7425,10 @@
             consecutiveFailures++;
             if      (consecutiveFailures >= MAX_FAIL_DISCONNECTED)  setConnectionState('disconnected');
             else if (consecutiveFailures >= MAX_FAIL_RECONNECTING)   setConnectionState('reconnecting');
+            // checkConnection is restarted fresh on every foreground, so its intervals are
+            // real wall-clock time — unlike setTimeouts which freeze when the app backgrounds.
+            // If stuck in reconnecting state with no active reconnect, retry here.
+            if (connectionState === 'reconnecting') forceReconnect();
         }
         let _checkConnTimer = setInterval(checkConnection, 2000);
         iframe.addEventListener('pointerdown', function () {
