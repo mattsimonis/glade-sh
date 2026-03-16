@@ -7250,8 +7250,11 @@
                     iframe.src = 'about:blank';
                     requestAnimationFrame(function () { iframe.src = url || '/'; startTerminalPoll(); startShellPoll(pid); });
                 });
-            // Safety: clear the flag after 30s in case everything silently fails
-            setTimeout(function () { reconnectInProgress = false; }, 30000);
+            // Safety: clear the flag after 30s in case everything silently fails.
+            // Guard with the current reconnect ID — if the app was backgrounded mid-reconnect,
+            // the frozen timer would thaw and fire during a newer attempt without this check.
+            const _safetyRId = _myReconnectId;
+            setTimeout(function () { if (_safetyRId === _forceReconnectId) reconnectInProgress = false; }, 30000);
         }
         reconnectOverlay.addEventListener('click', function () {
             if (connectionState !== 'connected') { reconnectInProgress = false; forceReconnect(); }
@@ -7341,12 +7344,21 @@
                 }
                 if (stateChanged) {
                     if (state === 'disconnected') { haptic([50,30,50]); startAutoReconnect(); }
+                    // Escape hatch: if still reconnecting after 15 s, the iframe loaded but
+                    // the terminal was never found. Retry rather than waiting forever.
+                    if (state === 'reconnecting') {
+                        clearTimeout(_reconnectingStuckTimer);
+                        _reconnectingStuckTimer = setTimeout(function() {
+                            if (connectionState === 'reconnecting') { reconnectInProgress = false; forceReconnect(); }
+                        }, 15000);
+                    }
                     releaseWakeLock();
                     setTimeout(function () { reconnectOverlay.focus(); }, 50); // focus for Enter key
                 }
             } else if (stateChanged) {
                 reconnectOverlay.classList.remove('visible', 'disconnected');
                 stopAutoReconnect();
+                clearTimeout(_reconnectingStuckTimer); _reconnectingStuckTimer = null;
                 _disconnectedAt = 0;
             }
             if (stateChanged) {
@@ -7396,6 +7408,7 @@
         let reconnectInProgress = false;
         let _forceReconnectId = 0;
         let _iframeErrorAutoRetried = false;
+        let _reconnectingStuckTimer = null;
         const MAX_FAIL_RECONNECTING = 2, MAX_FAIL_DISCONNECTED = 6;
         function checkConnection() {
             if (reconnectInProgress) return; // don't fight an active reconnect
