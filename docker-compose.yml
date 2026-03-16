@@ -28,6 +28,7 @@ services:
       context: .
       tags:
         - glade-ttyd
+      network: host   # packages.sh needs internet; default bridge can't reach github
     container_name: glade-ttyd
     # No ports needed — caddy-proxy handles external access via shared_web
     volumes:
