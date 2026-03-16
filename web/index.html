@@ -7295,8 +7295,14 @@
             } else {
                 const wasHiddenMs = hiddenAt ? Date.now() - hiddenAt : Infinity;
                 hiddenAt = 0;
-                reconnectInProgress = false; // any prior attempt is stale — timers were frozen
-                clearInterval(termPollTimer); termPollTimer = null; // kill any frozen poll timer
+                // Only invalidate an in-flight reconnect if the hide was long enough for timers
+                // to have frozen (~1.5 s on iOS). Brief hides (notification shade, app switcher)
+                // don't freeze timers — the existing attempt is still valid; clearing it here
+                // causes a reconnect loop where each brief hide restarts the attempt from scratch.
+                if (wasHiddenMs > 1500) {
+                    reconnectInProgress = false; // any prior attempt is stale — timers were frozen
+                    clearInterval(termPollTimer); termPollTimer = null; // kill any frozen poll timer
+                }
                 // Resume polls
                 startActivityPoll();
                 if (currentProjectId) startShellPoll(currentProjectId);
@@ -7304,10 +7310,14 @@
                 if (!_checkUpdTimer)  _checkUpdTimer  = setInterval(checkForUpdates, 30000);
                 // Re-acquire WakeLock — browser releases it automatically when page hides
                 if (connectionState === 'connected') requestWakeLock();
-                // Always reconnect after meaningful background time, not just when "disconnected"
+                // Reconnect after meaningful background time or when not yet connected.
+                // Guard with !reconnectInProgress: brief hides during an active reconnect
+                // (notification shade, iOS app switcher) must not stack a second forceReconnect()
+                // on top — each restart resets _forceReconnectId and kills the prior attempt,
+                // producing the "reconnecting → empty shell → reconnecting" loop.
                 if (wasHiddenMs > 5000 || connectionState !== 'connected') {
                     if (connectionState === 'connected') setConnectionState('reconnecting');
-                    forceReconnect();
+                    if (!reconnectInProgress) forceReconnect();
                 }
                 // (quick switches: the ResizeObserver IIFE's own visibilitychange handles nudgeFit)
             }
