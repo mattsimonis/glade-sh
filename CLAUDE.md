@@ -15,28 +15,28 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
 │   Laptop     │   │   Phone      │   │  Other PC    │
 │  (browser)   │   │ (Safari PWA) │   │  (browser)   │
 └──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       └──────────┬───────┴───────────────────┘
+       └──────────┬───────┴──────────────────┘
                   │  LAN / Tailscale
                   ▼
-       ┌──────────────────────────────────────┐
-       │       Server / Host (Docker)        │
-       │                                      │
-       │  caddy-proxy (standalone container)  │
-       │    glade.home → :7682                   │
-       │    /ttyd/{port} → :769x              │
-       │                                      │
-       │  glade-web (:7682, Caddy)            │
-       │    /         → index.html            │
-       │    /api/*    → glade-ttyd:7683       │
-       │    /assets/* → fonts                 │
-       │                                      │
+       ┌────────────────────────────────────────┐
+       │        Server / Host (Docker)          │
+       │                                        │
+       │  caddy-proxy (standalone container)    │
+       │    glade.home → :7682                  │
+       │    /ttyd/{port} → :769x                │
+       │                                        │
+       │  glade-web (:7682, Caddy)              │
+       │    /         → index.html              │
+       │    /api/*    → glade-ttyd:7683         │
+       │    /assets/* → fonts                   │
+       │                                        │
        │  glade-ttyd (:7681, :7683, :7690–7729) │
-       │    api.py    — REST API              │
-       │    ttyd      — terminal WebSocket    │
-       │    tmux      — session multiplexer   │
-       │    pipe-pane — session recording     │
-       │    SQLite    — projects, snippets    │
-       └──────────────────────────────────────┘
+       │    api.py    — REST API                │
+       │    ttyd      — terminal WebSocket      │
+       │    tmux      — session multiplexer     │
+       │    pipe-pane — session recording       │
+       │    SQLite    — projects, snippets      │
+       └────────────────────────────────────────┘
 ```
 
 **DNS:** `glade.home` requires a Pi-hole A record pointing to the host's **Tailscale IP**. This makes the same URL resolve on the LAN and remotely over Tailscale. Pi-hole must be configured as a global nameserver in Tailscale admin DNS settings.
