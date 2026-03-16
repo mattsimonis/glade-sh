@@ -5036,13 +5036,15 @@
                     result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
                 }
                 if (result && result.index !== undefined) {
-                    currentShellIdx = result.index;
-                    _saveShellChoice(currentProjectId, result.index);
+                    hideNoShells();
+                    await refreshShells();
+                    // Per-window ttyd: each shell has its own port. Must explicitly
+                    // switch to load the new shell's URL in the iframe.
+                    switchShell(result.index);
+                } else {
+                    hideNoShells();
+                    await refreshShells();
                 }
-                hideNoShells();
-                await refreshShells();
-                // No iframe reload needed — tmux auto-selects the new window and the
-                // shared project ttyd immediately reflects it in the live connection.
             } catch (e) { console.warn('addShell failed', e); }
         }
 
