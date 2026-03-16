@@ -149,15 +149,15 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 |---|---|---|
 | `web/index.html` | ~8600 | Single-file PWA: CSS, HTML, JavaScript inline |
 | `api/api.py` | ~1510 | REST API: projects, snippets, logs, uploads, GitHub auth |
-| `entrypoint.sh` | 11 | Container startup: create dirs, exec API |
+| `entrypoint.sh` | ~80 | Container startup: mkdir, clone/pull repo, run update poller, supervise API restart loop |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
-| `docker-compose.yml` | ~65 | Two services: ttyd + web |
-| `Makefile` | ~57 | Daily commands: up, down, restart, build, logs |
+| `docker-compose.yml` | ~74 | Two services: ttyd + web |
+| `Makefile` | ~83 | Daily commands: up, down, restart, build, logs; auto-copies packages.sh if missing |
 | `install.sh` | 292 | Host-side installer (creates dirs, init DB, shell integration) |
 | `db/schema.sql` | 64 | SQLite schema: projects, snippets, settings |
 | `config/zshrc` | — | Shell config baked into image |
 | `config/tmux.conf` | — | Tmux config (Catppuccin Mocha status bar) |
-| `config/packages.sh` | — | Build-time hook: user-defined package installs (empty by default) |
+| `config/packages.sh` | — | Build-time hook: user-defined package installs. Gitignored; not in repo. Auto-copied from `packages.sh.example` by `make setup`/`make build` if absent. |
 | `config/packages.sh.example` | — | Recipe examples: gh CLI, Node.js, pip, Rust, apt |
 | `services/Caddyfile` | 61 | Caddy-proxy config for glade.home |
 | `services/web.Caddyfile` | 54 | Inner Caddy config for glade-web container |
@@ -192,7 +192,7 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 
 ## Deployment Model
 
-The container clones the repo from GitHub on first start and polls `origin/main` every 2 minutes. The host only needs `docker-compose.yml` and `.env`.
+The container clones the repo from GitHub on first start and polls `origin/main` every 2 minutes. The host only needs `docker-compose.yml` — `.env` is optional (all values have sane defaults).
 
 | What changed | How it deploys |
 |---|---|

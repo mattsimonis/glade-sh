@@ -17,16 +17,16 @@ GitHub integration is built in — `gh` CLI ships in the image, GitHub auth stat
 ```
 web/index.html              ← All UI: CSS + HTML + JS inline, no build step
 api/api.py                  ← REST API: projects, snippets, logs, uploads, settings
-entrypoint.sh               ← Container boot: mkdir, start API
+entrypoint.sh               ← Container boot: mkdir, clone/pull repo, update poller, API supervisor loop
 Dockerfile                  ← Debian bookworm-slim + ttyd + zsh + packages.sh hook
 docker-compose.yml          ← Two services: glade-ttyd + glade-web
 Makefile                    ← Daily ops: up, down, restart, build, logs, shell
 services/Caddyfile          ← caddy-proxy config (glade.home routes)
 services/web.Caddyfile      ← Inner Caddy for glade-web (file server + API proxy)
-config/zshrc                ← Personal Zsh config (gitignored; edit in place, no rebuild)
+config/zshrc                ← Zsh config baked into the image (tracked in git; gitignore entry exists but file was committed first)
 config/zshrc.example        ← Starter template (committed; plain prompt, tmux hooks, glade-wrap)
 config/tmux.conf            ← Tmux config (Catppuccin Mocha status bar)
-config/packages.sh          ← Personal build-time packages (gitignored)
+config/packages.sh          ← Build-time packages (gitignored, not in repo; auto-copied from packages.sh.example by make setup/build if absent)
 config/packages.sh.example  ← Recipe examples: gh CLI, Oh My Zsh, Node.js, pip, Rust (committed)
 db/schema.sql               ← SQLite schema (projects, snippets, settings)
 install.sh                  ← Host-side installer (copies files, initialises DB, copies *.example → actual)
@@ -106,7 +106,7 @@ config/zsh_history        ← Persisted zsh history (HISTFILE); survives contain
 - `GET /api/github/repos?q=` — list/search user repos → `[{nameWithOwner, name, description, isPrivate}]`
 
 ### Other
-- `GET /api/health` — `{"ok": true, "build_date": "YYYYMMDDHHmmss"}`
+- `GET /api/health` — `{"ok": true, "update_pending": false, "image_update_pending": false, "build_date": "YYYYMMDDHHmmss"}`
 - `GET /api/export` — export all interactions as JSON
 - `POST /api/rebuild` — write `~/.glade/.rebuild-requested` trigger file → `{ok}`; host launchd watcher picks it up and runs `docker compose build`
 - `GET /api/rebuild/log` — `{log, running}` — rebuild output log + running state
@@ -219,12 +219,12 @@ This was refined twice to handle bracketed paste mode (`\x1b[?2004h`) and OSC se
 ```bash
 # Container health
 docker logs glade-ttyd --tail 50
-docker exec glade-ttyd curl http://localhost:7683/api/health
+docker exec glade-ttyd curl -s http://localhost:7683/api/health
 
-# API endpoints
-curl http://localhost:7683/api/projects
-curl http://localhost:7683/api/logs | python3 -m json.tool
-curl http://localhost:7683/api/logs/search?q=docker
+# API endpoints (port 7683 is not exposed to host — use docker exec or glade.home)
+docker exec glade-ttyd curl -s http://localhost:7683/api/projects
+curl -s https://glade.home/api/logs | python3 -m json.tool
+curl -s https://glade.home/api/logs/search?q=docker
 
 # Session logs on disk
 ls -la ~/.glade/logs/
@@ -261,7 +261,7 @@ make shell
 
 10. **Two Caddyfiles** — `services/Caddyfile` is for the standalone caddy-proxy (routes glade.home traffic). `services/web.Caddyfile` is for the glade-web container (serves files, proxies API).
 
-11. **`config/zshrc` and `config/packages.sh` are gitignored** — They are personal copies, never committed. `config/zshrc.example` and `config/packages.sh.example` are the committed templates. `install.sh` copies `*.example` → actual on first run if the actual doesn't exist.
+11. **`config/zshrc` is tracked in git; `config/packages.sh` is not** — `config/zshrc` was committed early and stays tracked despite the `.gitignore` entry; it ships with the repo and the Dockerfile COPYs it. `config/packages.sh` is gitignored and absent from a fresh clone — `make setup` and `make build` auto-copy it from `packages.sh.example` via the `_ensure-packages` target if it doesn't exist. Do not rely on `install.sh` for either of these; it's not part of the documented setup flow.
 
 12. **Personal directory mounts belong in `docker-compose.override.yml`** — This file is gitignored. Do not add volume mounts for personal directories (e.g. `~/Dev`) to `docker-compose.yml`.
 
