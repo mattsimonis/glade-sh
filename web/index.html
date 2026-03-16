@@ -7434,11 +7434,12 @@
             consecutiveFailures++;
             if      (consecutiveFailures >= MAX_FAIL_DISCONNECTED)  setConnectionState('disconnected');
             else if (consecutiveFailures >= MAX_FAIL_RECONNECTING)   setConnectionState('reconnecting');
-            // checkConnection is restarted fresh on every foreground, so its intervals are
-            // real wall-clock time — unlike setTimeouts which freeze when the app backgrounds.
-            // If stuck in a non-connected state with no active reconnect, retry.
-            // (disconnected has startAutoReconnect but it can stall; belt-and-suspenders here.)
-            if (connectionState !== 'connected') forceReconnect();
+            // Only call forceReconnect() after sustained failure (MAX_FAIL_DISCONNECTED
+            // consecutive empty checks = 12 s). Brief blanks during project switching or
+            // initial page load must not trigger a forced reload. The cache-bust fix handles
+            // the common case (visibilitychange → forceReconnect directly); this is a
+            // belt-and-suspenders fallback for any path where the iframe stays blank.
+            if (consecutiveFailures >= MAX_FAIL_DISCONNECTED) forceReconnect();
         }
         let _checkConnTimer = setInterval(checkConnection, 2000);
         iframe.addEventListener('pointerdown', function () {
