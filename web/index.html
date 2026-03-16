@@ -340,7 +340,7 @@
             flex-shrink: 0; padding: 8px 16px 10px; border-bottom: 1px solid var(--surface0);
         }
         #pg-search {
-            width: 100%; background: var(--surface0); border: none; border-radius: 10px;
+            width: 100%; background: var(--surface0); border: none; border-radius: 8px;
             padding: 8px 12px; color: var(--text); font-size: 14px; font-family: var(--font-sans);
             -webkit-appearance: none; appearance: none; box-sizing: border-box;
         }
@@ -437,8 +437,8 @@
             opacity: 0; pointer-events: none; transition: opacity 200ms ease; cursor: pointer;
         }
         #reconnect-overlay.visible { opacity: 1; pointer-events: auto; }
-        .reconnect-text { color: var(--peach); font-size: 1rem; font-weight: 600; font-family: var(--font-mono); animation: pulse-text 2s ease-in-out infinite; }
-        .reconnect-hint { color: var(--blue); font-size: 0.75rem; font-family: var(--font-mono); }
+        .reconnect-text { color: var(--peach); font-size: 16px; font-weight: 600; font-family: var(--font-mono); animation: pulse-text 2s ease-in-out infinite; }
+        .reconnect-hint { color: var(--blue); font-size: 12px; font-family: var(--font-mono); }
 
         @keyframes pulse-text { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes pulse-dot  { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
@@ -653,7 +653,7 @@
         #snippets-search-row { padding:6px 8px 3px; flex-shrink:0; }
         #snippets-search {
             width:100%; padding:6px 10px; background:var(--surface0);
-            border:1px solid var(--surface1); border-radius:6px;
+            border:1px solid var(--surface1); border-radius:8px;
             color:var(--text); font-family:var(--font-mono); font-size:12px;
             outline:none; box-sizing:border-box; -webkit-appearance:none;
         }
@@ -661,7 +661,7 @@
         #snippets-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 6px; display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content:start; overscroll-behavior:contain; }
         #snippets-list::-webkit-scrollbar { display:none; }
         .snippet-tile {
-            background:var(--surface0); border-radius:8px; padding:8px 10px; cursor:pointer;
+            background:var(--surface0); border-radius:8px; padding:9px 10px; cursor:pointer;
             -webkit-tap-highlight-color:transparent; overflow:hidden;
             transition:background 80ms, transform 80ms;
             display:flex; flex-direction:column; gap:2px;
@@ -692,7 +692,7 @@
         #history-list-view.slide-out { transform:translateX(-30%); }
         #history-log-view.active     { transform:translateX(0); }
         .history-empty-icon  { color:var(--surface0); }
-        .history-empty-title { font-size:13px; color:var(--subtext1); }
+        .history-empty-title { font-size:16px; color:var(--subtext1); }
         .history-empty-sub   { font-size:11px; color:var(--overlay0); text-align:center; line-height:1.6; }
         #history-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:20px; flex:1; }
 
@@ -711,7 +711,7 @@
         @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
         #log-search {
             width:100%; padding:5px 8px; background:var(--surface0); border:1px solid var(--surface1);
-            border-radius:6px; color:var(--text); font-family:var(--font-mono); font-size:11px;
+            border-radius:8px; color:var(--text); font-family:var(--font-mono); font-size:11px;
             outline:none; margin:6px 10px; box-sizing:border-box;
             width:calc(100% - 20px);
         }
@@ -818,13 +818,12 @@
         }
 
         /* ── Arrow D-pad (standard keyboard mode) ────────────── */
-        /* ── Arrow D-pad (standard keyboard mode) ────────────── */
         #arrow-pad {
             position:fixed; right:12px;
             top: calc(env(safe-area-inset-top) + 12px);
             z-index:59;
             width:96px; height:96px;
-            background:rgba(36,36,48,0.92); backdrop-filter:blur(16px);
+            background:color-mix(in srgb, var(--mantle) 92%, transparent); backdrop-filter:blur(16px);
             -webkit-backdrop-filter:blur(16px);
             border:1px solid color-mix(in srgb, var(--surface2) 28%, transparent); border-radius:20px;
             opacity:0; transform:scale(0.78) translateX(8px); pointer-events:none;
@@ -957,7 +956,7 @@
         }
         #cmd-palette-input {
             flex:1; padding:9px 12px 9px 34px; background:var(--surface0);
-            border:1px solid var(--surface1); border-radius:9px;
+            border:1px solid var(--surface1); border-radius:8px;
             color:var(--text); font-family:var(--font-mono); font-size:14px;
             outline:none; -webkit-appearance:none;
             background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236c7086' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
@@ -1047,7 +1046,7 @@
         }
         .confirm-backdrop {
             position:fixed; inset:0; z-index:299;
-            background:rgba(0,0,0,0.55);
+            background:color-mix(in srgb, var(--crust) 55%, transparent);
             backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
             animation:fadeIn 150ms ease-out;
         }
@@ -1251,8 +1250,8 @@
         }
         #img-overlay.io-visible #img-overlay-card { transform:translateY(0); }
         #img-overlay-close {
-            position:absolute; top:10px; right:10px; width:28px; height:28px;
-            background:var(--surface0); border:none; border-radius:50%; color:var(--text);
+            position:absolute; top:10px; right:10px; width:32px; height:32px;
+            background:var(--surface0); border:none; border-radius:50%; color:var(--subtext1);
             font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;
         }
         #img-overlay-preview {
@@ -1294,7 +1293,7 @@
         .dbg-section-label { font-size:10px; font-weight:700; color:var(--overlay0); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
         .dbg-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
         .dbg-btn {
-            padding:7px 14px; border-radius:10px; border:none; font-size:12px; font-family:var(--font-mono);
+            padding:7px 14px; border-radius:8px; border:none; font-size:12px; font-family:var(--font-mono);
             font-weight:600; cursor:pointer; flex-shrink:0;
             background:var(--surface0); color:var(--text); transition:background 120ms;
         }
@@ -1327,7 +1326,7 @@
             position:absolute; top:0; left:0;
             transform:translateX(-50%) translateY(-30px) scale(0.9);
             opacity:0;
-            background:rgba(30,30,46,0.82);
+            background:color-mix(in srgb, var(--base) 82%, transparent);
             backdrop-filter:blur(20px) saturate(180%);
             -webkit-backdrop-filter:blur(20px) saturate(180%);
             border-radius:20px;
@@ -1346,20 +1345,20 @@
         }
         .toast-icon-svg {
             width:22px; height:22px;
-            stroke:var(--toast-color,#89b4fa);
+            stroke:var(--toast-color,var(--blue));
             stroke-width:2.5; fill:none;
             stroke-linecap:round; stroke-linejoin:round;
         }
         .toast-msg {
             font-size:13px; font-family:var(--font-mono);
-            color:var(--text,#cdd6f4);
+            color:var(--text);
             letter-spacing:-0.2px; line-height:1.35;
             word-break:break-word; overflow-wrap:break-word;
         }
-        .toast                { --toast-color:#89b4fa; }
-        .toast.t-success      { --toast-color:#a6e3a1; }
-        .toast.t-error        { --toast-color:#f38ba8; }
-        .toast.t-warning      { --toast-color:#fab387; }
+        .toast               { --toast-color: var(--blue); }
+        .toast.t-success     { --toast-color: var(--green); }
+        .toast.t-error       { --toast-color: var(--red); }
+        .toast.t-warning      { --toast-color:var(--peach); }
 
         /* ── Settings sections ───────────────────────────────── */
         .settings-section { padding:16px 0; border-bottom:1px solid var(--surface0); }
@@ -1410,7 +1409,7 @@
 
         /* ── Keyboard key ripple ─────────────────────────────── */
         .kb-btn { position:relative; overflow:hidden; }
-        .kb-btn::after { content:''; position:absolute; inset:0; background:rgba(205,214,244,0.08); border-radius:inherit; opacity:0; transform:scale(0.6); transition:opacity 300ms, transform 300ms; pointer-events:none; }
+        .kb-btn::after { content:''; position:absolute; inset:0; background:color-mix(in srgb, var(--text) 8%, transparent); border-radius:inherit; opacity:0; transform:scale(0.6); transition:opacity 300ms, transform 300ms; pointer-events:none; }
         .kb-btn:active::after { opacity:1; transform:scale(1); transition:none; }
 
         /* ── Host unreachable overlay ────────────────────────── */
@@ -1517,7 +1516,7 @@
         /* ── Keyboard shortcuts overlay ────────────────────────── */
         #shortcuts-backdrop {
             display:none; position:fixed; inset:0; z-index:3200;
-            background:rgba(0,0,0,0.55); backdrop-filter:blur(6px);
+            background:color-mix(in srgb, var(--crust) 55%, transparent); backdrop-filter:blur(6px);
         }
         #shortcuts-backdrop.visible { display:flex; align-items:flex-end; justify-content:center; }
         @media (min-width:600px) { #shortcuts-backdrop.visible { align-items:center; } }
@@ -1601,7 +1600,7 @@
                 </svg>
             </button>
             <div id="reconnect-overlay" tabindex="-1">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fab387" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--peach)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                     <path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
                     <path d="M16 16h5v5"/>
@@ -1679,7 +1678,7 @@
                     </div>
                     <div id="history-empty-state">
                         <div class="history-empty-icon">
-                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
                         </div>
                         <div class="history-empty-title">No session logs yet</div>
                         <div class="history-empty-sub">Terminal output is recorded<br>automatically for each session</div>
@@ -1990,16 +1989,16 @@
                     <div class="settings-row">
                         <span class="settings-label" style="display:flex;align-items:center;gap:8px">
                             <img id="gh-avatar" src="" width="22" height="22" style="border-radius:50%" alt="">
-                            <span id="gh-username" style="font-family:var(--font-mono);font-size:13px;color:#cdd6f4"></span>
+                            <span id="gh-username" style="font-family:var(--font-mono);font-size:13px;color:var(--text)"></span>
                         </span>
-                        <span class="settings-value" style="color:#a6e3a1">Connected</span>
+                        <span class="settings-value" style="color:var(--green)">Connected</span>
                     </div>
-                    <button class="settings-btn-full" id="gh-disconnect-btn" style="background:rgba(243,139,168,0.1);color:#f38ba8;border:1px solid rgba(243,139,168,0.2)">Disconnect</button>
+                    <button class="settings-btn-full" id="gh-disconnect-btn" style="background:rgba(243,139,168,0.1);color:var(--red);border:1px solid rgba(243,139,168,0.2)">Disconnect</button>
                 </div>
                 <div id="gh-disconnected-state">
                     <div class="settings-row">
                         <span class="settings-label">Not connected</span>
-                        <span class="settings-value" style="color:#6c7086">—</span>
+                        <span class="settings-value" style="color:var(--overlay0)">—</span>
                     </div>
                     <button class="settings-btn-full settings-btn-primary" id="gh-connect-btn">Connect GitHub</button>
                 </div>
@@ -2051,9 +2050,9 @@
             <div class="settings-section-title">Container</div>
             <div class="settings-row">
                 <span class="settings-label">Rebuild</span>
-                <span class="settings-value" id="rebuild-status-val" style="color:#6c7086">Idle</span>
+                <span class="settings-value" id="rebuild-status-val" style="color:var(--overlay0)">Idle</span>
             </div>
-            <pre id="rebuild-log-pre" style="display:none;margin:8px 0 0;padding:8px;background:#11111b;border-radius:6px;font-size:10px;line-height:1.5;color:#a6adc8;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;border:1px solid #313244"></pre>
+            <pre id="rebuild-log-pre" style="display:none;margin:8px 0 0;padding:8px;background:var(--crust);border-radius:6px;font-size:10px;line-height:1.5;color:var(--subtext0);max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;border:1px solid var(--surface0)"></pre>
             <button class="settings-btn-full settings-btn-primary" id="rebuild-btn" style="margin-top:8px">Rebuild Container</button>
         </div>
 
@@ -2071,7 +2070,7 @@
         <div class="settings-section">
             <div class="settings-section-title">Uploads</div>
             <div id="settings-uploads-list" style="margin-top:8px;">
-                <span style="color:#6c7086;font-size:12px;">No uploads yet</span>
+                <span style="color:var(--overlay0);font-size:12px;">No uploads yet</span>
             </div>
         </div>
 
@@ -2124,20 +2123,20 @@
             <div class="settings-section-title">About</div>
             <div class="settings-row">
                 <span class="settings-label">Glade</span>
-                <span class="settings-value" style="color:#6c7086">v1.0.0</span>
+                <span class="settings-value" style="color:var(--overlay0)">v1.0.0</span>
             </div>
             <div class="settings-row">
                 <span class="settings-label">Build</span>
-                <span class="settings-value" id="settings-build-date" style="color:#6c7086">—</span>
+                <span class="settings-value" id="settings-build-date" style="color:var(--overlay0)">—</span>
             </div>
-            <div style="margin-top:8px;font-size:11px;color:#6c7086;line-height:1.5">
+            <div style="margin-top:8px;font-size:11px;color:var(--overlay0);line-height:1.5">
                 Catppuccin Mocha · Commit Mono · ttyd 1.7.7
             </div>
             <button class="settings-btn-full" id="settings-debug-btn" style="margin-top:14px;background:rgba(203,166,247,0.1);color:#cba6f7;border:1px solid rgba(203,166,247,0.2)">🛠 Debug Panel</button>
         </div>
     </div>
 </div>
-    <div id="img-overlay" style="display:none">
+    <div id="img-overlay">
         <div id="img-overlay-card">
             <button id="img-overlay-close" aria-label="Close">×</button>
             <img id="img-overlay-preview" src="" alt="Pasted image">
@@ -2200,7 +2199,7 @@
                     <button class="dbg-btn" id="dbg-haptic-medium">Medium</button>
                     <button class="dbg-btn" id="dbg-haptic-error">Error pattern</button>
                 </div>
-                <div id="dbg-haptic-note" style="display:none;font-size:11px;color:#f38ba8;margin-top:6px">navigator.vibrate not supported on this browser (iOS Safari)</div>
+                <div id="dbg-haptic-note" style="display:none;font-size:11px;color:var(--red);margin-top:6px">navigator.vibrate not supported on this browser (iOS Safari)</div>
             </div>
 
             <div class="dbg-section">
@@ -3593,7 +3592,7 @@
                 // Server health
                 fetch('/api/health').then(function(r) { return r.json(); }).then(function(h) {
                     const el = document.getElementById('settings-status-val');
-                    if (el) { el.textContent = 'Online'; el.style.color = '#a6e3a1'; }
+                    if (el) { el.textContent = 'Online'; el.style.color = 'var(--green)'; }
                     const bd = document.getElementById('settings-build-date');
                     if (bd && h.build_date) {
                         var d = h.build_date;
@@ -3603,7 +3602,7 @@
                     }
                 }).catch(function() {
                     const el = document.getElementById('settings-status-val');
-                    if (el) { el.textContent = 'Offline'; el.style.color = '#f38ba8'; }
+                    if (el) { el.textContent = 'Offline'; el.style.color = 'var(--red)'; }
                 });
                 // Project count
                 fetch('/api/projects').then(function(r) { return r.json(); }).then(function(arr) {
@@ -3619,16 +3618,16 @@
                 fetch('/api/uploads').then(function(r) { return r.json(); }).then(function(arr) {
                     const el = document.getElementById('settings-uploads-list');
                     if (!el) return;
-                    if (!arr.length) { el.innerHTML = '<span style="color:#6c7086;font-size:12px">No uploads yet</span>'; return; }
+                    if (!arr.length) { el.innerHTML = '<span style="color:var(--overlay0);font-size:12px">No uploads yet</span>'; return; }
                     el.innerHTML = arr.slice(0, 5).map(function(u) {
                         var isImg = u.mime && u.mime.startsWith('image/');
                         var icon = isImg ? '🖼️' : '📄';
                         var sizeStr = u.size >= 1024 * 1024
                             ? (u.size / (1024 * 1024)).toFixed(1) + 'MB'
                             : Math.round(u.size / 1024) + 'KB';
-                        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #313244">' +
-                            '<span style="font-size:11px;font-family:var(--font-mono);color:#89b4fa">' + icon + ' ' + u.filename + '</span>' +
-                            '<span style="font-size:10px;color:#6c7086">' + sizeStr + '</span>' +
+                        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--surface0)">' +
+                            '<span style="font-size:11px;font-family:var(--font-mono);color:var(--blue)">' + icon + ' ' + u.filename + '</span>' +
+                            '<span style="font-size:10px;color:var(--overlay0)">' + sizeStr + '</span>' +
                             '</div>';
                     }).join('');
                 }).catch(function(){});
@@ -3848,7 +3847,7 @@
                         if (d.running) {
                             wasBuilding = true;
                             rebuildVal.textContent = 'Building…';
-                            rebuildVal.style.color = '#fab387';
+                            rebuildVal.style.color = 'var(--peach)';
                             rebuildBtn.disabled = true;
                             rebuildBtn.textContent = 'Building…';
                         } else {
@@ -3856,11 +3855,11 @@
                             rebuildPoll = null;
                             if (wasBuilding) {
                                 var success = d.log && d.log.includes('exit=0');
-                                rebuildVal.style.color = success ? '#a6e3a1' : '#f38ba8';
+                                rebuildVal.style.color = success ? 'var(--green)' : 'var(--red)';
                                 rebuildVal.textContent  = success ? 'Done' : 'Failed';
                                 setRefreshMode(success);
                             } else {
-                                rebuildVal.style.color = d.log ? '#a6e3a1' : '#6c7086';
+                                rebuildVal.style.color = d.log ? 'var(--green)' : 'var(--overlay0)';
                                 rebuildVal.textContent = d.log ? 'Done' : 'Idle';
                                 rebuildBtn.disabled = false;
                                 rebuildBtn.textContent = 'Rebuild Container';
@@ -3873,7 +3872,7 @@
                         clearInterval(rebuildPoll);
                         rebuildPoll = null;
                         rebuildVal.textContent = 'Restarting…';
-                        rebuildVal.style.color = '#fab387';
+                        rebuildVal.style.color = 'var(--peach)';
                         setTimeout(function () {
                             if (!rebuildPoll) rebuildPoll = setInterval(pollRebuildLog, 2000);
                         }, 4000);
@@ -3885,7 +3884,7 @@
                     rebuildPre.style.display = 'none';
                     rebuildPre.textContent = '';
                     rebuildVal.textContent = 'Triggered…';
-                    rebuildVal.style.color = '#fab387';
+                    rebuildVal.style.color = 'var(--peach)';
                     rebuildBtn.disabled = true;
                     rebuildBtn.textContent = 'Building…';
                     rebuildBtn.style.background = '';
@@ -4258,12 +4257,10 @@
             }
             pathEl.textContent       = pathText;
             statusEl.textContent     = injectPath ? (isImage ? 'Image saved on server' : 'File saved on server') : '';
-            overlay.style.display    = 'flex';
             requestAnimationFrame(function() { overlay.classList.add('io-visible'); });
 
             document.getElementById('img-overlay-close').onclick = function() {
                 overlay.classList.remove('io-visible');
-                setTimeout(function() { overlay.style.display = 'none'; }, 280);
             };
             document.getElementById('img-overlay-copy-path').onclick = function() {
                 if (!injectPath) return;
@@ -4276,7 +4273,6 @@
                 if (!injectPath) return;
                 sendTextToTerminal(injectPath);
                 overlay.classList.remove('io-visible');
-                setTimeout(function() { overlay.style.display = 'none'; }, 280);
             };
         }
 
@@ -4457,8 +4453,14 @@
             list.innerHTML = '';
             if (filtered.length === 0) {
                 const empty = document.createElement('div');
-                empty.style.cssText = 'padding:24px;text-align:center;color:#6c7086;font-size:13px;grid-column:1/-1;';
-                empty.textContent = q ? 'No snippets match' : 'No snippets yet. Add one below.';
+                empty.style.cssText = 'padding:24px;text-align:center;color:var(--overlay0);font-size:13px;grid-column:1/-1;';
+                var icon = document.createElement('div');
+                icon.style.cssText = 'font-size:44px;margin-bottom:8px';
+                icon.textContent = '📋';
+                empty.appendChild(icon);
+                var msg = document.createElement('div');
+                msg.textContent = q ? 'No snippets match' : 'No snippets yet. Add one below.';
+                empty.appendChild(msg);
                 list.appendChild(empty); return;
             }
 
@@ -4612,7 +4614,7 @@
             if (_logTailTimer) { clearInterval(_logTailTimer); _logTailTimer = null; }
             listView.classList.remove('slide-out');
             logView.classList.remove('active');
-            list.innerHTML = '<div style="padding:8px 10px;font-size:11px;color:#585b70;">Loading\u2026</div>';
+            list.innerHTML = '<div style="padding:8px 10px;font-size:11px;color:var(--surface2);">Loading\u2026</div>';
             emptyState.style.display = 'none';
             var logs = [];
             try { var r = await fetch('/api/logs'); if (r.ok) logs = await r.json(); } catch (e) {}
@@ -4757,7 +4759,7 @@
                 btn.dataset.projectId = p.id;
                 const dot = document.createElement('span');
                 dot.className = 'proj-dot';
-                dot.style.background = p.color || '#585b70';
+                dot.style.background = p.color || 'var(--surface2)';
                 const lbl = document.createElement('span');
                 lbl.textContent = p.name;
                 const badge = document.createElement('span');
@@ -5290,7 +5292,7 @@
                 card.style.animationDelay = (i * 30) + 'ms';
                 const accent = document.createElement('div');
                 accent.className = 'proj-card-accent';
-                accent.style.background = p.color || '#585b70';
+                accent.style.background = p.color || 'var(--surface2)';
                 const nm = document.createElement('div'); nm.className = 'proj-card-name'; nm.textContent = p.name;
                 const dr = document.createElement('div'); dr.className = 'proj-card-dir'; dr.textContent = p.directory || '~';
                 const st = document.createElement('div'); st.className = 'proj-card-status';
@@ -5366,7 +5368,7 @@
                 empty.className = 'proj-grid-empty';
                 empty.innerHTML =
                     '<div class="proj-grid-empty-icon" style="font-size:28px">🔍</div>' +
-                    '<div class="proj-grid-empty-title" style="font-size:13px;color:#6c7086">No projects match \u201c' + escapeHtml(q) + '\u201d</div>';
+                    '<div class="proj-grid-empty-title" style="font-size:13px;color:var(--overlay0)">No projects match \u201c' + escapeHtml(q) + '\u201d</div>';
                 grid.appendChild(empty);
             }
             // Add card
@@ -6468,6 +6470,7 @@
                 brightBlack: h(p[3]), brightRed:   h(p[8]),  brightGreen: h(p[11]),
                 brightYellow:h(p[10]),brightBlue:   h(p[13]), brightMagenta:h(p[14]),
                 brightCyan:  h(p[12]),brightWhite:  h(p[7]),
+                dim:         h(p[3]),
             };
         }
 
@@ -6600,7 +6603,7 @@
                     blue:'#89b4fa', magenta:'#f5c2e7', cyan:'#94e2d5', white:'#bac2de',
                     brightBlack:'#585b70', brightRed:'#f38ba8', brightGreen:'#a6e3a1',
                     brightYellow:'#f9e2af', brightBlue:'#89b4fa', brightMagenta:'#f5c2e7',
-                    brightCyan:'#94e2d5', brightWhite:'#a6adc8' },
+                    brightCyan:'#94e2d5', brightWhite:'#a6adc8', dim:'#6c7086' },
             },
             'frappe': {
                 label: 'Frappé', swatch: '#303446',
@@ -6609,7 +6612,7 @@
                     blue:'#8caaee', magenta:'#f4b8e4', cyan:'#81c8be', white:'#b5bfe2',
                     brightBlack:'#626880', brightRed:'#e78284', brightGreen:'#a6d189',
                     brightYellow:'#e5c890', brightBlue:'#8caaee', brightMagenta:'#f4b8e4',
-                    brightCyan:'#81c8be', brightWhite:'#a5adce' },
+                    brightCyan:'#81c8be', brightWhite:'#a5adce', dim:'#737994' },
             },
             'macchiato': {
                 label: 'Macchiato', swatch: '#24273a',
@@ -6618,7 +6621,7 @@
                     blue:'#8aadf4', magenta:'#f5bde6', cyan:'#8bd5ca', white:'#b8c0e0',
                     brightBlack:'#5b6078', brightRed:'#ed8796', brightGreen:'#a6da95',
                     brightYellow:'#eed49f', brightBlue:'#8aadf4', brightMagenta:'#f5bde6',
-                    brightCyan:'#8bd5ca', brightWhite:'#a5adcb' },
+                    brightCyan:'#8bd5ca', brightWhite:'#a5adcb', dim:'#6e738d' },
             },
             'latte': {
                 label: 'Latte', swatch: '#eff1f5',
@@ -6627,7 +6630,7 @@
                     blue:'#1e66f5', magenta:'#ea76cb', cyan:'#179299', white:'#acb0be',
                     brightBlack:'#6c6f85', brightRed:'#d20f39', brightGreen:'#40a02b',
                     brightYellow:'#df8e1d', brightBlue:'#1e66f5', brightMagenta:'#ea76cb',
-                    brightCyan:'#179299', brightWhite:'#bcc0cc' },
+                    brightCyan:'#179299', brightWhite:'#bcc0cc', dim:'#9ca0b0' },
             },
             'solarized-dark': {
                 label: 'Solarized Dark', swatch: '#002b36',
@@ -6636,7 +6639,7 @@
                     blue:'#268bd2', magenta:'#d33682', cyan:'#2aa198', white:'#eee8d5',
                     brightBlack:'#002b36', brightRed:'#cb4b16', brightGreen:'#586e75',
                     brightYellow:'#657b83', brightBlue:'#839496', brightMagenta:'#6c71c4',
-                    brightCyan:'#93a1a1', brightWhite:'#fdf6e3' },
+                    brightCyan:'#93a1a1', brightWhite:'#fdf6e3', dim:'#586e75' },
             },
             'one-dark': {
                 label: 'One Dark', swatch: '#282c34',
@@ -6645,7 +6648,7 @@
                     blue:'#61afef', magenta:'#c678dd', cyan:'#56b6c2', white:'#abb2bf',
                     brightBlack:'#4f5666', brightRed:'#be5046', brightGreen:'#98c379',
                     brightYellow:'#d19a66', brightBlue:'#61afef', brightMagenta:'#c678dd',
-                    brightCyan:'#56b6c2', brightWhite:'#ffffff' },
+                    brightCyan:'#56b6c2', brightWhite:'#ffffff', dim:'#5c6370' },
             },
         };
 
@@ -6803,10 +6806,10 @@
                     findCount.textContent = '';
                 } else if (n === 0) {
                     findCount.textContent = 'No matches';
-                    findCount.style.color = '#f38ba8';
+                    findCount.style.color = 'var(--red)';
                 } else {
                     findCount.textContent = (findCurrent + 1) + '/' + n;
-                    findCount.style.color = '#6c7086';
+                    findCount.style.color = 'var(--overlay0)';
                 }
                 fbPrev.disabled = n < 2;
                 fbNext.disabled = n < 2;
@@ -8155,7 +8158,7 @@
             if (!navigator.vibrate) {
                 var hapticNote = document.getElementById('dbg-haptic-note');
                 if (_hapticIsIOS) {
-                    hapticNote.style.color = '#a6e3a1';
+                    hapticNote.style.color = 'var(--green)';
                     hapticNote.textContent = 'iOS 18+: using switch haptic workaround';
                 } else {
                     document.getElementById('dbg-haptic-row').querySelectorAll('button').forEach(function(b){ b.disabled = true; });
@@ -8225,7 +8228,8 @@
                 var scur = stabs.findIndex(function(t){ return t.classList.contains('active'); });
                 var snext = isNextShell ? (scur + 1) % sn : (scur - 1 + sn) % sn;
                 e.preventDefault(); e.stopImmediatePropagation();
-                switchShell(snext);
+                var nextTab = stabs[snext];
+                if (nextTab) switchShell(parseInt(nextTab.dataset.index, 10));
                 return;
             }
 
@@ -8374,7 +8378,7 @@
         <div class="hu-icon">
             <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#45475a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>
-                <line x1="4" y1="4" x2="20" y2="20" stroke="#585b70" stroke-width="1.5"/>
+                <line x1="4" y1="4" x2="20" y2="20" stroke="var(--surface2)" stroke-width="1.5"/>
             </svg>
         </div>
         <div class="hu-title">Can't reach Glade</div>

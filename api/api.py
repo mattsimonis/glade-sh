@@ -85,42 +85,42 @@ TTYD_THEMES = {
                      '"blue":"#89b4fa","magenta":"#f5c2e7","cyan":"#94e2d5","white":"#bac2de",'
                      '"brightBlack":"#585b70","brightRed":"#f38ba8","brightGreen":"#a6e3a1",'
                      '"brightYellow":"#f9e2af","brightBlue":"#89b4fa","brightMagenta":"#f5c2e7",'
-                     '"brightCyan":"#94e2d5","brightWhite":"#a6adc8"}'),
+                     '"brightCyan":"#94e2d5","brightWhite":"#a6adc8","dim":"#6c7086"}'),
     "frappe":       ('{"background":"#303446","foreground":"#c6d0f5","cursor":"#f2d5cf",'
                      '"cursorAccent":"#303446","selectionBackground":"#626880","selectionForeground":"#c6d0f5",'
                      '"black":"#51576d","red":"#e78284","green":"#a6d189","yellow":"#e5c890",'
                      '"blue":"#8caaee","magenta":"#f4b8e4","cyan":"#81c8be","white":"#b5bfe2",'
                      '"brightBlack":"#626880","brightRed":"#e78284","brightGreen":"#a6d189",'
                      '"brightYellow":"#e5c890","brightBlue":"#8caaee","brightMagenta":"#f4b8e4",'
-                     '"brightCyan":"#81c8be","brightWhite":"#a5adce"}'),
+                     '"brightCyan":"#81c8be","brightWhite":"#a5adce","dim":"#737994"}'),
     "macchiato":    ('{"background":"#24273a","foreground":"#cad3f5","cursor":"#f4dbd6",'
                      '"cursorAccent":"#24273a","selectionBackground":"#5b6078","selectionForeground":"#cad3f5",'
                      '"black":"#494d64","red":"#ed8796","green":"#a6da95","yellow":"#eed49f",'
                      '"blue":"#8aadf4","magenta":"#f5bde6","cyan":"#8bd5ca","white":"#b8c0e0",'
                      '"brightBlack":"#5b6078","brightRed":"#ed8796","brightGreen":"#a6da95",'
                      '"brightYellow":"#eed49f","brightBlue":"#8aadf4","brightMagenta":"#f5bde6",'
-                     '"brightCyan":"#8bd5ca","brightWhite":"#a5adcb"}'),
+                     '"brightCyan":"#8bd5ca","brightWhite":"#a5adcb","dim":"#6e738d"}'),
     "latte":        ('{"background":"#eff1f5","foreground":"#4c4f69","cursor":"#dc8a78",'
                      '"cursorAccent":"#eff1f5","selectionBackground":"#acb0be","selectionForeground":"#4c4f69",'
                      '"black":"#5c5f77","red":"#d20f39","green":"#40a02b","yellow":"#df8e1d",'
                      '"blue":"#1e66f5","magenta":"#ea76cb","cyan":"#179299","white":"#acb0be",'
                      '"brightBlack":"#6c6f85","brightRed":"#d20f39","brightGreen":"#40a02b",'
                      '"brightYellow":"#df8e1d","brightBlue":"#1e66f5","brightMagenta":"#ea76cb",'
-                     '"brightCyan":"#179299","brightWhite":"#bcc0cc"}'),
+                     '"brightCyan":"#179299","brightWhite":"#bcc0cc","dim":"#9ca0b0"}'),
     "solarized-dark": ('{"background":"#002b36","foreground":"#839496","cursor":"#839496",'
                         '"cursorAccent":"#002b36","selectionBackground":"#073642","selectionForeground":"#839496",'
                         '"black":"#073642","red":"#dc322f","green":"#859900","yellow":"#b58900",'
                         '"blue":"#268bd2","magenta":"#d33682","cyan":"#2aa198","white":"#eee8d5",'
                         '"brightBlack":"#002b36","brightRed":"#cb4b16","brightGreen":"#586e75",'
                         '"brightYellow":"#657b83","brightBlue":"#839496","brightMagenta":"#6c71c4",'
-                        '"brightCyan":"#93a1a1","brightWhite":"#fdf6e3"}'),
+                        '"brightCyan":"#93a1a1","brightWhite":"#fdf6e3","dim":"#586e75"}'),
     "one-dark":     ('{"background":"#282c34","foreground":"#abb2bf","cursor":"#528bff",'
                      '"cursorAccent":"#282c34","selectionBackground":"#3f4451","selectionForeground":"#abb2bf",'
                      '"black":"#3f4451","red":"#e06c75","green":"#98c379","yellow":"#e5c07b",'
                      '"blue":"#61afef","magenta":"#c678dd","cyan":"#56b6c2","white":"#abb2bf",'
                      '"brightBlack":"#4f5666","brightRed":"#be5046","brightGreen":"#98c379",'
                      '"brightYellow":"#d19a66","brightBlue":"#61afef","brightMagenta":"#c678dd",'
-                     '"brightCyan":"#56b6c2","brightWhite":"#ffffff"}'),
+                     '"brightCyan":"#56b6c2","brightWhite":"#ffffff","dim":"#5c6370"}'),
 }
 
 _lock       = threading.Lock()
