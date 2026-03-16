@@ -7238,17 +7238,26 @@
                     const url = '/ttyd/' + port + '/';
                     if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
                     _sessionWasNew = !!data.session_was_new;
+                    // Force a fresh navigation with a cache-bust param instead of going through
+                    // about:blank. On iOS WKWebView, the about:blank load event fires async —
+                    // AFTER the rAF that already set iframe.src = url. The load guard
+                    // (iframe.src === 'about:blank') then fails, the handler fires on an empty
+                    // page, and setConnectionState('connected') is called prematurely.
                     try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
-                    iframe.src = 'about:blank';
-                    requestAnimationFrame(function () { iframe.src = url; startTerminalPoll(); startShellPoll(pid); });
+                    iframe.src = url + '?_r=' + Date.now();
+                    startTerminalPoll();
+                    startShellPoll(pid);
                 })
                 .catch(function (e) {
                     if (_myReconnectId !== _forceReconnectId) { reconnectInProgress = false; return; }
                     if (isNetworkError(e)) { showHostUnreachable(); reconnectInProgress = false; return; }
-                    const url = iframe.src;
+                    // API error: reload current URL (strip any prior cache-bust, add fresh one).
+                    const raw = iframe.src || '/';
+                    const base = raw.replace(/[?&]_r=\d+/, '').replace(/[?&]$/, '').replace(/\?$/, '');
                     try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
-                    iframe.src = 'about:blank';
-                    requestAnimationFrame(function () { iframe.src = url || '/'; startTerminalPoll(); startShellPoll(pid); });
+                    iframe.src = base + (base.indexOf('?') >= 0 ? '&' : '?') + '_r=' + Date.now();
+                    startTerminalPoll();
+                    startShellPoll(pid);
                 });
             // Safety: clear the flag after 30s in case everything silently fails.
             // Guard with the current reconnect ID — if the app was backgrounded mid-reconnect,
@@ -7427,8 +7436,9 @@
             else if (consecutiveFailures >= MAX_FAIL_RECONNECTING)   setConnectionState('reconnecting');
             // checkConnection is restarted fresh on every foreground, so its intervals are
             // real wall-clock time — unlike setTimeouts which freeze when the app backgrounds.
-            // If stuck in reconnecting state with no active reconnect, retry here.
-            if (connectionState === 'reconnecting') forceReconnect();
+            // If stuck in a non-connected state with no active reconnect, retry.
+            // (disconnected has startAutoReconnect but it can stall; belt-and-suspenders here.)
+            if (connectionState !== 'connected') forceReconnect();
         }
         let _checkConnTimer = setInterval(checkConnection, 2000);
         iframe.addEventListener('pointerdown', function () {
