@@ -122,6 +122,29 @@ make build
 
 ---
 
+## Step 7b: Custom Packages (Optional)
+
+To install additional tools in the container (Node.js, Python packages, Rust, etc.), create a packages script in the persistent config directory:
+
+```bash
+cp ~/Dev/glade/config/packages.sh.example ~/.glade/config/packages.sh
+```
+
+Edit `~/.glade/config/packages.sh` and uncomment the recipes you need. Then rebuild:
+
+```bash
+make build
+```
+
+This file lives at `~/.glade/config/packages.sh` — **not** inside the repo. The rebuild watcher copies it into the repo automatically before every build, so your customisations survive `git reset` and clean clones.
+
+> **Note:** The example uses `curl | sh` for Oh My Zsh. On some hosts `raw.githubusercontent.com` is unreachable from the Docker build network. If Oh My Zsh silently fails to install, switch to the git-clone approach:
+> ```bash
+> git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git /root/.oh-my-zsh
+> ```
+
+---
+
 ## Step 8: Verify
 
 ```bash

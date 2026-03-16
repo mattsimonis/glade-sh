@@ -157,7 +157,7 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 | `db/schema.sql` | 64 | SQLite schema: projects, snippets, settings |
 | `config/zshrc` | — | Shell config baked into image |
 | `config/tmux.conf` | — | Tmux config (Catppuccin Mocha status bar) |
-| `config/packages.sh` | — | Build-time hook: user-defined package installs. Gitignored; not in repo. Auto-copied from `packages.sh.example` by `make setup`/`make build` if absent. |
+| `config/packages.sh` | — | Build-time hook: user-defined package installs. Gitignored; not in repo. **Authoritative copy lives at `~/.glade/config/packages.sh`** — rebuild-watcher seeds this path before every build. `make setup`/`make build` only auto-copy from `packages.sh.example` if completely absent. |
 | `config/packages.sh.example` | — | Recipe examples: gh CLI, Node.js, pip, Rust, apt |
 | `services/Caddyfile` | 61 | Caddy-proxy config for glade.home |
 | `services/web.Caddyfile` | 54 | Inner Caddy config for glade-web container |
@@ -173,6 +173,7 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 | `uploads/` | Pasted images (temporary storage) |
 | `assets/fonts/` | Custom font uploads (user-supplied via Settings UI) |
 | `config/zshrc.local` | User shell overrides: `PROMPT`, `RPROMPT`, aliases, extra sources. Sourced last in container `.zshrc`. Edit on host — no rebuild needed. |
+| `config/packages.sh` | **Authoritative** custom packages script. Edit here, not in the repo. Rebuild-watcher copies it to `~/Dev/glade/config/packages.sh` before every build. |
 | `config/zsh_history` | Persisted zsh history (`HISTFILE`); survives container rebuilds |
 | `config/github-copilot/` | GitHub Copilot CLI auth + sessions; bind-mounted to `/root/.config/github-copilot` |
 | `config/claude/` | Claude CLI auth + sessions; bind-mounted to `/root/.claude` |
