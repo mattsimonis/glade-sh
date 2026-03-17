@@ -2327,17 +2327,6 @@
             // 'system' → no class; @media prefers-color-scheme handles it
         }
         applyAppTheme(localStorage.getItem('appTheme') || 'system');
-        // Restore Base16 theme on load — overrides appTheme CSS vars if set
-        (function() {
-            var b16 = localStorage.getItem('base16Theme');
-            if (!b16) return;
-            var scheme = BASE16_SCHEMES.find(function(s) { return s.s === b16; });
-            if (!scheme) return;
-            var root = document.documentElement;
-            root.classList.remove('theme-mocha','theme-frappe','theme-macchiato','theme-latte','force-dark','force-light');
-            var vars = _b16css(scheme.p);
-            Object.keys(vars).forEach(function(k) { root.style.setProperty(k, '#' + vars[k]); });
-        })();
 
         // ── DOM refs ────────────────────────────────────────────────────────────
         const iframe            = document.getElementById('terminal-iframe');
@@ -6479,6 +6468,18 @@
         }
 
         let currentB16Scheme = localStorage.getItem('base16Theme') || null;
+
+        // Restore Base16 theme on load — overrides appTheme CSS vars if set.
+        // Must run here, after BASE16_SCHEMES and _b16css are defined.
+        if (currentB16Scheme) {
+            var _b16s = BASE16_SCHEMES.find(function(s) { return s.s === currentB16Scheme; });
+            if (_b16s) {
+                var _root = document.documentElement;
+                _root.classList.remove('theme-mocha','theme-frappe','theme-macchiato','theme-latte','force-dark','force-light');
+                var _vars = _b16css(_b16s.p);
+                Object.keys(_vars).forEach(function(k) { _root.style.setProperty(k, '#' + _vars[k]); });
+            }
+        }
 
         function applyBase16Scheme(slug, syncApp) {
             var scheme = BASE16_SCHEMES.find(function(s) { return s.s === slug; });
