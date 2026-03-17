@@ -165,34 +165,55 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 5: Check for Berkeley Mono Nerd Font
+# Step 5: Install Commit Mono font (default terminal font)
 # ─────────────────────────────────────────────────────────────────────────────
 FONT_DIR="$GLADE_DIR/assets/fonts"
-FONT_FOUND=false
+FONT_TARGET="$FONT_DIR/CommitMonoV143-VF.woff2"
+COMMIT_MONO_ZIP_URL="https://github.com/eigilnikolajsen/commit-mono/releases/download/v1.143/CommitMono-1.143.zip"
+COMMIT_MONO_TTF_IN_ZIP="CommitMono-1.143/ttfautohint/CommitMono-400-Regular.ttf"
 
-for ext in woff2 woff ttf otf; do
-    if compgen -G "$FONT_DIR/"*.[Bb]erkeley*."$ext" &>/dev/null || \
-       compgen -G "$FONT_DIR/"*berkeley*."$ext" &>/dev/null; then
-        FONT_FOUND=true
-        break
+if [[ -f "$FONT_TARGET" ]]; then
+    success "Commit Mono font already present."
+elif command -v curl &>/dev/null && command -v woff2_compress &>/dev/null; then
+    info "Downloading Commit Mono v1.143..."
+    TMP_ZIP="$(mktemp /tmp/CommitMono.XXXXXX.zip)"
+    TMP_TTF="$(mktemp /tmp/CommitMono.XXXXXX.ttf)"
+    if curl -fsSL "$COMMIT_MONO_ZIP_URL" -o "$TMP_ZIP"; then
+        if python3 -c "
+import zipfile, shutil, sys
+try:
+    z = zipfile.ZipFile('$TMP_ZIP')
+    data = z.read('$COMMIT_MONO_TTF_IN_ZIP')
+    open('$TMP_TTF', 'wb').write(data)
+except Exception as e:
+    sys.exit(1)
+"; then
+            if woff2_compress "$TMP_TTF" 2>/dev/null; then
+                WOFF2_OUT="${TMP_TTF%.ttf}.woff2"
+                mv "$WOFF2_OUT" "$FONT_TARGET"
+                success "Commit Mono installed to $FONT_TARGET"
+                INSTALLED+=("Commit Mono font")
+            else
+                warn "woff2_compress failed — skipping font install."
+                WARNINGS+=("Commit Mono font not installed (woff2_compress error)")
+            fi
+        else
+            warn "Could not extract font from zip — skipping."
+            WARNINGS+=("Commit Mono font not installed (zip extract error)")
+        fi
+    else
+        warn "Could not download Commit Mono — skipping."
+        WARNINGS+=("Commit Mono font not installed (download failed)")
     fi
-done
-
-# Also check with broader pattern in case of different naming
-if [[ "$FONT_FOUND" == false ]]; then
-    # Check if any font files exist at all
-if compgen -G "$FONT_DIR/*.woff2" &>/dev/null || compgen -G "$FONT_DIR/*.ttf" &>/dev/null; then
-        FONT_FOUND=true
-    fi
-fi
-
-if [[ "$FONT_FOUND" == true ]]; then
-    success "Font file(s) found in $FONT_DIR"
+    rm -f "$TMP_ZIP" "$TMP_TTF"
+elif command -v curl &>/dev/null; then
+    warn "woff2_compress not found — cannot convert font."
+    warn "  Install it with: brew install woff2   (macOS) or apt install woff2 (Linux)"
+    warn "  Then re-run install.sh, or place CommitMonoV143-VF.woff2 in: $FONT_DIR/"
+    WARNINGS+=("Commit Mono font not installed (woff2 tool missing)")
 else
-    warn "No Berkeley Mono Nerd Font (.ttf or .woff2) found in $FONT_DIR"
-    warn "  The UI will fall back to JetBrains Mono / Fira Code / system monospace."
-    warn "  To add it later, place BerkeleyMonoNerdFont-Regular.ttf in: $FONT_DIR/"
-    WARNINGS+=("Berkeley Mono Nerd Font not found (optional)")
+    warn "curl not found — cannot download Commit Mono."
+    WARNINGS+=("Commit Mono font not installed (curl missing)")
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
