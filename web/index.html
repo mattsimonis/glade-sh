@@ -6510,6 +6510,7 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(termTheme),
                 }).catch(function() {});
+                _syncThemesToServer();
             }
             // Deselect Catppuccin swatches
             document.querySelectorAll('.theme-swatch').forEach(function(el) {
@@ -6520,7 +6521,7 @@
             renderB16List._markActive(slug);
         }
 
-        function clearBase16Theme() {
+        function clearBase16Theme(sync) {
             currentB16Scheme = null;
             localStorage.removeItem('base16Theme');
             // Remove inline CSS var overrides so Catppuccin classes take over
@@ -6530,7 +6531,46 @@
              '--red','--peach','--yellow','--green','--teal','--blue','--mauve','--sky','--pink'
             ].forEach(function(k) { root.style.removeProperty(k); });
             renderB16List._markActive(null);
+            if (sync !== false) _syncThemesToServer();
         }
+
+        function _syncThemesToServer() {
+            fetch('/api/settings/themes', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    termTheme:  currentTermTheme  || null,
+                    appTheme:   localStorage.getItem('appTheme') || null,
+                    base16Theme: currentB16Scheme || null,
+                }),
+            }).catch(function() {});
+        }
+
+        function _applyThemesFromServer(t) {
+            if (!t) return;
+            if (t.base16Theme && t.base16Theme !== currentB16Scheme) {
+                applyBase16Scheme(t.base16Theme, false);
+            } else if (!t.base16Theme && currentB16Scheme) {
+                clearBase16Theme(false);
+            }
+            if (!t.base16Theme) {
+                if (t.termTheme && t.termTheme !== currentTermTheme) {
+                    applyTermTheme(t.termTheme, false);
+                }
+                if (t.appTheme && t.appTheme !== (localStorage.getItem('appTheme') || 'system')) {
+                    localStorage.setItem('appTheme', t.appTheme);
+                    applyAppTheme(t.appTheme);
+                }
+            }
+        }
+
+        // Fetch server theme on load — server wins over localStorage.
+        fetch('/api/settings/themes').then(function(r) {
+            return r.ok ? r.json() : null;
+        }).then(function(t) {
+            _applyThemesFromServer(t);
+        }).catch(function() {});
+
 
         // ── Base16 list renderer ────────────────────────────────────────────────
         var renderB16List = (function() {
@@ -6697,8 +6737,8 @@
                 const swatchTheme = TERM_THEMES[el.dataset.themeId];
                 el.style.border = '2px solid ' + (active && swatchTheme ? swatchTheme.theme.blue : 'transparent');
             });
-            // Deselect any active base16 scheme
-            if (syncApp) { clearBase16Theme(); }
+            // Deselect any active base16 scheme and sync all theme identifiers to server
+            if (syncApp) { clearBase16Theme(); }  // clearBase16Theme calls _syncThemesToServer
         }
 
         function renderThemePicker() {

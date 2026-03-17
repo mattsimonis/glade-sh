@@ -603,6 +603,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._get_setting("font")
         if p == ["api", "settings", "term-theme"]:
             return self._get_setting("term_theme")
+        if p == ["api", "settings", "themes"]:
+            return self._get_setting("themes")
         if p == ["api", "settings", "layout"]:
             return self._get_layout()
         if p == ["api", "settings", "compact-layout"]:
@@ -667,6 +669,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._put_setting("font")
         if p == ["api", "settings", "term-theme"]:
             return self._put_setting("term_theme")
+        if p == ["api", "settings", "themes"]:
+            return self._put_setting("themes")
         if p == ["api", "settings", "layout"]:
             return self._save_layout()
         if p == ["api", "settings", "compact-layout"]:
