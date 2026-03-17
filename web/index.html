@@ -7583,6 +7583,7 @@
                              e.key === 'Enter');
                         if (isTerminalNav) {
                             e.preventDefault();
+                            e.stopPropagation(); // prevent xterm.js from also processing the key
                             sendKey(e.key, {});
                             return;
                         }
