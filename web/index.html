@@ -2327,6 +2327,35 @@
             // 'system' → no class; @media prefers-color-scheme handles it
         }
         applyAppTheme(localStorage.getItem('appTheme') || 'system');
+        // Early apply for non-Catppuccin themes that drive the full app chrome.
+        // TERM_THEMES isn't defined yet so the color data is inlined here.
+        (function() {
+            var _t = localStorage.getItem('termTheme');
+            var _earlyVars = {
+                'solarized-dark': {
+                    '--base':'#002b36','--mantle':'#001f2b','--crust':'#001419',
+                    '--surface0':'#073642','--surface1':'#0a3f4e','--surface2':'#0f4f61',
+                    '--overlay0':'#586e75','--overlay1':'#657b83',
+                    '--subtext0':'#839496','--subtext1':'#93a1a1','--text':'#839496',
+                    '--red':'#dc322f','--peach':'#cb4b16','--yellow':'#b58900',
+                    '--green':'#859900','--teal':'#2aa198','--sky':'#2aa198',
+                    '--blue':'#268bd2','--mauve':'#6c71c4','--pink':'#d33682',
+                },
+                'one-dark': {
+                    '--base':'#282c34','--mantle':'#21252b','--crust':'#181a1f',
+                    '--surface0':'#2c313a','--surface1':'#3e4451','--surface2':'#4b5263',
+                    '--overlay0':'#5c6370','--overlay1':'#636d83',
+                    '--subtext0':'#818896','--subtext1':'#9da5b4','--text':'#abb2bf',
+                    '--red':'#e06c75','--peach':'#d19a66','--yellow':'#e5c07b',
+                    '--green':'#98c379','--teal':'#56b6c2','--sky':'#56b6c2',
+                    '--blue':'#61afef','--mauve':'#c678dd','--pink':'#c678dd',
+                },
+            };
+            if (_earlyVars[_t]) {
+                document.documentElement.classList.remove('theme-mocha','theme-frappe','theme-macchiato','theme-latte','force-dark','force-light');
+                Object.keys(_earlyVars[_t]).forEach(function(k) { document.documentElement.style.setProperty(k, _earlyVars[_t][k]); });
+            }
+        })();
 
         // ── DOM refs ────────────────────────────────────────────────────────────
         const iframe            = document.getElementById('terminal-iframe');
@@ -6521,16 +6550,23 @@
             renderB16List._markActive(slug);
         }
 
-        function clearBase16Theme(sync) {
+        // CSS custom property keys that non-Catppuccin themes set inline on :root.
+        // Used by clearBase16Theme and applyTermTheme to clear/apply the full set.
+        var _APP_VAR_KEYS = [
+            '--base','--mantle','--crust','--surface0','--surface1','--surface2',
+            '--overlay0','--overlay1','--subtext0','--subtext1','--text',
+            '--red','--peach','--yellow','--green','--teal','--blue','--mauve','--sky','--pink',
+        ];
+
+        function _clearBase16State() {
             currentB16Scheme = null;
             localStorage.removeItem('base16Theme');
-            // Remove inline CSS var overrides so Catppuccin classes take over
-            var root = document.documentElement;
-            ['--base','--mantle','--crust','--surface0','--surface1','--surface2',
-             '--overlay0','--overlay1','--subtext0','--subtext1','--text',
-             '--red','--peach','--yellow','--green','--teal','--blue','--mauve','--sky','--pink'
-            ].forEach(function(k) { root.style.removeProperty(k); });
             renderB16List._markActive(null);
+        }
+
+        function clearBase16Theme(sync) {
+            _clearBase16State();
+            _APP_VAR_KEYS.forEach(function(k) { document.documentElement.style.removeProperty(k); });
             if (sync !== false) _syncThemesToServer();
         }
 
@@ -6557,7 +6593,11 @@
                 if (t.termTheme && t.termTheme !== currentTermTheme) {
                     applyTermTheme(t.termTheme, false);
                 }
-                if (t.appTheme && t.appTheme !== (localStorage.getItem('appTheme') || 'system')) {
+                // Only apply appTheme separately for Catppuccin; non-Catppuccin themes
+                // (solarized-dark, one-dark) drive app chrome via applyTermTheme's appVars.
+                var _cats = ['mocha','frappe','macchiato','latte'];
+                if (t.appTheme && _cats.indexOf(t.appTheme) !== -1 &&
+                        t.appTheme !== (localStorage.getItem('appTheme') || 'system')) {
                     localStorage.setItem('appTheme', t.appTheme);
                     applyAppTheme(t.appTheme);
                 }
@@ -6685,6 +6725,15 @@
                     brightBlack:'#002b36', brightRed:'#cb4b16', brightGreen:'#586e75',
                     brightYellow:'#657b83', brightBlue:'#839496', brightMagenta:'#6c71c4',
                     brightCyan:'#93a1a1', brightWhite:'#fdf6e3', dim:'#586e75' },
+                appVars: {
+                    '--base':'#002b36', '--mantle':'#001f2b', '--crust':'#001419',
+                    '--surface0':'#073642', '--surface1':'#0a3f4e', '--surface2':'#0f4f61',
+                    '--overlay0':'#586e75', '--overlay1':'#657b83',
+                    '--subtext0':'#839496', '--subtext1':'#93a1a1', '--text':'#839496',
+                    '--red':'#dc322f', '--peach':'#cb4b16', '--yellow':'#b58900',
+                    '--green':'#859900', '--teal':'#2aa198', '--sky':'#2aa198',
+                    '--blue':'#268bd2', '--mauve':'#6c71c4', '--pink':'#d33682',
+                },
             },
             'one-dark': {
                 label: 'One Dark', swatch: '#282c34',
@@ -6694,6 +6743,15 @@
                     brightBlack:'#4f5666', brightRed:'#be5046', brightGreen:'#98c379',
                     brightYellow:'#d19a66', brightBlue:'#61afef', brightMagenta:'#c678dd',
                     brightCyan:'#56b6c2', brightWhite:'#ffffff', dim:'#5c6370' },
+                appVars: {
+                    '--base':'#282c34', '--mantle':'#21252b', '--crust':'#181a1f',
+                    '--surface0':'#2c313a', '--surface1':'#3e4451', '--surface2':'#4b5263',
+                    '--overlay0':'#5c6370', '--overlay1':'#636d83',
+                    '--subtext0':'#818896', '--subtext1':'#9da5b4', '--text':'#abb2bf',
+                    '--red':'#e06c75', '--peach':'#d19a66', '--yellow':'#e5c07b',
+                    '--green':'#98c379', '--teal':'#56b6c2', '--sky':'#56b6c2',
+                    '--blue':'#61afef', '--mauve':'#c678dd', '--pink':'#c678dd',
+                },
             },
         };
 
@@ -6704,7 +6762,7 @@
             if (!def) return;
             currentTermTheme = themeId;
             localStorage.setItem('termTheme', themeId);
-            // Use the already-discovered terminalInstance — handles all ttyd naming variants
+            // Update xterm.js terminal colors
             if (terminalInstance && typeof terminalInstance.options === 'object') {
                 try { terminalInstance.options.theme = def.theme; } catch(e) {}
             }
@@ -6717,6 +6775,19 @@
                     styleEl.textContent = '.xterm-viewport,.xterm-screen{background:' + def.theme.background + '!important}';
                 }
             } catch(e) {}
+            // Apply app-wide chrome colors
+            var root = document.documentElement;
+            if (def.appVars) {
+                // Non-Catppuccin theme with full app palette (e.g. Solarized Dark, One Dark)
+                root.classList.remove('theme-mocha','theme-frappe','theme-macchiato','theme-latte','force-dark','force-light');
+                _APP_VAR_KEYS.forEach(function(k) { root.style.removeProperty(k); });
+                Object.keys(def.appVars).forEach(function(k) { root.style.setProperty(k, def.appVars[k]); });
+            } else if (['mocha','frappe','macchiato','latte'].indexOf(themeId) !== -1) {
+                // Catppuccin: clear all inline overrides, apply flavor class
+                _APP_VAR_KEYS.forEach(function(k) { root.style.removeProperty(k); });
+                localStorage.setItem('appTheme', themeId);
+                applyAppTheme(themeId);
+            }
             // Persist to server so new ttyd processes start with the correct theme (no flash)
             if (syncApp) {
                 fetch('/api/settings/term-theme', {
@@ -6724,11 +6795,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(themeId),
                 }).catch(function() {});
-            }
-            // Catppuccin flavors drive the full app theme — only on explicit user selection
-            if (syncApp && ['mocha', 'frappe', 'macchiato', 'latte'].indexOf(themeId) !== -1) {
-                localStorage.setItem('appTheme', themeId);
-                applyAppTheme(themeId);
+                // Clear any active Base16 scheme (state only — CSS vars already handled above)
+                _clearBase16State();
+                _syncThemesToServer();
             }
             // Update swatch active state
             document.querySelectorAll('.theme-swatch').forEach(function(el) {
@@ -6737,8 +6806,6 @@
                 const swatchTheme = TERM_THEMES[el.dataset.themeId];
                 el.style.border = '2px solid ' + (active && swatchTheme ? swatchTheme.theme.blue : 'transparent');
             });
-            // Deselect any active base16 scheme and sync all theme identifiers to server
-            if (syncApp) { clearBase16Theme(); }  // clearBase16Theme calls _syncThemesToServer
         }
 
         function renderThemePicker() {
