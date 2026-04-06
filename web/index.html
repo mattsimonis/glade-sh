@@ -161,6 +161,44 @@
         }
         #terminal-spacer { flex-shrink: 0; background: var(--crust); position: relative; z-index: 21; }
         #terminal-iframe { flex: 1; min-height: 0; width: 100%; border: none; display: block; background: var(--base); }
+
+        /* ── Pane grid ─────────────────────────────────────────── */
+        #pane-grid {
+            flex: 1; min-height: 0; display: grid; gap: 1px;
+            background: var(--surface0);
+        }
+        #pane-grid.panes-1 { grid-template: 1fr / 1fr; }
+        #pane-grid.panes-2 { grid-template: 1fr / 1fr 1fr; }
+        #pane-grid.panes-3 { grid-template: 1fr / 1fr 1fr 1fr; }
+        #pane-grid.panes-4 { grid-template: 1fr 1fr / 1fr 1fr; }
+        #pane-grid.panes-5 { grid-template: 1fr 1fr / repeat(6, 1fr); }
+        #pane-grid.panes-5 .pane-cell:nth-child(-n+3) { grid-column: span 2; }
+        #pane-grid.panes-5 .pane-cell:nth-child(n+4)  { grid-column: span 3; }
+        #pane-grid.panes-6 { grid-template: 1fr 1fr / 1fr 1fr 1fr; }
+        .pane-cell {
+            overflow: hidden; position: relative; background: var(--base);
+            outline: 2px solid transparent; outline-offset: -2px;
+            transition: outline-color .15s;
+        }
+        .pane-cell.pane-focused { outline-color: var(--blue); }
+        .pane-cell iframe { width: 100%; height: 100%; border: none; display: block; background: var(--base); }
+
+        /* ── Pane controls ─────────────────────────────────────── */
+        #pane-controls {
+            display: none; height: 28px; background: var(--mantle);
+            align-items: center; gap: 4px; padding: 0 8px;
+            border-bottom: 1px solid var(--surface0);
+        }
+        @media (min-width: 768px) and (min-height: 600px) {
+            #pane-controls { display: flex; }
+        }
+        #pane-controls button {
+            width: 26px; height: 26px; border: none; border-radius: 5px;
+            background: transparent; color: var(--overlay0); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent; transition: color .12s, background .12s;
+        }
+        #pane-controls button:hover { background: var(--surface0); color: var(--text); }
         #no-shells-state, #no-workspace-state {
             display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
             gap: 12px; background: var(--base); text-align: center; padding: 24px; padding-top: 96px;
@@ -1595,7 +1633,22 @@
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
             </div>
-            <iframe id="terminal-iframe" src="about:blank" title="Terminal"></iframe>
+            <div id="pane-controls">
+                <button id="pane-split-h" title="Split horizontal (⌘D)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                </button>
+                <button id="pane-split-v" title="Split vertical (⌘⇧D)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                </button>
+                <button id="pane-close" title="Close pane (⌘W)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div id="pane-grid" class="panes-1">
+                <div class="pane-cell" data-pane="0">
+                    <iframe id="terminal-iframe" src="about:blank" title="Terminal"></iframe>
+                </div>
+            </div>
             <div id="no-shells-state">
                 <div class="no-shells-icon">⌨️</div>
                 <div class="no-shells-title">No open shells</div>
@@ -2418,9 +2471,12 @@
         document.getElementById('no-workspace-open-btn').addEventListener('click', function() { openWorkspaceGrid(); });
 
         // ── Pane control buttons ─────────────────────────────────────────────
-        document.getElementById('pane-split-h').addEventListener('click', function() { addPane(); });
-        document.getElementById('pane-split-v').addEventListener('click', function() { addPane(); });
-        document.getElementById('pane-close').addEventListener('click', function() { removePane(); });
+        var _paneSplitH = document.getElementById('pane-split-h');
+        var _paneSplitV = document.getElementById('pane-split-v');
+        var _paneClose  = document.getElementById('pane-close');
+        if (_paneSplitH) _paneSplitH.addEventListener('click', function() { addPane(); });
+        if (_paneSplitV) _paneSplitV.addEventListener('click', function() { addPane(); });
+        if (_paneClose)  _paneClose.addEventListener('click', function() { removePane(); });
 
         // Initialize pane[0] from existing DOM
         (function() {
