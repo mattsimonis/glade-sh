@@ -1653,11 +1653,8 @@
                 <!-- Shell tabs -->
                 <div id="shell-tabs-bar"></div>
                 <div id="pane-controls">
-                    <button id="pane-split-h" title="Split horizontal (⌘D)">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
-                    </button>
-                    <button id="pane-split-v" title="Split vertical (⌘⇧D)">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                    <button id="pane-split" title="Split pane (⌘D)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="12" y1="9" x2="18" y2="9"/><line x1="15" y1="6" x2="15" y2="12"/></svg>
                     </button>
                     <button id="pane-close" title="Close pane (⌘W)">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -2495,11 +2492,9 @@
         document.getElementById('no-workspace-open-btn').addEventListener('click', function() { openWorkspaceGrid(); });
 
         // ── Pane control buttons ─────────────────────────────────────────────
-        var _paneSplitH = document.getElementById('pane-split-h');
-        var _paneSplitV = document.getElementById('pane-split-v');
+        var _paneSplit = document.getElementById('pane-split');
         var _paneClose  = document.getElementById('pane-close');
-        if (_paneSplitH) _paneSplitH.addEventListener('click', function() { addPane(); });
-        if (_paneSplitV) _paneSplitV.addEventListener('click', function() { addPane(); });
+        if (_paneSplit) _paneSplit.addEventListener('click', function() { addPane(); });
         if (_paneClose)  _paneClose.addEventListener('click', function() { removePane(); });
 
         // ── Pane state ───────────────────────────────────────────────────────
@@ -8968,15 +8963,8 @@
                 return;
             }
 
-            // Cmd+D — split pane (horizontal) ────────────────────────────────────
-            if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyD') {
-                e.preventDefault(); e.stopImmediatePropagation();
-                if (currentWorkspaceId && isMultiPaneCapable()) addPane();
-                return;
-            }
-
-            // Cmd+Shift+D — split pane (vertical) ────────────────────────────────
-            if (e.metaKey && !e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+            // Cmd+D — split pane ─────────────────────────────────────────────
+            if (e.metaKey && !e.ctrlKey && e.code === 'KeyD') {
                 e.preventDefault(); e.stopImmediatePropagation();
                 if (currentWorkspaceId && isMultiPaneCapable()) addPane();
                 return;
