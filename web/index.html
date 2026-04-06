@@ -180,7 +180,7 @@
             outline: 2px solid transparent; outline-offset: -2px;
             transition: outline-color .15s;
         }
-        .pane-cell.pane-focused { outline-color: var(--blue); }
+        .pane-cell.pane-focused { outline-color: color-mix(in srgb, var(--blue) 50%, transparent); }
         .pane-cell iframe { width: 100%; height: 100%; border: none; display: block; background: var(--base); }
 
         /* ── Pane controls ─────────────────────────────────────── */
@@ -5361,6 +5361,14 @@
                 }
                 ifr.addEventListener('load', _onThemeLoad);
                 ifr.src = url;
+                // Wire focus detection — clicking inside an iframe fires focus on its contentWindow
+                ifr.addEventListener('load', function _onFocusWire() {
+                    ifr.removeEventListener('load', _onFocusWire);
+                    try {
+                        ifr.contentWindow.addEventListener('focus', function() { focusPane(paneIdx); });
+                        ifr.contentWindow.addEventListener('pointerdown', function() { focusPane(paneIdx); });
+                    } catch(e) {}
+                });
                 // Also fade in after a timeout in case theme load doesn't fire
                 setTimeout(function() { ifr.style.transition = 'opacity 120ms ease'; ifr.style.opacity = '1'; }, 800);
             }, 50);
