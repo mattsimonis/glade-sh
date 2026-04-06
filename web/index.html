@@ -8982,6 +8982,25 @@
                 return;
             }
 
+            // Cmd+X — close active terminal (with confirmation) ──────────────────
+            if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyX') {
+                // Only intercept when no text is selected (preserve native cut)
+                var sel = '';
+                try {
+                    if (terminalInstance && typeof terminalInstance.getSelection === 'function') sel = terminalInstance.getSelection();
+                    if (!sel) { var s = window.getSelection(); if (s) sel = s.toString(); }
+                } catch(ex) {}
+                if (!sel && currentShellIdx !== null) {
+                    e.preventDefault(); e.stopImmediatePropagation();
+                    if (panes.length > 1) {
+                        removePane();
+                    } else {
+                        confirmCloseShell(currentShellIdx);
+                    }
+                    return;
+                }
+            }
+
             // Cmd+1-9 — switch to nth workspace ────────────────────────────────────
             if (e.metaKey && !e.ctrlKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
                 var n = parseInt(e.code.slice(5), 10) - 1;
