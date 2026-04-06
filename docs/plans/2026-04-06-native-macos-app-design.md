@@ -242,27 +242,83 @@ glade-app/                        ← forked from ghostty-org/ghostty
 
 ---
 
-## MVP Scope
+## Phases
 
-The first working build. Everything else layers on after.
+### Phase 1 — Foundation
+
+Get a working app that can open projects and run shells.
 
 1. Fork Ghostty, build unmodified, verify it runs
 2. Add `GladeServer` module — connect to api.py, fetch project list
 3. Replace "new tab" with "open project" — start tmux session via API,
-   connect via SSH
+   connect via SSH or ttyd
 4. Project tabs with color dots and names, inline in title bar
 5. Shell sub-tabs per project
 6. Command palette (⌘K) with project switching + snippet sending
 
-### Post-MVP
+### Phase 2 — Project Management
 
-- Log viewer sidebar
-- Native notifications on command completion
-- Global hotkey (summon/dismiss)
-- Split panes wired to tmux windows
-- Multiple windows
-- Drag-and-drop file paths
-- Auto-update mechanism
+Full project lifecycle — create, edit, delete, reorder.
+
+1. Project create UI — name, directory, color picker
+2. GitHub repo cloning — device auth flow, create project from GitHub URL
+3. Project edit — rename, change color, change directory
+4. Project delete — with confirmation, optional directory cleanup
+5. Project reordering — drag tabs to reorder, persisted via sort_order
+6. Stop project — kill ttyd/SSH but keep tmux session alive
+
+### Phase 3 — Awareness
+
+Know what's happening across all projects without switching to each one.
+
+1. Activity badges — poll `GET /api/projects/activity`, blue dot on tabs
+   with unseen output
+2. Idle detection — `GET /api/projects/:id/shell-idle` before sending
+   snippets or commands
+3. Activity polling interval — configurable in settings (default 5s)
+
+### Phase 4 — Session History
+
+Browse and search everything that happened in every project.
+
+1. Log browser sidebar — list projects, their log files, timestamps, sizes
+2. Log viewer — render log content with ANSI stripped, scrollable
+3. Live log tailing — poll `GET /api/logs/current/:project` for active
+   sessions, auto-scroll
+4. Log search — `GET /api/logs/search?q=` with results grouped by project
+5. Log deletion — per-file delete with confirmation
+
+### Phase 5 — Settings & Configuration
+
+In-app settings panel for everything that isn't Ghostty's own config.
+
+1. Server connection — address, transport (SSH/ttyd), test connection
+2. GitHub section — connect/disconnect, show username + avatar
+3. Theme picker — in-app browser for Ghostty's themes (read config dir)
+4. Custom font upload — upload woff2/ttf/otf via API, apply to terminal
+5. Server status — build date, version, project count, health
+6. Container rebuild trigger — same as PWA, with log viewer
+
+### Phase 6 — Native Power
+
+Features only a native app can do well.
+
+1. Split panes — wire Ghostty's native splits to tmux windows
+2. Native notifications — macOS notification when long-running command
+   finishes (uses idle detection)
+3. Global hotkey — system-wide shortcut to summon/dismiss the app
+4. Drag-and-drop — drag files into terminal to paste paths
+5. Multiple windows — one per project, or all in one, user's choice
+6. Image paste/upload — paste image, upload via API, insert URL
+
+### Phase 7 — Polish & Ship
+
+1. Auto-update mechanism (Sparkle or similar)
+2. `.dmg` distribution with code signing + notarization
+3. App icon and branding
+4. First-run onboarding flow (connect to server, pick transport)
+5. Keyboard shortcut reference sheet (⌘? or help menu)
+6. Menu bar — standard macOS menus with all actions wired up
 
 ---
 
