@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """
-glade API — projects, snippets, keyboard layout, image uploads
+glade API — workspaces, snippets, keyboard layout, image uploads
 
 Runs inside the ttyd Docker container on port 7683.
-Manages project lifecycle: tmux sessions + ttyd child processes.
+Manages workspace lifecycle: tmux sessions + ttyd child processes.
 
 Routes:
   GET    /api/health                    {ok, update_pending, image_update_pending}
   POST   /api/restart                   trigger graceful API restart (exit 42 → entrypoint loops)
-  GET    /api/projects                  list all projects with running status
-  POST   /api/projects                  create {name, directory, color}
-  PUT    /api/projects/:id              update project
-  DELETE /api/projects/:id              delete + stop ttyd
-  POST   /api/projects/:id/start        ensure tmux + ttyd running -> {port}
-  POST   /api/projects/:id/stop         kill ttyd (keep tmux session)
-  GET    /api/projects/:id/shells       list tmux windows [{index,name,active}]
-  POST   /api/projects/:id/shells       open new tmux window -> {index}
-  DELETE /api/projects/:id/shells/:n    kill tmux window n
-  GET    /api/projects/activity         [{id, hasActivity}] for badge polling
-  PUT    /api/projects/:id/viewed       clear activity baseline
+  GET    /api/workspaces                list all workspaces with running status
+  POST   /api/workspaces                create {name, directory, color}
+  PUT    /api/workspaces/:id            update workspace
+  DELETE /api/workspaces/:id            delete + stop ttyd
+  POST   /api/workspaces/:id/start      ensure tmux + ttyd running -> {port}
+  POST   /api/workspaces/:id/stop       kill ttyd (keep tmux session)
+  GET    /api/workspaces/:id/shells     list tmux windows [{index,name,active}]
+  POST   /api/workspaces/:id/shells     open new tmux window -> {index}
+  DELETE /api/workspaces/:id/shells/:n  kill tmux window n
+  GET    /api/workspaces/activity       [{id, hasActivity}] for badge polling
+  PUT    /api/workspaces/:id/viewed     clear activity baseline
   GET    /api/snippets
   POST   /api/snippets
   PUT    /api/snippets/:id
@@ -68,15 +68,15 @@ DISABLE_UPDATE_CHECK = os.environ.get("DISABLE_UPDATE_CHECK", "").lower() in ("1
 REBUILD_TRIGGER = os.path.join(GLADE_DIR, ".rebuild-requested")
 REBUILD_LOCK    = os.path.join(GLADE_DIR, ".rebuild-running")
 REBUILD_LOG     = os.path.join(GLADE_DIR, "rebuild.log")
-PROJECTS_DIR    = os.path.join(GLADE_DIR, "projects")
+WORKSPACES_DIR  = os.path.join(GLADE_DIR, "projects")  # on-disk path kept for backward compat
 
-PORT_POOL = list(range(7690, 7730))  # 40 slots — one per active window across all projects
+PORT_POOL = list(range(7690, 7730))  # 40 slots — one per active window across all workspaces
 
 _gh_auth_proc = None
 _gh_auth_lock = threading.Lock()
 
-# Shell key format: f"{sname}:{window_index}"  e.g. "proj-abc12345:0"
-SHELL_KEY_RE = re.compile(r'^proj-[0-9a-f]{8}:\d+$')
+# Shell key format: f"{sname}:{window_index}"  e.g. "ws-abc12345:0"
+SHELL_KEY_RE = re.compile(r'^(?:ws|proj)-[0-9a-f]{8}:\d+$')
 
 TTYD_THEMES = {
     "mocha":        ('{"background":"#1e1e2e","foreground":"#cdd6f4","cursor":"#f5e0dc",'
@@ -125,7 +125,7 @@ TTYD_THEMES = {
 
 _lock       = threading.Lock()
 _ttyd_procs = {}   # shell_key (sname:widx) -> {"process": Popen|None, "port": int}
-_baselines  = {}   # project_id -> int (tmux history_size at last view)
+_baselines  = {}   # workspace_id -> int (tmux history_size at last view)
 
 
 def _get_term_theme():
@@ -175,6 +175,12 @@ def open_db():
 
 def ensure_tables():
     with open_db() as conn:
+        # Migrate: rename projects → workspaces table (idempotent)
+        existing = {r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()}
+        if "projects" in existing and "workspaces" not in existing:
+            conn.execute("ALTER TABLE projects RENAME TO workspaces")
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS snippets (
                 id         TEXT PRIMARY KEY,
@@ -188,7 +194,7 @@ def ensure_tables():
                 value      TEXT NOT NULL,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
-            CREATE TABLE IF NOT EXISTS projects (
+            CREATE TABLE IF NOT EXISTS workspaces (
                 id          TEXT PRIMARY KEY,
                 name        TEXT NOT NULL,
                 directory   TEXT NOT NULL DEFAULT "/",
@@ -212,7 +218,7 @@ def ensure_tables():
         """)
         # Migrate: add github_repo column if it doesn't exist yet
         try:
-            conn.execute("ALTER TABLE projects ADD COLUMN github_repo TEXT")
+            conn.execute("ALTER TABLE workspaces ADD COLUMN github_repo TEXT")
         except Exception:
             pass
 
@@ -231,8 +237,8 @@ def slugify(name):
     return s.strip('-') or 'unnamed'
 
 
-def session_name(project_id):
-    return "proj-" + project_id[:8]
+def session_name(workspace_id):
+    return "ws-" + workspace_id[:8]
 
 
 def tmux_session_exists(sname):
@@ -341,7 +347,7 @@ def _recover_shell_procs():
 
     ttyd processes survive API restarts; we reconstruct the mapping by
     parsing each process's cmdline for:  ttyd -p PORT ... tmux attach-session -t LINKED
-    Linked session names use the format proj-XXXX-wN, which maps to key proj-XXXX:N.
+    Linked session names follow ws-XXXX-wN (or legacy proj-XXXX-wN), mapped to key sname:N.
     Legacy session-level and old per-window entries are silently ignored.
     """
     for pid in os.listdir('/proc'):
@@ -366,11 +372,11 @@ def _recover_shell_procs():
                     for j in range(i + 1, min(i + 4, len(parts))):
                         if parts[j] == b'-t' and j + 1 < len(parts):
                             t = parts[j + 1].decode('utf-8', errors='ignore')
-                            # New linked-session format: proj-XXXX-wN → key proj-XXXX:N
-                            m = re.match(r'^(proj-[0-9a-f]{8})-w(\d+)$', t)
+                            # Linked-session format: ws-XXXX-wN or legacy proj-XXXX-wN
+                            m = re.match(r'^((?:ws|proj)-[0-9a-f]{8})-w(\d+)$', t)
                             if m:
                                 target = f"{m.group(1)}:{m.group(2)}"
-                            elif t.startswith('proj-'):
+                            elif t.startswith(('ws-', 'proj-')):
                                 # Legacy session-level or old per-window — ignore
                                 pass
                             break
@@ -460,7 +466,7 @@ def _kill_shell_ttyd(shell_key):
     if not info:
         return
     # Kill the linked session if this is a per-window key (sname:N)
-    m = re.match(r'^(proj-[0-9a-f]{8}):(\d+)$', shell_key)
+    m = re.match(r'^((?:ws|proj)-[0-9a-f]{8}):(\d+)$', shell_key)
     if m:
         linked = f"{m.group(1)}-w{m.group(2)}"
         subprocess.run(["tmux", "kill-session", "-t", linked], capture_output=True)
@@ -491,13 +497,13 @@ def _kill_shell_ttyd(shell_key):
                     pass
 
 
-def ensure_project_running(project_id, directory, project_name=""):
+def ensure_workspace_running(workspace_id, directory, workspace_name=""):
     """Ensure the tmux session exists and each window has a dedicated ttyd running.
 
     Returns the port for window 0, or None if no ports are available.
     """
-    sname = session_name(project_id)
-    log_slug = slugify(project_name) if project_name else project_id[:8]
+    sname = session_name(workspace_id)
+    log_slug = slugify(workspace_name) if workspace_name else workspace_id[:8]
     create_tmux_session(sname, directory, log_slug=log_slug)
 
     _recover_shell_procs()
@@ -510,9 +516,9 @@ def ensure_project_running(project_id, directory, project_name=""):
     return port0
 
 
-def stop_project_proc(project_id):
-    """Kill all per-window ttyd processes belonging to this project."""
-    sname = session_name(project_id)
+def stop_workspace_proc(workspace_id):
+    """Kill all per-window ttyd processes belonging to this workspace."""
+    sname = session_name(workspace_id)
     _recover_shell_procs()
     with _lock:
         # Match per-window keys: sname:0, sname:1, etc.
@@ -589,13 +595,13 @@ class Handler(BaseHTTPRequestHandler):
                 "image_update_pending": not DISABLE_UPDATE_CHECK and os.path.exists("/tmp/glade-image-update-pending"),
                 "build_date": os.environ.get("GLADE_BUILD_DATE", ""),
             })
-        if p == ["api", "projects", "activity"]:
+        if p == ["api", "workspaces", "activity"]:
             return self._get_activity()
-        if p == ["api", "projects"]:
-            return self._list_projects()
-        if len(p) == 3 and p[:2] == ["api", "projects"]:
-            return self._get_project(p[2])
-        if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "shells":
+        if p == ["api", "workspaces"]:
+            return self._list_workspaces()
+        if len(p) == 3 and p[:2] == ["api", "workspaces"]:
+            return self._get_workspace(p[2])
+        if len(p) == 4 and p[:2] == ["api", "workspaces"] and p[3] == "shells":
             return self._list_shells(p[2])
         if p == ["api", "snippets"]:
             return self._list_snippets()
@@ -629,7 +635,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._gh_auth_status()
         if p == ["api", "github", "repos"]:
             return self._gh_repos()
-        if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "shell-idle":
+        if len(p) == 4 and p[:2] == ["api", "workspaces"] and p[3] == "shell-idle":
             return self._shell_idle(p[2])
         self.send_json(404, {"error": "not found"})
 
@@ -639,13 +645,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._trigger_rebuild()
         if p == ["api", "restart"]:
             return self._restart_api()
-        if p == ["api", "projects"]:
-            return self._create_project()
-        if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "start":
-            return self._start_project(p[2])
-        if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "stop":
-            return self._stop_project(p[2])
-        if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "shells":
+        if p == ["api", "workspaces"]:
+            return self._create_workspace()
+        if len(p) == 4 and p[:2] == ["api", "workspaces"] and p[3] == "start":
+            return self._start_workspace(p[2])
+        if len(p) == 4 and p[:2] == ["api", "workspaces"] and p[3] == "stop":
+            return self._stop_workspace(p[2])
+        if len(p) == 4 and p[:2] == ["api", "workspaces"] and p[3] == "shells":
             return self._new_shell(p[2])
         if p == ["api", "snippets"]:
             return self._create_snippet()
@@ -659,11 +665,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         p = self.parts()
-        if len(p) == 3 and p[:2] == ["api", "projects"]:
-            return self._update_project(p[2])
-        if len(p) == 4 and p[:2] == ["api", "projects"] and p[3] == "viewed":
+        if len(p) == 3 and p[:2] == ["api", "workspaces"]:
+            return self._update_workspace(p[2])
+        if len(p) == 4 and p[:2] == ["api", "workspaces"] and p[3] == "viewed":
             return self._mark_viewed(p[2])
-        if len(p) == 6 and p[:2] == ["api", "projects"] and p[3] == "shells" and p[5] == "select":
+        if len(p) == 6 and p[:2] == ["api", "workspaces"] and p[3] == "shells" and p[5] == "select":
             return self._select_shell(p[2], p[4])
         if p == ["api", "settings", "font"]:
             return self._put_setting("font")
@@ -681,9 +687,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         p = self.parts()
-        if len(p) == 3 and p[:2] == ["api", "projects"]:
-            return self._delete_project(p[2])
-        if len(p) == 5 and p[:2] == ["api", "projects"] and p[3] == "shells":
+        if len(p) == 3 and p[:2] == ["api", "workspaces"]:
+            return self._delete_workspace(p[2])
+        if len(p) == 5 and p[:2] == ["api", "workspaces"] and p[3] == "shells":
             return self._kill_shell(p[2], p[4])
         if len(p) == 3 and p[:2] == ["api", "snippets"]:
             return self._delete_snippet(p[2])
@@ -695,11 +701,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._delete_custom_font()
         self.send_json(404, {"error": "not found"})
 
-    def _list_projects(self):
+    def _list_workspaces(self):
         with open_db() as conn:
             rows = conn.execute(
                 "SELECT id,name,directory,color,sort_order,created_at,last_active,github_repo "
-                "FROM projects ORDER BY sort_order, created_at"
+                "FROM workspaces ORDER BY sort_order, created_at"
             ).fetchall()
         result = []
         for r in rows:
@@ -713,13 +719,13 @@ class Handler(BaseHTTPRequestHandler):
             result.append(d)
         self.send_json(200, result)
 
-    def _get_project(self, pid):
+    def _get_workspace(self, wid):
         with open_db() as conn:
-            row = conn.execute("SELECT * FROM projects WHERE id=?", (pid,)).fetchone()
+            row = conn.execute("SELECT * FROM workspaces WHERE id=?", (wid,)).fetchone()
         if not row:
             return self.send_json(404, {"error": "not found"})
         d = dict(row)
-        sname = session_name(pid)
+        sname = session_name(wid)
         key0 = _ttyd_shell_key(sname, 0)
         with _lock:
             info = _ttyd_procs.get(key0)
@@ -727,7 +733,7 @@ class Handler(BaseHTTPRequestHandler):
             d["port"]    = info["port"] if d["running"] else None
         self.send_json(200, d)
 
-    def _create_project(self):
+    def _create_workspace(self):
         data, err = self._read_body()
         if err:
             return
@@ -743,13 +749,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(503, {"error": "gh CLI not available"})
             repo_name = github_repo.split("/")[-1] if "/" in github_repo else github_repo
             slug = slugify(repo_name)
-            clone_dir = os.path.join(PROJECTS_DIR, slug)
+            clone_dir = os.path.join(WORKSPACES_DIR, slug)
             base = clone_dir
             n = 1
             while os.path.exists(clone_dir):
                 clone_dir = f"{base}-{n}"
                 n += 1
-            os.makedirs(PROJECTS_DIR, exist_ok=True)
+            os.makedirs(WORKSPACES_DIR, exist_ok=True)
             r = subprocess.run(
                 ["gh", "repo", "clone", github_repo, clone_dir],
                 capture_output=True, text=True, timeout=120
@@ -759,19 +765,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(422, {"error": f"Clone failed: {msg}"})
             directory = clone_dir
 
-        pid = str(uuid.uuid4())
+        wid = str(uuid.uuid4())
         with open_db() as conn:
             conn.execute(
-                "INSERT INTO projects (id,name,directory,color,github_repo) VALUES (?,?,?,?,?)",
-                (pid, name, directory, color, github_repo or None)
+                "INSERT INTO workspaces (id,name,directory,color,github_repo) VALUES (?,?,?,?,?)",
+                (wid, name, directory, color, github_repo or None)
             )
         self.send_json(201, {
-            "id": pid, "name": name, "directory": directory,
+            "id": wid, "name": name, "directory": directory,
             "color": color, "github_repo": github_repo or None,
             "running": False, "port": None,
         })
 
-    def _update_project(self, pid):
+    def _update_workspace(self, wid):
         data, err = self._read_body()
         if err:
             return
@@ -782,12 +788,12 @@ class Handler(BaseHTTPRequestHandler):
                 vals.append(data[col])
         if not fields:
             return self.send_json(400, {"error": "nothing to update"})
-        vals.append(pid)
+        vals.append(wid)
         with open_db() as conn:
-            conn.execute(f"UPDATE projects SET {','.join(fields)} WHERE id=?", vals)
+            conn.execute(f"UPDATE workspaces SET {','.join(fields)} WHERE id=?", vals)
         self.send_json(200, {"ok": True})
 
-    def _delete_project(self, pid):
+    def _delete_workspace(self, wid):
         try:
             data = self.read_json()
         except ValueError:
@@ -795,32 +801,32 @@ class Handler(BaseHTTPRequestHandler):
         delete_dir = bool(data.get("delete_dir"))
 
         with open_db() as conn:
-            row = conn.execute("SELECT directory FROM projects WHERE id=?", (pid,)).fetchone()
+            row = conn.execute("SELECT directory FROM workspaces WHERE id=?", (wid,)).fetchone()
         directory = row["directory"] if row else None
 
-        stop_project_proc(pid)
-        sname = session_name(pid)
+        stop_workspace_proc(wid)
+        sname = session_name(wid)
         subprocess.run(["tmux", "kill-session", "-t", sname], capture_output=True)
         with open_db() as conn:
-            conn.execute("DELETE FROM projects WHERE id=?", (pid,))
+            conn.execute("DELETE FROM workspaces WHERE id=?", (wid,))
 
         if delete_dir and directory:
-            safe_root = os.path.realpath(PROJECTS_DIR)
+            safe_root = os.path.realpath(WORKSPACES_DIR)
             target = os.path.realpath(directory)
             if target.startswith(safe_root + os.sep) or target == safe_root:
                 shutil.rmtree(target, ignore_errors=True)
 
         self.send_json(200, {"ok": True})
 
-    def _start_project(self, pid):
+    def _start_workspace(self, wid):
         with open_db() as conn:
-            row = conn.execute("SELECT name, directory FROM projects WHERE id=?", (pid,)).fetchone()
+            row = conn.execute("SELECT name, directory FROM workspaces WHERE id=?", (wid,)).fetchone()
             if not row:
                 return self.send_json(404, {"error": "not found"})
             directory = row["directory"]
-            project_name = row["name"]
-            conn.execute("UPDATE projects SET last_active=CURRENT_TIMESTAMP WHERE id=?", (pid,))
-        sname = session_name(pid)
+            workspace_name = row["name"]
+            conn.execute("UPDATE workspaces SET last_active=CURRENT_TIMESTAMP WHERE id=?", (wid,))
+        sname = session_name(wid)
         session_was_new = not tmux_session_exists(sname)
         if not session_was_new:
             # Existing session — treat it as "new" for clear purposes if it's
@@ -837,7 +843,7 @@ class Handler(BaseHTTPRequestHandler):
                     session_was_new = True
             except Exception:
                 pass
-        port = ensure_project_running(pid, directory, project_name=project_name)
+        port = ensure_workspace_running(wid, directory, workspace_name=workspace_name)
         if port is None:
             return self.send_json(503, {"error": "no ports available"})
         # Pre-resize the tmux window to the client's current terminal dimensions so
@@ -854,19 +860,19 @@ class Handler(BaseHTTPRequestHandler):
                 )
         except Exception:
             pass
-        shells = self._shells_with_ports(pid, sname)
-        if pid not in _baselines:
-            _baselines[pid] = tmux_history_size(sname)
+        shells = self._shells_with_ports(wid, sname)
+        if wid not in _baselines:
+            _baselines[wid] = tmux_history_size(sname)
         self.send_json(200, {"port": port, "shells": shells, "session_was_new": session_was_new})
 
-    def _stop_project(self, pid):
-        stop_project_proc(pid)
+    def _stop_workspace(self, wid):
+        stop_workspace_proc(wid)
         self.send_json(200, {"ok": True})
 
-    def _shells_with_ports(self, pid, sname=None):
+    def _shells_with_ports(self, wid, sname=None):
         """Return shell list from tmux enriched with per-window ttyd ports."""
         if sname is None:
-            sname = session_name(pid)
+            sname = session_name(wid)
         # Rebuild proc map from /proc if we have no entries for this session
         with _lock:
             has_entries = any(k.startswith(sname + ":") for k in _ttyd_procs)
@@ -883,11 +889,11 @@ class Handler(BaseHTTPRequestHandler):
                 sh["port"] = _ensure_window_ttyd(sname, sh["index"])
         return shells
 
-    def _list_shells(self, pid):
-        sname = session_name(pid)
+    def _list_shells(self, wid):
+        sname = session_name(wid)
         if not tmux_session_exists(sname):
             return self.send_json(200, [])
-        self.send_json(200, self._shells_with_ports(pid, sname))
+        self.send_json(200, self._shells_with_ports(wid, sname))
 
     # ── GitHub ───────────────────────────────────────────────────────────────
 
@@ -1003,43 +1009,43 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self.send_json(200, [])
 
-    def _new_shell(self, pid):
+    def _new_shell(self, wid):
         with open_db() as conn:
-            row = conn.execute("SELECT directory FROM projects WHERE id=?", (pid,)).fetchone()
+            row = conn.execute("SELECT directory FROM workspaces WHERE id=?", (wid,)).fetchone()
         if not row:
             return self.send_json(404, {"error": "not found"})
-        sname = session_name(pid)
+        sname = session_name(wid)
         if not tmux_session_exists(sname):
-            return self.send_json(409, {"error": "project not running"})
+            return self.send_json(409, {"error": "workspace not running"})
         idx = new_shell_tmux(sname, row["directory"])
         if idx is None:
             return self.send_json(500, {"error": "tmux new-window failed"})
         port = _ensure_window_ttyd(sname, idx)
         self.send_json(201, {"index": idx, "port": port})
 
-    def _select_shell(self, pid, index):
+    def _select_shell(self, wid, index):
         # Tab switching is now handled client-side via per-window ttyd ports.
         # No server-side tmux select-window needed — each client loads its own
         # linked session independently.
         self.send_json(200, {"ok": True})
 
-    def _kill_shell(self, pid, index):
-        sname = session_name(pid)
+    def _kill_shell(self, wid, index):
+        sname = session_name(wid)
         # Tear down the per-window ttyd + linked session first
         _kill_shell_ttyd(_ttyd_shell_key(sname, index))
         subprocess.run(["tmux", "kill-window", "-t", f"{sname}:{index}"],
                        capture_output=True)
         if not tmux_session_exists(sname):
-            stop_project_proc(pid)
+            stop_workspace_proc(wid)
         self.send_json(200, {"ok": True})
 
     def _get_activity(self):
         with open_db() as conn:
-            rows = conn.execute("SELECT id FROM projects").fetchall()
+            rows = conn.execute("SELECT id FROM workspaces").fetchall()
         result = []
         for row in rows:
-            pid = row["id"]
-            sname = session_name(pid)
+            wid = row["id"]
+            sname = session_name(wid)
             key0 = _ttyd_shell_key(sname, 0)
             with _lock:
                 info    = _ttyd_procs.get(key0)
@@ -1048,16 +1054,16 @@ class Handler(BaseHTTPRequestHandler):
             if running and tmux_session_exists(sname):
                 current = tmux_history_size(sname)
                 with _lock:
-                    baseline = _baselines.get(pid, current)
+                    baseline = _baselines.get(wid, current)
                 has_activity = current != baseline
-            result.append({"id": pid, "hasActivity": has_activity})
+            result.append({"id": wid, "hasActivity": has_activity})
         self.send_json(200, result)
 
-    def _mark_viewed(self, pid):
-        sname = session_name(pid)
+    def _mark_viewed(self, wid):
+        sname = session_name(wid)
         if tmux_session_exists(sname):
             with _lock:
-                _baselines[pid] = tmux_history_size(sname)
+                _baselines[wid] = tmux_history_size(sname)
         self.send_json(200, {"ok": True})
 
     # -- snippets --
@@ -1226,12 +1232,12 @@ class Handler(BaseHTTPRequestHandler):
 
     _IDLE_SHELLS = {"bash", "zsh", "fish", "sh", "dash", "ksh", "tcsh", "csh", "-bash", "-zsh"}
 
-    def _shell_idle(self, pid):
+    def _shell_idle(self, wid):
         with open_db() as conn:
-            row = conn.execute("SELECT name FROM projects WHERE id=?", (pid,)).fetchone()
+            row = conn.execute("SELECT name FROM workspaces WHERE id=?", (wid,)).fetchone()
         if not row:
-            return self.send_json(404, {"error": "project not found"})
-        sname = session_name(pid)
+            return self.send_json(404, {"error": "workspace not found"})
+        sname = session_name(wid)
         try:
             r = subprocess.run(
                 ["tmux", "display-message", "-pt", f"{sname}:0.0", "#{pane_current_command}"],
@@ -1296,9 +1302,9 @@ class Handler(BaseHTTPRequestHandler):
                            capture_output=True, text=True)
         return set(r.stdout.strip().splitlines()) if r.returncode == 0 else set()
 
-    def _project_slug_map(self):
+    def _workspace_slug_map(self):
         with open_db() as conn:
-            rows = conn.execute("SELECT id, name FROM projects").fetchall()
+            rows = conn.execute("SELECT id, name FROM workspaces").fetchall()
         return {slugify(r["name"]): r["name"] for r in rows}
 
     def _list_logs(self):
@@ -1306,7 +1312,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, [])
         active_sessions = self._active_tmux_sessions()
         with open_db() as conn:
-            rows = conn.execute("SELECT id, name FROM projects").fetchall()
+            rows = conn.execute("SELECT id, name FROM workspaces").fetchall()
         slug_names   = {slugify(r["name"]): r["name"] for r in rows}
         active_slugs = {slugify(r["name"]) for r in rows
                         if session_name(r["id"]) in active_sessions}
@@ -1325,7 +1331,7 @@ class Handler(BaseHTTPRequestHandler):
                 except OSError:
                     continue
                 results.append({
-                    "project": slug,
+                    "workspace": slug,
                     "display_name": display_name,
                     "file": fname,
                     "size": st.st_size,
@@ -1336,10 +1342,10 @@ class Handler(BaseHTTPRequestHandler):
         results.sort(key=lambda x: x["mtime"], reverse=True)
         self.send_json(200, results)
 
-    def _get_log_file(self, project, filename):
-        if ".." in project or ".." in filename:
+    def _get_log_file(self, slug, filename):
+        if ".." in slug or ".." in filename:
             return self.send_json(400, {"error": "invalid path"})
-        fpath = os.path.normpath(os.path.join(LOGS_DIR, project, filename))
+        fpath = os.path.normpath(os.path.join(LOGS_DIR, slug, filename))
         if not fpath.startswith(os.path.normpath(LOGS_DIR) + os.sep):
             return self.send_json(400, {"error": "invalid path"})
         if not os.path.isfile(fpath):
@@ -1367,14 +1373,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _tail_current_log(self, project):
-        if ".." in project:
+    def _tail_current_log(self, slug):
+        if ".." in slug:
             return self.send_json(400, {"error": "invalid path"})
-        slug_dir = os.path.normpath(os.path.join(LOGS_DIR, project))
+        slug_dir = os.path.normpath(os.path.join(LOGS_DIR, slug))
         if not slug_dir.startswith(os.path.normpath(LOGS_DIR) + os.sep):
             return self.send_json(400, {"error": "invalid path"})
         if not os.path.isdir(slug_dir):
-            return self.send_json(404, {"error": "no logs for project"})
+            return self.send_json(404, {"error": "no logs for workspace"})
         logs = sorted([f for f in os.listdir(slug_dir) if f.endswith(".log")])
         if not logs:
             return self.send_json(404, {"error": "no log files"})
@@ -1408,7 +1414,7 @@ class Handler(BaseHTTPRequestHandler):
         except subprocess.TimeoutExpired:
             return self.send_json(200, [])
         results = []
-        slug_names = self._project_slug_map()
+        slug_names = self._workspace_slug_map()
         for fpath in r.stdout.strip().splitlines()[:20]:
             if not fpath:
                 continue
@@ -1432,17 +1438,17 @@ class Handler(BaseHTTPRequestHandler):
             except OSError:
                 continue
             results.append({
-                "project": slug,
+                "workspace": slug,
                 "display_name": display_name,
                 "file": fname,
                 "matches": matches,
             })
         self.send_json(200, results)
 
-    def _delete_log_file(self, project, filename):
-        if ".." in project or ".." in filename:
+    def _delete_log_file(self, slug, filename):
+        if ".." in slug or ".." in filename:
             return self.send_json(400, {"error": "invalid path"})
-        fpath = os.path.normpath(os.path.join(LOGS_DIR, project, filename))
+        fpath = os.path.normpath(os.path.join(LOGS_DIR, slug, filename))
         if not fpath.startswith(os.path.normpath(LOGS_DIR) + os.sep):
             return self.send_json(400, {"error": "invalid path"})
         if not os.path.isfile(fpath):

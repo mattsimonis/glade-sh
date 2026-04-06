@@ -3,8 +3,8 @@
 
 -- ── Active tables (used by current code) ────────────────────────────────────
 
--- Projects: terminal sessions managed via tmux + ttyd
-CREATE TABLE IF NOT EXISTS projects (
+-- Workspaces: terminal sessions managed via tmux + ttyd
+CREATE TABLE IF NOT EXISTS workspaces (
     id         TEXT PRIMARY KEY,
     name       TEXT NOT NULL,
     directory  TEXT DEFAULT '',
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- ── Legacy tables (from copilot-logging era, not used by current code) ──────
 -- Session logs are now recorded via tmux pipe-pane to flat files in
--- ~/.glade/logs/{project-slug}/. These tables remain for backward compat
+-- ~/.glade/logs/{workspace-slug}/. These tables remain for backward compat
 -- but no new data is written to them.
 
 CREATE TABLE IF NOT EXISTS sessions (
