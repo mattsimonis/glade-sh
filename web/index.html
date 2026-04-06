@@ -200,6 +200,29 @@
             -webkit-tap-highlight-color: transparent; transition: color .12s, background .12s;
         }
         #pane-controls button:hover { background: var(--surface0); color: var(--text); }
+
+        /* ── Terminal context menu ─────────────────────────────── */
+        #term-ctx {
+            display: none; position: fixed; z-index: 9999;
+            min-width: 160px; padding: 4px 0;
+            background: var(--surface0); border: 1px solid var(--surface1);
+            border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+            font-size: 13px; color: var(--text);
+        }
+        #term-ctx.visible { display: block; }
+        .ctx-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 12px; cursor: pointer; border: none;
+            background: none; color: var(--text); width: 100%;
+            font: inherit; text-align: left;
+        }
+        .ctx-item:hover { background: var(--surface1); }
+        .ctx-item[disabled] { opacity: 0.35; pointer-events: none; }
+        .ctx-item .ctx-key {
+            margin-left: auto; font-size: 11px; color: var(--overlay0);
+        }
+        .ctx-sep { height: 1px; margin: 4px 8px; background: var(--surface1); }
+
         #no-shells-state, #no-workspace-state {
             display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
             gap: 12px; background: var(--base); text-align: center; padding: 24px; padding-top: 96px;
@@ -2513,8 +2536,132 @@
             }, 0);
         });
 
-        // Suppress native right-click menu over the terminal area
-        document.getElementById('pane-grid').addEventListener('contextmenu', function(e) { e.preventDefault(); }, { passive: false });
+        // ── Terminal right-click context menu ────────────────────────────────────
+        (function() {
+            var ctxEl = document.getElementById('term-ctx');
+            var paneGrid = document.getElementById('pane-grid');
+            if (!ctxEl || !paneGrid) return;
+
+            function hideCtx() { ctxEl.classList.remove('visible'); }
+
+            function hasSelection() {
+                try {
+                    if (terminalInstance && typeof terminalInstance.getSelection === 'function') {
+                        var s = terminalInstance.getSelection();
+                        if (s && s.length > 0) return true;
+                    }
+                    var iSel = iframe.contentWindow.getSelection();
+                    if (iSel && iSel.toString().length > 0) return true;
+                } catch(e) {}
+                return false;
+            }
+
+            function buildMenu() {
+                var hasSel = hasSelection();
+                ctxEl.innerHTML = '';
+                var items = [
+                    { label: 'Copy', key: '⌘C', action: 'copy', disabled: !hasSel },
+                    { label: 'Paste', key: '⌘V', action: 'paste' },
+                    { sep: true },
+                    { label: 'Select All', key: '⌘A', action: 'selectAll' },
+                    { sep: true },
+                    { label: 'Clear Terminal', key: '⌘K', action: 'clear' },
+                ];
+                items.forEach(function(item) {
+                    if (item.sep) {
+                        var sep = document.createElement('div');
+                        sep.className = 'ctx-sep';
+                        ctxEl.appendChild(sep);
+                        return;
+                    }
+                    var btn = document.createElement('button');
+                    btn.className = 'ctx-item';
+                    if (item.disabled) btn.setAttribute('disabled', '');
+                    var lbl = document.createElement('span');
+                    lbl.textContent = item.label;
+                    btn.appendChild(lbl);
+                    if (item.key) {
+                        var k = document.createElement('span');
+                        k.className = 'ctx-key';
+                        k.textContent = item.key;
+                        btn.appendChild(k);
+                    }
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        hideCtx();
+                        doAction(item.action);
+                    });
+                    ctxEl.appendChild(btn);
+                });
+            }
+
+            function doAction(action) {
+                switch (action) {
+                    case 'copy':
+                        if (typeof handleCopy === 'function') handleCopy();
+                        break;
+                    case 'paste':
+                        if (typeof handlePaste === 'function') handlePaste();
+                        break;
+                    case 'selectAll':
+                        try {
+                            if (terminalInstance && typeof terminalInstance.selectAll === 'function') {
+                                terminalInstance.selectAll();
+                            }
+                        } catch(e) {}
+                        break;
+                    case 'clear':
+                        try {
+                            if (terminalInstance) {
+                                terminalInstance.clear();
+                                toast('Terminal cleared', 'success');
+                            }
+                        } catch(e) {}
+                        break;
+                }
+            }
+
+            function showCtx(x, y) {
+                buildMenu();
+                ctxEl.style.left = x + 'px';
+                ctxEl.style.top = y + 'px';
+                ctxEl.classList.add('visible');
+                // Keep menu on screen
+                requestAnimationFrame(function() {
+                    var r = ctxEl.getBoundingClientRect();
+                    if (r.right > window.innerWidth) ctxEl.style.left = (window.innerWidth - r.width - 4) + 'px';
+                    if (r.bottom > window.innerHeight) ctxEl.style.top = (window.innerHeight - r.height - 4) + 'px';
+                });
+            }
+
+            // Suppress native menu on the parent grid
+            paneGrid.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                showCtx(e.clientX, e.clientY);
+            }, { passive: false });
+
+            // Dismiss on click anywhere or Escape
+            document.addEventListener('click', function(e) {
+                if (!ctxEl.contains(e.target)) hideCtx();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') hideCtx();
+            });
+
+            // Wire contextmenu inside iframe contentWindows
+            window._wireIframeCtx = function(ifr, paneIdx) {
+                try {
+                    ifr.contentWindow.document.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        // Translate iframe-local coords to parent page coords
+                        var rect = ifr.getBoundingClientRect();
+                        showCtx(rect.left + e.clientX, rect.top + e.clientY);
+                        // Ensure this pane is focused
+                        if (typeof focusPane === 'function') focusPane(paneIdx);
+                    }, { passive: false });
+                } catch(e) {}
+            };
+        })();
         // clip-path fills from tail toward tip for each direction
         const AP_CLIP = {
             ArrowUp:    function(p) { return 'inset('+pct(1-p)+'% 0 0 0)'; },   // tail=bottom, fill upward
@@ -5402,8 +5549,9 @@
                     try {
                         ifr.contentWindow.addEventListener('focus', function() { focusPane(paneIdx); });
                         ifr.contentWindow.addEventListener('pointerdown', function() { focusPane(paneIdx); });
-                        ifr.contentWindow.document.addEventListener('contextmenu', function(e) { e.preventDefault(); }, { passive: false });
                     } catch(e) {}
+                    // Wire right-click context menu inside the iframe
+                    if (window._wireIframeCtx) window._wireIframeCtx(ifr, paneIdx);
                 });
                 // Also fade in after a timeout in case theme load doesn't fire
                 setTimeout(function() { ifr.style.transition = 'opacity 120ms ease'; ifr.style.opacity = '1'; }, 800);
@@ -8966,6 +9114,9 @@
             <span>Try:</span> Open Tailscale · Check Wi-Fi · Verify the container is running
         </div>
     </div>
+
+    <!-- Terminal context menu (positioned by JS on right-click) -->
+    <div id="term-ctx"></div>
 
     <script>
         if ('serviceWorker' in navigator) {
