@@ -2478,6 +2478,11 @@
         if (_paneSplitV) _paneSplitV.addEventListener('click', function() { addPane(); });
         if (_paneClose)  _paneClose.addEventListener('click', function() { removePane(); });
 
+        // ── Pane state ───────────────────────────────────────────────────────
+        var panes = [];
+        var currentFocusedPane = 0;
+        var MAX_PANES = 6;
+
         // Initialize pane[0] from existing DOM
         (function() {
             var cell0 = document.querySelector('#pane-grid .pane-cell');
