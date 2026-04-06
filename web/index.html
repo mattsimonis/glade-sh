@@ -4982,8 +4982,13 @@
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
                 _sessionWasNew = !!data.session_was_new;
                 hideNoShells();
-                if (isMultiPaneCapable() && savedPaneCount > 1 && data.shells && data.shells.length > 1) {
-                    initPanesFromShells(data.shells, savedPaneCount);
+                // Use whichever is larger: saved pane count or actual running shells
+                var effectivePaneCount = savedPaneCount;
+                if (data.shells && data.shells.length > effectivePaneCount) effectivePaneCount = data.shells.length;
+                if (effectivePaneCount > MAX_PANES) effectivePaneCount = MAX_PANES;
+                if (isMultiPaneCapable() && effectivePaneCount > 1 && data.shells && data.shells.length > 1) {
+                    initPanesFromShells(data.shells, effectivePaneCount);
+                    _savePaneCount(pid, effectivePaneCount);
                 } else {
                     // Single pane — use first shell
                     var active = _savedShellChoice(pid, data.shells) || (data.shells || []).find(function(s) { return s.active; });
@@ -5397,6 +5402,7 @@
                     try {
                         ifr.contentWindow.addEventListener('focus', function() { focusPane(paneIdx); });
                         ifr.contentWindow.addEventListener('pointerdown', function() { focusPane(paneIdx); });
+                        ifr.contentWindow.document.addEventListener('contextmenu', function(e) { e.preventDefault(); }, { passive: false });
                     } catch(e) {}
                 });
                 // Also fade in after a timeout in case theme load doesn't fire
