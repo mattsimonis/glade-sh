@@ -185,9 +185,10 @@
 
         /* ── Pane controls ─────────────────────────────────────── */
         #pane-controls {
-            display: none; height: 28px; background: var(--mantle);
-            align-items: center; gap: 4px; padding: 0 8px;
-            border-bottom: 1px solid var(--surface0);
+            display: none; align-items: center; gap: 2px;
+            position: absolute; top: 0; right: 40px; z-index: 22;
+            height: 38px; padding: 0 4px;
+            background: var(--mantle); border-bottom: 1px solid var(--surface0);
         }
         @media (min-width: 768px) and (min-height: 600px) {
             #pane-controls { display: flex; }
@@ -1161,8 +1162,8 @@
             #panel, #bottom-nav, #shortcut-bar { display:none; }
             /* Center vertically within the 38px workspace-tabs-bar; clear the settings gear */
             #status-indicator { top:5px; right:52px; }
-            /* Make room for settings gear at the right of the workspace-tabs-bar */
-            #workspace-tabs-bar { padding-right:44px; }
+            /* Make room for pane controls + settings gear at the right */
+            #workspace-tabs-bar { padding-right: 130px; }
             /* Settings gear — sits in the workspace-tabs-bar row, right side */
             #desktop-settings-btn {
                 display:flex; align-items:center; justify-content:center;
@@ -1628,20 +1629,20 @@
                 <div id="workspace-tabs-bar"></div>
                 <!-- Shell tabs -->
                 <div id="shell-tabs-bar"></div>
+                <div id="pane-controls">
+                    <button id="pane-split-h" title="Split horizontal (⌘D)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                    </button>
+                    <button id="pane-split-v" title="Split vertical (⌘⇧D)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                    </button>
+                    <button id="pane-close" title="Close pane (⌘W)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
                 <!-- Desktop-only settings gear: sits at the right of the workspace-tabs-bar row -->
                 <button id="desktop-settings-btn" title="Settings" aria-label="Settings">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-            </div>
-            <div id="pane-controls">
-                <button id="pane-split-h" title="Split horizontal (⌘D)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
-                </button>
-                <button id="pane-split-v" title="Split vertical (⌘⇧D)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-                </button>
-                <button id="pane-close" title="Close pane (⌘W)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             <div id="pane-grid" class="panes-1">
