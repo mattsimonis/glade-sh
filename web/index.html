@@ -2512,6 +2512,9 @@
                 }
             }, 0);
         });
+
+        // Suppress native right-click menu over the terminal area
+        document.getElementById('pane-grid').addEventListener('contextmenu', function(e) { e.preventDefault(); }, { passive: false });
         // clip-path fills from tail toward tip for each direction
         const AP_CLIP = {
             ArrowUp:    function(p) { return 'inset('+pct(1-p)+'% 0 0 0)'; },   // tail=bottom, fill upward
