@@ -160,7 +160,7 @@ Then open `https://glade.home` in a browser on the host to confirm the UI loads.
 1. Make sure you're on the same network (or connected via Tailscale)
 2. Go to `https://glade.home` in a browser
 3. First visit: run `mkcert -install` on the laptop to trust the local CA (avoids cert warning)
-4. Create a project and run a command — it executes on the host
+4. Create a workspace and run a command — it executes on the host
 
 ---
 
@@ -180,7 +180,7 @@ To avoid cert warnings on iOS: import the mkcert root CA profile → Settings �
 
 ## Optional: Attach Directly via tmux
 
-If you prefer using your own terminal app instead of the browser UI, you can attach directly to any Glade session. Sessions run inside the `glade-ttyd` container and are named `proj-{id}`, where `{id}` is the first 8 characters of the project's UUID.
+If you prefer using your own terminal app instead of the browser UI, you can attach directly to any Glade session. Sessions run inside the `glade-ttyd` container and are named `ws-{id}`, where `{id}` is the first 8 characters of the workspace's UUID.
 
 From the host machine, list all active sessions:
 
@@ -191,14 +191,14 @@ docker exec -it glade-ttyd tmux list-sessions
 Then attach to the one you want:
 
 ```bash
-docker exec -it glade-ttyd tmux attach -t proj-<id>
+docker exec -it glade-ttyd tmux attach -t ws-<id>
 ```
 
 If you're on another machine on the network, SSH to the host first:
 
 ```bash
 ssh user@your-host
-docker exec -it glade-ttyd tmux attach -t proj-<id>
+docker exec -it glade-ttyd tmux attach -t ws-<id>
 ```
 
 Detach with the standard tmux keybinding (`Ctrl+b d`) — the session stays running and is still accessible from the Glade PWA.
@@ -246,10 +246,10 @@ Once Tailscale is set up on the host, `glade.home` needs a DNS record so every d
 
 ## Optional: GitHub Integration
 
-Glade includes a `gh` CLI and can connect to your GitHub account. This is entirely optional — local projects work without it.
+Glade includes a `gh` CLI and can connect to your GitHub account. This is entirely optional — local workspaces work without it.
 
 **What it enables:**
-- Create projects directly from a GitHub repo (clone happens automatically)
+- Create workspaces directly from a GitHub repo (clone happens automatically)
 - Use `gh` commands, `gh copilot`, and authenticated git operations inside the terminal
 
 **One-time setup:** `docker-compose.yml` uses a named Docker volume (`gh-config`) for `gh` auth — it lives inside Docker, separate from the host's `~/.config/gh`, and persists across container restarts and rebuilds.
@@ -261,8 +261,8 @@ Glade includes a `gh` CLI and can connect to your GitHub account. This is entire
 4. Open [github.com/login/device](https://github.com/login/device), enter the code
 5. Done — your username and avatar appear in Settings
 
-**To create a project from a GitHub repo:**
-1. Tap **New Project** → toggle the source to **GitHub Repo**
+**To create a workspace from a GitHub repo:**
+1. Tap **New Workspace** → toggle the source to **GitHub Repo**
 2. Search for a repo, select it, tap Create
 3. Glade clones the repo to `~/.glade/projects/{slug}` and opens a terminal in it
 
@@ -281,5 +281,5 @@ If you tap "GitHub Repo" without being connected, the auth flow starts automatic
 | Terminal shows but no input works | Make sure ttyd is running with `--writable` flag |
 | Docker first build is slow | Normal — first build takes ~2 min. Watch with `docker compose logs -f ttyd` |
 | Phone keyboard covers terminal | The toolbar should push the terminal up. Try "Add to Home Screen" for full-screen mode. |
-| History not logging | Check `ls ~/.glade/logs/` for files. Create a project and run a command to start recording. |
+| History not logging | Check `ls ~/.glade/logs/` for files. Create a workspace and run a command to start recording. |
 

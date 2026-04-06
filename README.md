@@ -23,11 +23,11 @@ It's also a practical fit for AI coding tools. Running Claude Code, GitHub Copil
 <tr>
 <td rowspan="2" valign="top" width="55%">
 
-### GitHub projects in seconds
+### GitHub workspaces in seconds
 
 Connect GitHub in Settings. Search a repo, tap Create — you're already inside it. No manual cloning.
 
-<img src="assets/demos/demo-github.gif" width="100%" alt="GitHub project demo">
+<img src="assets/demos/demo-github.gif" width="100%" alt="GitHub workspace demo">
 </td>
 <td valign="top">
 
@@ -84,11 +84,11 @@ Open `https://glade.home`. Tap **Share → Add to Home Screen** to install the P
 - **AI-ready** — run Claude Code, GitHub Copilot, or any agentic tool directly on your server; isolated inside Docker from your local machine and files; sessions keep running after you close the laptop
 - **Installable PWA** — Add to Home Screen on iOS or Android; full-screen, no browser chrome
 - **Custom mobile keyboard** — Esc, Tab, Ctrl, arrows, combos; long-press to repeat; drag to reorder
-- **Project isolation** — each project gets its own tmux session and ttyd instance; multiple shell tabs per project; long-press or right-click a card to open, edit (name, directory, color), or delete
+- **Workspace isolation** — each workspace gets its own tmux session and ttyd instance; multiple shell tabs per workspace; long-press or right-click a card to open, edit (name, directory, color), or delete
 - **Session logging** — every session recorded automatically via `tmux pipe-pane`; browse and search from History tab
 - **Command snippets** — saved commands that inject directly into the terminal with one tap
 - **Command palette** — keyboard-accessible actions: `^C`, `^Z`, `^A`, new shell, history, snippets, and more
-- **GitHub integration** — connect your GitHub account in Settings; create projects directly from any repo without manual cloning; type `owner/repo` or a GitHub URL to skip search entirely; auth persists across container restarts
+- **GitHub integration** — connect your GitHub account in Settings; create workspaces directly from any repo without manual cloning; type `owner/repo` or a GitHub URL to skip search entirely; auth persists across container restarts
 - **Auto-reconnect** — recovers from network drops and app backgrounding automatically; shows a clear overlay if the host can't be reached
 - **In-app rebuild** — queue a `git pull && docker compose build` from the UI; no SSH needed
 - **Commit Mono font (bundled)** — ships as the default; upload a custom font via Settings → Font for a personalized look

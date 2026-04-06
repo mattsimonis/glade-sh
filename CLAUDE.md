@@ -35,7 +35,7 @@ For user setup, see `SETUP.md`. For the full API reference, see `README.md`.
        │    ttyd      — terminal WebSocket      │
        │    tmux      — session multiplexer     │
        │    pipe-pane — session recording       │
-       │    SQLite    — projects, snippets      │
+       │    SQLite    — workspaces, snippets    │
        └────────────────────────────────────────┘
 ```
 
@@ -75,8 +75,8 @@ Two Docker services defined in `docker-compose.yml`:
 
 ### Terminal Session
 
-1. User taps project card in PWA
-2. PWA calls `POST /api/projects/:id/start`
+1. User taps workspace card in PWA
+2. PWA calls `POST /api/workspaces/:id/start`
 3. API creates tmux session (if not running) via `create_tmux_session()`
 4. API starts `tmux pipe-pane` to record output to `~/.glade/logs/{slug}/{timestamp}.log`
 5. API spawns a ttyd per window via a **linked (grouped) tmux session** (`{sname}-w{idx}`) on a free port (7690–7729)
@@ -88,7 +88,7 @@ Two Docker services defined in `docker-compose.yml`:
 
 - `tmux pipe-pane -o -t {session} 'cat >> {logfile}'` starts on session creation
 - Raw terminal output (including ANSI codes) is appended to the log file
-- Log files: `~/.glade/logs/{project-slug}/{YYYY-MM-DD_HH-MM-SS}.log`
+- Log files: `~/.glade/logs/{slug}/{YYYY-MM-DD_HH-MM-SS}.log`
 - One file per session lifetime; stops when the tmux session closes
 - ANSI codes stripped client-side (in PWA) or server-side (in search API)
 
@@ -96,8 +96,8 @@ Two Docker services defined in `docker-compose.yml`:
 
 1. User opens History tab
 2. PWA calls `GET /api/logs` → list of log files with metadata
-3. User taps a session → PWA calls `GET /api/logs/{project}/{file}`
-4. If active: PWA polls `GET /api/logs/current/{project}` every 3 seconds
+3. User taps a session → PWA calls `GET /api/logs/{workspace}/{file}`
+4. If active: PWA polls `GET /api/logs/current/{workspace}` every 3 seconds
 5. Client-side `stripAnsi()` cleans output for display
 6. Client-side search filters rendered text in real-time
 
@@ -148,13 +148,13 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 | File | Lines | Purpose |
 |---|---|---|
 | `web/index.html` | ~8600 | Single-file PWA: CSS, HTML, JavaScript inline |
-| `api/api.py` | ~1510 | REST API: projects, snippets, logs, uploads, GitHub auth |
+| `api/api.py` | ~1510 | REST API: workspaces, snippets, logs, uploads, GitHub auth |
 | `entrypoint.sh` | ~80 | Container startup: mkdir, clone/pull repo, run update poller, supervise API restart loop |
 | `Dockerfile` | ~60 | Image: Debian, ttyd, Oh My Zsh, packages.sh hook |
 | `docker-compose.yml` | ~74 | Two services: ttyd + web |
 | `Makefile` | ~83 | Daily commands: up, down, restart, build, logs; auto-copies packages.sh if missing |
 | `install.sh` | 292 | Host-side installer (creates dirs, init DB, shell integration) |
-| `db/schema.sql` | 64 | SQLite schema: projects, snippets, settings |
+| `db/schema.sql` | 64 | SQLite schema: workspaces, snippets, settings |
 | `config/zshrc` | — | Shell config baked into image |
 | `config/tmux.conf` | — | Tmux config (Catppuccin Mocha status bar) |
 | `config/packages.sh` | — | Build-time hook: user-defined package installs. Gitignored; not in repo. **Authoritative copy lives at `~/.glade/config/packages.sh`** — rebuild-watcher seeds this path before every build. `make setup`/`make build` only auto-copy from `packages.sh.example` if completely absent. |
@@ -166,10 +166,10 @@ Catppuccin flavor is applied by adding a class (`theme-mocha`, `theme-frappe`, `
 
 | Path | Purpose |
 |---|---|
-| `db/history.db` | SQLite: projects, snippets, settings, keyboard layouts |
-| `logs/{project-slug}/` | Session log files (one per tmux session) |
+| `db/history.db` | SQLite: workspaces, snippets, settings, keyboard layouts |
+| `logs/{slug}/` | Session log files (one per tmux session) |
 | `logs/_main/` | Main shell logs (reserved, currently unused) |
-| `projects/{slug}/` | GitHub-cloned repos (created on project creation from GitHub source) |
+| `projects/{slug}/` | GitHub-cloned repos (created on workspace creation from GitHub source) |
 | `uploads/` | Pasted images (temporary storage) |
 | `assets/fonts/` | Custom font uploads (user-supplied via Settings UI) |
 | `config/zshrc.local` | User shell overrides: `PROMPT`, `RPROMPT`, aliases, extra sources. Sourced last in container `.zshrc`. Edit on host — no rebuild needed. |
@@ -227,7 +227,7 @@ Both handle: CSI sequences (including `?` intermediates like bracketed paste), O
 
 - No log rotation or retention policy (logs grow without bound)
 - ANSI colors are stripped, not rendered, in the log viewer
-- No multi-user access control (anyone on the tailnet sees all projects)
+- No multi-user access control (anyone on the tailnet sees all workspaces)
 - Container restarts don't re-attach pipe-pane to existing sessions
 - `_main/` log directory exists but main shell recording is not wired up
 - The `sessions` and `interactions` tables in schema.sql are legacy (from the copilot-focused era); not used by current code

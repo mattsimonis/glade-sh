@@ -8,7 +8,7 @@ Instructions for GitHub Copilot, Claude, and other AI systems working on this co
 
 **Glade** is a self-hosted browser terminal. An always-on host runs Docker; any device connects via `https://glade.home`. The frontend is a single-file PWA (`web/index.html`, ~8500 lines). The backend is a stdlib Python API (`api/api.py`, ~1510 lines). Session logs are recorded via `tmux pipe-pane` to flat files.
 
-GitHub integration is built in — `gh` CLI ships in the image, GitHub auth state persists via a named Docker volume (`gh-config`), Copilot CLI auth/sessions persist via `~/.glade/config/github-copilot/`, and Claude auth/sessions persist via `~/.glade/config/claude/`. Projects can be created directly from GitHub repos.
+GitHub integration is built in — `gh` CLI ships in the image, GitHub auth state persists via a named Docker volume (`gh-config`), Copilot CLI auth/sessions persist via `~/.glade/config/github-copilot/`, and Claude auth/sessions persist via `~/.glade/config/claude/`. Workspaces can be created directly from GitHub repos.
 
 ---
 
@@ -16,7 +16,7 @@ GitHub integration is built in — `gh` CLI ships in the image, GitHub auth stat
 
 ```
 web/index.html              ← All UI: CSS + HTML + JS inline, no build step
-api/api.py                  ← REST API: projects, snippets, logs, uploads, settings
+api/api.py                  ← REST API: workspaces, snippets, logs, uploads, settings
 entrypoint.sh               ← Container boot: mkdir, clone/pull repo, update poller, API supervisor loop
 Dockerfile                  ← Debian bookworm-slim + ttyd + zsh + packages.sh hook
 docker-compose.yml          ← Two services: glade-ttyd + glade-web
@@ -28,15 +28,15 @@ config/zshrc.example        ← Starter template (committed; plain prompt, tmux 
 config/tmux.conf            ← Tmux config (Catppuccin Mocha status bar)
 config/packages.sh          ← Build-time packages (gitignored, not in repo; authoritative copy lives at ~/.glade/config/packages.sh — rebuild-watcher seeds this path before every build; auto-copied from packages.sh.example by make setup/build only if the file is completely absent)
 config/packages.sh.example  ← Recipe examples: gh CLI, Oh My Zsh, Node.js, pip, Rust (committed)
-db/schema.sql               ← SQLite schema (projects, snippets, settings)
+db/schema.sql               ← SQLite schema (workspaces, snippets, settings)
 install.sh                  ← Host-side installer (copies files, initialises DB, copies *.example → actual)
 ```
 
 ### Runtime data (not in repo, lives at `~/.glade/` on host)
 
 ```
-db/history.db             ← SQLite: projects, snippets, settings
-logs/{project-slug}/      ← Session log files (flat, one per tmux session)
+db/history.db             ← SQLite: workspaces, snippets, settings
+logs/{slug}/              ← Session log files (flat, one per tmux session)
 uploads/                  ← Pasted images
 assets/fonts/             ← Custom font uploads (user-supplied via Settings)
 config/github-copilot/    ← Copilot CLI auth + sessions (bind-mounted to /root/.config/github-copilot)
@@ -50,20 +50,20 @@ scripts/rebuild-watcher.sh ← Host-side rebuild script (triggered by .rebuild-r
 
 ## API Endpoints (api/api.py)
 
-### Projects
-- `GET /api/projects` — list all (with running status)
-- `POST /api/projects` — create `{name, directory, color}`
-- `GET /api/projects/:id` — get one
-- `PUT /api/projects/:id` — update
-- `DELETE /api/projects/:id` — delete + stop ttyd; accepts optional JSON body `{delete_dir: true}` to also remove the cloned directory from `~/.glade/projects/`
-- `POST /api/projects/:id/start` — ensure tmux + ttyd running → `{port}`
-- `POST /api/projects/:id/stop` — kill ttyd (keep tmux)
-- `GET /api/projects/:id/shells` — list tmux windows
-- `POST /api/projects/:id/shells` — new window → `{index}`
-- `PUT /api/projects/:id/shells/:n/select` — switch active window *(no-op: tab switching is now client-side)*
-- `DELETE /api/projects/:id/shells/:n` — kill window
-- `GET /api/projects/activity` — activity status for badge polling
-- `PUT /api/projects/:id/viewed` — clear activity badge
+### Workspaces
+- `GET /api/workspaces` — list all (with running status)
+- `POST /api/workspaces` — create `{name, directory, color}`
+- `GET /api/workspaces/:id` — get one
+- `PUT /api/workspaces/:id` — update
+- `DELETE /api/workspaces/:id` — delete + stop ttyd; accepts optional JSON body `{delete_dir: true}` to also remove the cloned directory from `~/.glade/projects/`
+- `POST /api/workspaces/:id/start` — ensure tmux + ttyd running → `{port}`
+- `POST /api/workspaces/:id/stop` — kill ttyd (keep tmux)
+- `GET /api/workspaces/:id/shells` — list tmux windows
+- `POST /api/workspaces/:id/shells` — new window → `{index}`
+- `PUT /api/workspaces/:id/shells/:n/select` — switch active window *(no-op: tab switching is now client-side)*
+- `DELETE /api/workspaces/:id/shells/:n` — kill window
+- `GET /api/workspaces/activity` — activity status for badge polling
+- `PUT /api/workspaces/:id/viewed` — clear activity badge
 
 ### Snippets
 - `GET /api/snippets` — list all
@@ -87,8 +87,8 @@ scripts/rebuild-watcher.sh ← Host-side rebuild script (triggered by .rebuild-r
 
 ### Session Logs
 - `GET /api/logs` — list all log files (newest first)
-- `GET /api/logs/:project/:file` — raw log content (`?tail=N`)
-- `GET /api/logs/current/:project` — tail active session (last 200 lines)
+- `GET /api/logs/:workspace/:file` — raw log content (`?tail=N`)
+- `GET /api/logs/current/:workspace` — tail active session (last 200 lines)
 - `GET /api/logs/search?q=term` — grep across all logs
 
 ### Uploads
@@ -97,7 +97,7 @@ scripts/rebuild-watcher.sh ← Host-side rebuild script (triggered by .rebuild-r
 - `GET /api/uploads/:filename` — serve file
 
 ### Shell State
-- `GET /api/projects/:id/shell-idle` — `{idle: bool, command: str}` — checks `pane_current_command` in tmux; idle when shell is at prompt (bash/zsh/sh/fish)
+- `GET /api/workspaces/:id/shell-idle` — `{idle: bool, command: str}` — checks `pane_current_command` in tmux; idle when shell is at prompt (bash/zsh/sh/fish)
 
 ### GitHub Auth
 - `GET /api/github/auth/status` — `{connected, username, avatar_url}` (runs `gh auth status`)
@@ -138,7 +138,7 @@ scripts/rebuild-watcher.sh ← Host-side rebuild script (triggered by .rebuild-r
 
 ### Session recording flow
 
-1. `ensure_project_running()` calls `create_tmux_session(sname, dir, slug)`
+1. `ensure_workspace_running()` calls `create_tmux_session(sname, dir, slug)`
 2. `create_tmux_session()` calls `start_pipe_pane(sname, slug)`
 3. `start_pipe_pane()` runs: `tmux pipe-pane -o -t {session} 'cat >> ~/.glade/logs/{slug}/{ts}.log'`
 4. Recording stops when the tmux pane exits
@@ -150,14 +150,14 @@ scripts/rebuild-watcher.sh ← Host-side rebuild script (triggered by .rebuild-r
 | Function | Purpose |
 |---|---|
 | `open_db()` | Returns SQLite connection (creates tables if needed) |
-| `ensure_tables()` | Creates projects/snippets/settings/interactions tables |
+| `ensure_tables()` | Creates workspaces/snippets/settings/interactions tables |
 | `strip_ansi(text)` | Remove ANSI escape codes from terminal output |
-| `slugify(name)` | "My Project" → "my-project" (for log directory names) |
-| `session_name(project_id)` | `"proj-" + project_id[:8]` (tmux session name) |
+| `slugify(name)` | "My Workspace" → "my-workspace" (for log directory names) |
+| `session_name(workspace_id)` | `"ws-" + workspace_id[:8]` (tmux session name) |
 | `create_tmux_session()` | Create tmux session + start pipe-pane recording |
 | `start_pipe_pane()` | Start `tmux pipe-pane` for a session |
-| `ensure_project_running()` | Create tmux + spawn ttyd on a free port |
-| `stop_project_proc()` | Kill ttyd process for a project |
+| `ensure_workspace_running()` | Create tmux + spawn ttyd on a free port |
+| `stop_workspace_proc()` | Kill ttyd process for a workspace |
 | `_gh_available(self)` | Returns bool — is `gh` on PATH? |
 | `_gh_auth_status(self)` | Run `gh auth status` → `{connected, username, avatar_url}` |
 | `_gh_auth_start(self)` | Shell out `gh auth login -w`, parse device code + URL from output |
@@ -172,25 +172,25 @@ scripts/rebuild-watcher.sh ← Host-side rebuild script (triggered by .rebuild-r
 | Function | Purpose |
 |---|---|
 | `renderHistory()` | Fetch and display session log list |
-| `openLogViewer(project, file, name, active)` | Open log viewer with search + live tail |
+| `openLogViewer(workspace, file, name, active)` | Open log viewer with search + live tail |
 | `stripAnsi(str)` | Client-side ANSI code removal |
 | `sendString(str)` | Inject text into ttyd terminal via WebSocket |
 | `attachHandlers()` | Set up custom keyboard with key-repeat logic |
 | `renderShortcutBar()` | Arrow keys + Enter buttons above keyboard |
-| `startProject(id)` / `stopProject(id)` | Project lifecycle from UI |
+| `startWorkspace(id)` / `stopWorkspace(id)` | Workspace lifecycle from UI |
 | `loadShellUrl(url)` | Clear iframe `onbeforeunload`, then navigate to url |
 | `attachSwipeToDismiss(handleEl, sheetEl, closeFn, backdropEl)` | Wire swipe-down-to-dismiss on a bottom sheet |
 | `startGhAuth(pendingSwitch)` | Begin GitHub device flow; shows modal with one-time code |
 | `pollGhAuthStatus()` | Polls `/api/github/auth/status` every 3 s until connected |
 | `renderGhConnected(status)` | Update Settings GitHub section (avatar, username, or "Not connected") |
-| `setProjectSource(src)` | Toggle Local ↔ GitHub in project creation sheet; shows 🔒 on button when not connected |
+| `setWorkspaceSource(src)` | Toggle Local ↔ GitHub in workspace creation sheet; shows 🔒 on button when not connected |
 | `searchGhRepos(q)` | Debounced repo search; renders autocomplete dropdown |
 | `refreshGithubSettingsState()` | Fetches auth status; updates Settings UI and GitHub Repo button icon |
 | `applyTermTheme(name, syncApp)` | Apply a named Catppuccin/Solarized/One Dark theme; clears any active Base16 scheme when `syncApp` is true (user-initiated); persisted in localStorage |
 | `applyBase16Scheme(slug, syncApp)` | Apply a Base16 community scheme by slug; sets all 19 CSS vars on `:root` inline, applies xterm.js terminal colors, persists full theme dict to API; deselects Catppuccin swatches |
 | `clearBase16Theme()` | Remove inline CSS var overrides from `:root` so Catppuccin class-driven theming resumes; clears `localStorage('base16Theme')` |
 | `renderB16List(query)` | Render the Base16 scheme picker list (color dots, name, variant badge, active highlight); used in Settings; has `._markActive(slug)` sub-function |
-| `confirmDeleteProject(p)` | Show two-step delete confirmation: "Delete project + directory" vs "Delete project only"; second prompt added after long-press/right-click context menu |
+| `confirmDeleteWorkspace(p)` | Show two-step delete confirmation: "Delete workspace + directory" vs "Delete workspace only"; second prompt added after long-press/right-click context menu |
 | `openFind()` | Open floating find-in-scrollback bar (Cmd+F); scans xterm.js buffer via `getLine()` |
 | `looksLikeSecret(str)` | Detect credentials (GitHub PAT, OpenAI key, AWS AKIA, JWT, Slack, PEM) in pasted text |
 | `applyCustomFont(cfg)` | Inject `@font-face` style tag (`id="custom-font-face"`) and set `--font-mono` CSS var; `applyCustomFont(null)` removes it and falls back to Commit Mono |
@@ -224,7 +224,7 @@ docker logs glade-ttyd --tail 50
 docker exec glade-ttyd curl -s http://localhost:7683/api/health
 
 # API endpoints (port 7683 is not exposed to host — use docker exec or glade.home)
-docker exec glade-ttyd curl -s http://localhost:7683/api/projects
+docker exec glade-ttyd curl -s http://localhost:7683/api/workspaces
 curl -s https://glade.home/api/logs | python3 -m json.tool
 curl -s https://glade.home/api/logs/search?q=docker
 
@@ -247,7 +247,7 @@ make shell
 
 2. **`make restart` vs `make build`** — `restart` picks up api.py changes (no rebuild). `build` is only for Dockerfile/config changes.
 
-3. **Project slug → log directory** — Project "My App" becomes `my-app/` in `~/.glade/logs/`. The `slugify()` function handles this.
+3. **Workspace slug → log directory** — Workspace "My App" becomes `my-app/` in `~/.glade/logs/`. The `slugify()` function handles this.
 
 4. **Port pool is finite** — 40 per-window ports (7690–7729). `get_free_port()` finds the first unused one. Each tmux window gets its own ttyd process on its own port.
 
@@ -269,7 +269,7 @@ make shell
 
 13. **GitHub auth is isolated to a named Docker volume** — `gh-config` volume mounts to `/root/.config/gh` inside the container. Completely separate from the host's `~/.config/gh`. `_gh_auth_disconnect()` deletes `~/.config/gh/hosts.yml` directly — NOT `gh auth logout`, which is interactive when multiple accounts exist and hangs the request.
 
-14. **GitHub projects clone to `~/.glade/projects/{slug}`** — Not `~/projects` or the bind-mounted dev dir. The `~/.glade/` volume is already mounted, so these repos persist across restarts without any extra config.
+14. **GitHub workspaces clone to `~/.glade/projects/{slug}`** — Not `~/projects` or the bind-mounted dev dir. The `~/.glade/` volume is already mounted, so these repos persist across restarts without any extra config.
 
 15. **`gh auth login -w` outputs to stderr** — The device flow one-time code and URL come from stderr (or mixed stdout/stderr). The `_gh_auth_start()` method reads both streams with a 20 s deadline. If the code line doesn't appear, it falls back to the default verification URL (`https://github.com/login/device`).
 
@@ -285,7 +285,7 @@ make shell
 
 21. **Paste guard on multiline input** — pasting text with newlines shows a confirm dialog with line count before sending. Smart paste also detects secrets (PAT, OpenAI key, AWS AKIA, JWT, PEM, Slack token) and offers bracketed paste (concealed mode) via `looksLikeSecret()`.
 
-22. **Shell-idle polling uses `pane_current_command`** — `GET /api/projects/:id/shell-idle` queries tmux `#{pane_current_command}`. Returns `{idle: true}` when the command is one of the known shell names (bash, zsh, sh, fish, -bash, -zsh). Used by the "Notify when done" feature.
+22. **Shell-idle polling uses `pane_current_command`** — `GET /api/workspaces/:id/shell-idle` queries tmux `#{pane_current_command}`. Returns `{idle: true}` when the command is one of the known shell names (bash, zsh, sh, fish, -bash, -zsh). Used by the "Notify when done" feature.
 
 23. **`config/zshrc` COPY must come _after_ the `packages.sh` RUN step in the Dockerfile** — `packages.sh` installs Oh My Zsh, which unconditionally writes a fresh default `.zshrc` (via `install.sh --unattended`). A `COPY config/zshrc` placed _before_ the `RUN packages.sh` step gets silently overwritten every build. The COPY must be the last config step. This bit us once — don't reorder it.
 
@@ -299,13 +299,13 @@ make shell
 
 28. **`_onThemeLoad` must resolve the active theme, not assume Catppuccin** — `_onThemeLoad` runs on every iframe `load` event. It applies the terminal theme to `options.theme` and injects the `glade-theme-bg` style tag (which prevents the xterm viewport from flashing the wrong background on first paint). It checks `currentB16Scheme` first and derives colors via `_b16term()`; falls back to `TERM_THEMES[currentTermTheme]`. Do not simplify this back to only checking `TERM_THEMES` — that was the exact bug that caused the stale background color on theme switch.
 
-29. **Deleting a project does not auto-delete the cloned directory** — `DELETE /api/projects/:id` only removes the DB record and kills ttyd by default. Pass `{delete_dir: true}` in the JSON body to also `shutil.rmtree` the `directory` field from the DB. The API resolves `os.path.realpath()` on both `PROJECTS_DIR` and the target path before deleting — it will refuse to delete anything outside `~/.glade/projects/`. If the directory is not removed, re-creating a GitHub project from the same repo will increment the clone path counter (`my-project-2`, `-3`, etc.).
+29. **Deleting a workspace does not auto-delete the cloned directory** — `DELETE /api/workspaces/:id` only removes the DB record and kills ttyd by default. Pass `{delete_dir: true}` in the JSON body to also `shutil.rmtree` the `directory` field from the DB. The API resolves `os.path.realpath()` on both `WORKSPACES_DIR` and the target path before deleting — it will refuse to delete anything outside `~/.glade/projects/`. If the directory is not removed, re-creating a GitHub workspace from the same repo will increment the clone path counter (`my-project-2`, `-3`, etc.).
 
-30. **Smart GitHub repo input: two modes** — In the new-project sheet, the repo input field has two behaviors. Typing plain text debounces a `/api/github/repos?q=` search and shows a dropdown. Typing `owner/repo` or a GitHub URL (contains `/` or `github.com`) hides the dropdown and skips the search; on blur it auto-fills the project name from the repo slug. Do not revert to auto-open-on-focus — it caused noise on every tap.
+30. **Smart GitHub repo input: two modes** — In the new-workspace sheet, the repo input field has two behaviors. Typing plain text debounces a `/api/github/repos?q=` search and shows a dropdown. Typing `owner/repo` or a GitHub URL (contains `/` or `github.com`) hides the dropdown and skips the search; on blur it auto-fills the workspace name from the repo slug. Do not revert to auto-open-on-focus — it caused noise on every tap.
 
 31. **Per-window ttyd via linked tmux sessions** — Each tmux window gets its own dedicated ttyd process on its own port. The ttyd attaches to a *linked (grouped) session* named `{sname}-w{idx}` rather than the source session. Linked sessions share all windows but track the current window independently — switching tabs on one device never moves the other device's active window. `_ttyd_shell_key(sname, idx)` returns `"sname:idx"`. `_ensure_window_ttyd(sname, idx)` is the idempotent entry point. `switchShell()` in the client just loads the new port in the iframe — no API call. `PUT /api/.../shells/:n/select` is kept for backward compatibility but is a no-op.
 
-32. **Keyboard shortcuts on desktop** — Ctrl+Tab / Ctrl+Shift+Tab cycle shell tabs within the current project. Cmd+1–9 switch to the Nth project. Arrow keys (Up/Down/Left/Right) and Enter without modifiers are intercepted at the iframe capture-phase and forwarded directly to the terminal WebSocket — bypassing xterm.js focus handling so interactive TUI tools (gh copilot suggest, Go prompts) receive them reliably.
+32. **Keyboard shortcuts on desktop** — Ctrl+Tab / Ctrl+Shift+Tab cycle shell tabs within the current workspace. Cmd+1–9 switch to the Nth workspace. Arrow keys (Up/Down/Left/Right) and Enter without modifiers are intercepted at the iframe capture-phase and forwarded directly to the terminal WebSocket — bypassing xterm.js focus handling so interactive TUI tools (gh copilot suggest, Go prompts) receive them reliably.
 
 33. **Terminal URL links on mobile** — `findUrlAtTerminalPos(outerX, outerY)` converts outer-page viewport coordinates to a terminal cell, reads the xterm buffer, and extracts a URL if one is present at that cell. The `gestureOverlay touchend` handler calls this on every tap; if a URL is found it shows `showUrlActionSheet(url)` (Open in Safari / Copy URL / Cancel action sheet) instead of forwarding the tap to the iframe. On desktop, xterm.js `WebLinksAddon` handles links natively via Ctrl+click. Never attempt to forward a synthesised click or postMessage into the iframe to trigger link handling — `WebLinksAddon` only fires on a real `ctrl+mousedown` inside the xterm canvas; the outer-page tap path cannot fake that modifier.
 
@@ -321,7 +321,7 @@ make shell
 
 39. **After a clean wipe, `install.sh` must be re-run — `make setup` alone is not enough** — `install.sh` creates `~/.glade/scripts/rebuild-watcher.sh` and `auto-update.sh`, then registers both as macOS launchd agents. `make setup` does not call `install.sh`. If `~/.glade/` is deleted (e.g. a clean e2e test wipe) but `~/Library/LaunchAgents/` is not, the plists survive but the scripts they reference are gone. The launchd agents will exit with code 127 on every trigger. Symptoms: rebuild button spins forever, `rebuild.log` stays empty, trigger file is never consumed, `launchctl list | grep glade` shows exit 127. Fix: re-run `bash install.sh` (or manually recreate the two scripts and `launchctl unload/load` the plists).
 
-40. **Reconnect stuck on "Reconnecting…" after app backgrounding — root cause: `about:blank` race on iOS WKWebView** — The original `forceReconnect()` did `iframe.src = 'about:blank'` then in a `requestAnimationFrame` set the real URL. On iOS WKWebView, `about:blank` loads asynchronously — its `load` event fires *after* the rAF has already written the real URL to `iframe.src`. The load guard (`if (iframe.src === 'about:blank') return`) then fails (the attribute already shows the real URL), the handler fires on the blank page, and `setConnectionState('connected')` is called prematurely for empty content. The terminal never completes its own connection cycle. Fix: remove the `about:blank` intermediate entirely. Append `?_r=Date.now()` to the ttyd URL to force a fresh navigation even when the port hasn't changed. One navigation, one `load` event, no race. Secondary fixes in the same patch: (1) `_reconnectingStuckTimer` is reset on every `setConnectionState('reconnecting')` call, not just when the state changes; (2) `checkConnection()` gates `forceReconnect()` on `consecutiveFailures >= MAX_FAIL_DISCONNECTED` (12 s of sustained empty body) — not on any non-connected state — to avoid triggering full reloads during the ~50 ms blank-iframe window that occurs on every project switch.
+40. **Reconnect stuck on "Reconnecting…" after app backgrounding — root cause: `about:blank` race on iOS WKWebView** — The original `forceReconnect()` did `iframe.src = 'about:blank'` then in a `requestAnimationFrame` set the real URL. On iOS WKWebView, `about:blank` loads asynchronously — its `load` event fires *after* the rAF has already written the real URL to `iframe.src`. The load guard (`if (iframe.src === 'about:blank') return`) then fails (the attribute already shows the real URL), the handler fires on the blank page, and `setConnectionState('connected')` is called prematurely for empty content. The terminal never completes its own connection cycle. Fix: remove the `about:blank` intermediate entirely. Append `?_r=Date.now()` to the ttyd URL to force a fresh navigation even when the port hasn't changed. One navigation, one `load` event, no race. Secondary fixes in the same patch: (1) `_reconnectingStuckTimer` is reset on every `setConnectionState('reconnecting')` call, not just when the state changes; (2) `checkConnection()` gates `forceReconnect()` on `consecutiveFailures >= MAX_FAIL_DISCONNECTED` (12 s of sustained empty body) — not on any non-connected state — to avoid triggering full reloads during the ~50 ms blank-iframe window that occurs on every workspace switch.
 
 41. **Brief `visibilitychange` events during a reconnect cause a "reconnecting → empty shell → reconnecting" loop** — iOS fires `visibilitychange` for hides as short as 50 ms (notification shade, app switcher, screen dim). The prior code unconditionally set `reconnectInProgress = false` then called `forceReconnect()` whenever `connectionState !== 'connected'`. Each brief hide/show during an active reconnect killed the in-flight attempt (reset `_forceReconnectId`) and started a fresh one, which loaded the iframe briefly (empty shell visible) before the next hide hit — loop. Fix: gate the `reconnectInProgress = false` reset and `termPollTimer` clear behind `wasHiddenMs > 1500`. iOS only freezes timers after ~1.5 s of background; brief hides do not freeze anything, so the in-flight attempt is still valid. Guard `forceReconnect()` with `!reconnectInProgress` so brief hides during a reconnect do not stack a second attempt on top.
 

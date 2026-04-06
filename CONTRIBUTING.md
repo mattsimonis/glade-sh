@@ -91,4 +91,4 @@ New features and bug fixes should include tests. Place API unit tests in
   clean global state, and mocked subprocess calls for every test.
 - Use `assert_cors(headers)` to verify the CORS header on every response.
 - Name tests after the behavior they verify:
-  `test_create_project_missing_name_returns_400` not `test_create`.
+  `test_create_workspace_missing_name_returns_400` not `test_create`.
