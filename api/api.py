@@ -853,13 +853,26 @@ class Handler(BaseHTTPRequestHandler):
             body = self.read_json()
             cols = int(body.get("cols", 0))
             rows = int(body.get("rows", 0))
+            shell_count = int(body.get("shell_count", 0))
             if cols > 0 and rows > 0:
                 subprocess.run(
                     ["tmux", "resize-window", "-t", sname, "-x", str(cols), "-y", str(rows)],
                     capture_output=True
                 )
         except Exception:
-            pass
+            body = {}
+            shell_count = 0
+        # Batch shell creation: ensure at least shell_count tmux windows exist
+        if shell_count > 1:
+            existing_shells = list_shells_tmux(sname)
+            existing_count = len(existing_shells)
+            directory_for_new = directory if (directory and os.path.isdir(directory)) else "/root"
+            while existing_count < shell_count and existing_count < 40:
+                idx = new_shell_tmux(sname, directory_for_new)
+                if idx is None:
+                    break
+                _ensure_window_ttyd(sname, idx)
+                existing_count += 1
         shells = self._shells_with_ports(wid, sname)
         if wid not in _baselines:
             _baselines[wid] = tmux_history_size(sname)

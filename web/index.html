@@ -4733,7 +4733,7 @@
             });
         }
 
-        async function openLogViewer(project, file, displayName, isActive) {
+        async function openLogViewer(slug, file, displayName, isActive) {
             var listView = document.getElementById('history-list-view');
             var logView = document.getElementById('history-log-view');
             var title = document.getElementById('log-header-title');
@@ -4749,7 +4749,7 @@
             searchInput.value = '';
             var rawText = '';
             try {
-                var r = await fetch('/api/logs/' + encodeURIComponent(project) + '/' + encodeURIComponent(file));
+                var r = await fetch('/api/logs/' + encodeURIComponent(slug) + '/' + encodeURIComponent(file));
                 if (r.ok) rawText = await r.text();
             } catch (e) {}
             var stripped = stripAnsi(rawText);
@@ -4767,7 +4767,7 @@
             if (isActive) {
                 _logTailTimer = setInterval(async function () {
                     try {
-                        var r2 = await fetch('/api/logs/current/' + encodeURIComponent(project));
+                        var r2 = await fetch('/api/logs/current/' + encodeURIComponent(slug));
                         if (r2.ok) {
                             var tail = await r2.text();
                             var s2 = stripAnsi(tail);
