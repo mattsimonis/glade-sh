@@ -161,11 +161,11 @@
         }
         #terminal-spacer { flex-shrink: 0; background: var(--crust); position: relative; z-index: 21; }
         #terminal-iframe { flex: 1; min-height: 0; width: 100%; border: none; display: block; background: var(--base); }
-        #no-shells-state, #no-project-state {
+        #no-shells-state, #no-workspace-state {
             display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
             gap: 12px; background: var(--base); text-align: center; padding: 24px; padding-top: 96px;
         }
-        #no-shells-state.visible, #no-project-state.visible { display: flex; z-index: 25; position: relative; }
+        #no-shells-state.visible, #no-workspace-state.visible { display: flex; z-index: 25; position: relative; }
         .no-shells-icon { font-size: 48px; line-height: 1; margin-bottom: 4px; opacity: 0.5; }
         .no-shells-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
         .no-shells-body  { font-size: 13px; color: var(--overlay0); line-height: 1.6; }
@@ -175,18 +175,18 @@
             cursor: pointer; transition: opacity 120ms;
         }
         .no-shells-btn:active { opacity: 0.75; }
-        .no-project-icon { width: 72px; height: 72px; border-radius: 18px; opacity: 0.7; margin-bottom: 4px; }
-        .no-project-wordmark { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-        .no-project-tagline { font-size: 13px; color: var(--overlay0); line-height: 1.6; }
-        .no-project-btn {
+        .no-workspace-icon { width: 72px; height: 72px; border-radius: 18px; opacity: 0.7; margin-bottom: 4px; }
+        .no-workspace-wordmark { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+        .no-workspace-tagline { font-size: 13px; color: var(--overlay0); line-height: 1.6; }
+        .no-workspace-btn {
             margin-top: 8px; padding: 10px 24px; border: none; border-radius: 10px;
             background: var(--blue); color: var(--base); font-size: 14px; font-weight: 600;
             cursor: pointer; transition: opacity 120ms;
         }
-        .no-project-btn:active { opacity: 0.75; }
+        .no-workspace-btn:active { opacity: 0.75; }
 
-        /* ── Project tab strip ────────────────────────────────── */
-        #project-tabs-bar {
+        /* ── Workspace tab strip ────────────────────────────────── */
+        #workspace-tabs-bar {
             height: 38px; background: var(--mantle); flex-shrink: 0;
             display: flex; align-items: center; overflow-x: auto; overflow-y: hidden;
             border-bottom: 1px solid var(--surface0); gap: 2px; padding: 0 6px;
@@ -194,34 +194,34 @@
             height: calc(38px + env(safe-area-inset-top));
             touch-action: pan-x;
         }
-        #project-tabs-bar::-webkit-scrollbar { display: none; }
-        .proj-tab {
+        #workspace-tabs-bar::-webkit-scrollbar { display: none; }
+        .ws-tab {
             flex-shrink: 0; height: 28px; padding: 0 10px; border-radius: 8px;
             display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500;
             color: var(--overlay0); background: transparent; border: none; cursor: pointer;
             white-space: nowrap; -webkit-tap-highlight-color: transparent;
             transition: background 100ms, color 100ms; position: relative;
         }
-        .proj-tab.active { background: var(--surface0); color: var(--text); }
-        .proj-tab:active { background: var(--surface0); }
-        .proj-dot {
+        .ws-tab.active { background: var(--surface0); color: var(--text); }
+        .ws-tab:active { background: var(--surface0); }
+        .ws-dot {
             width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
             background: var(--surface2);
         }
-        .proj-tab.active .proj-dot { background: currentColor; }
-        .proj-activity-badge {
+        .ws-tab.active .ws-dot { background: currentColor; }
+        .ws-activity-badge {
             width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
             background: var(--peach); display: none;
         }
-        .proj-tab.has-activity .proj-activity-badge { display: block; }
-        #proj-manage-btn {
+        .ws-tab.has-activity .ws-activity-badge { display: block; }
+        #ws-manage-btn {
             flex-shrink: 0; width: 30px; height: 28px; margin-left: 2px;
             display: flex; align-items: center; justify-content: center;
             background: transparent; border: none; border-radius: 8px;
             color: var(--surface1); cursor: pointer; -webkit-tap-highlight-color: transparent;
         }
-        #proj-manage-btn:active { background: var(--surface0); color: var(--surface2); }
-        #proj-manage-btn svg { width: 14px; height: 14px; }
+        #ws-manage-btn:active { background: var(--surface0); color: var(--surface2); }
+        #ws-manage-btn svg { width: 14px; height: 14px; }
 
         /* ── Shell tab strip ──────────────────────────────────── */
         #shell-tabs-bar {
@@ -271,13 +271,13 @@
             #bottom-nav .nav-btn { height: 26px; min-height: 26px; }
         }
 
-        /* ── Project grid overlay ─────────────────────────────── */
-        #project-grid-overlay {
+        /* ── Workspace grid overlay ─────────────────────────────── */
+        #workspace-grid-overlay {
             position: fixed; inset: 0; z-index: 200;
             background: var(--crust); display: flex; flex-direction: column;
             transform: translateY(100%); transition: transform 320ms cubic-bezier(0.34,1.12,0.64,1);
         }
-        #project-grid-overlay.open { transform: translateY(0); }
+        #workspace-grid-overlay.open { transform: translateY(0); }
 
         /* ── iPad persistent sidebar layout (>= 1024px) ───────── */
         #sidebar-toggle-btn {
@@ -295,8 +295,8 @@
                 -webkit-tap-highlight-color: transparent;
             }
             #sidebar-toggle-btn:hover { background: var(--surface0); color: var(--text); }
-            #project-tabs-bar { padding-left: 44px; }
-            #project-grid-overlay {
+            #workspace-tabs-bar { padding-left: 44px; }
+            #workspace-grid-overlay {
                 right: auto !important; bottom: auto !important;
                 width: 260px !important; height: 100dvh !important;
                 z-index: 10 !important;
@@ -305,7 +305,7 @@
                 transform: translateX(-100%);
                 transition: transform 280ms cubic-bezier(0.32,0.72,0,1) !important;
             }
-            body.sidebar-open #project-grid-overlay {
+            body.sidebar-open #workspace-grid-overlay {
                 transform: translateX(0) !important;
             }
             body.sidebar-open #app {
@@ -316,27 +316,27 @@
                 transition: margin-left 280ms cubic-bezier(0.32,0.72,0,1);
             }
             body.sidebar-open #path-footer { left: 260px; }
-            body.sidebar-open #project-grid-close { display: none; }
-            body.sidebar-open #project-grid-header {
+            body.sidebar-open #workspace-grid-close { display: none; }
+            body.sidebar-open #workspace-grid-header {
                 border-bottom-color: var(--surface1);
             }
         }
-        #project-grid-header {
+        #workspace-grid-header {
             flex-shrink: 0; height: 52px; display: flex; align-items: center;
             justify-content: space-between; padding: 0 18px;
             border-bottom: 1px solid var(--surface0);
             padding-top: env(safe-area-inset-top);
             height: calc(52px + env(safe-area-inset-top));
         }
-        #project-grid-header span { font-size: 15px; font-weight: 600; color: var(--text); }
-        #project-grid-close {
+        #workspace-grid-header span { font-size: 15px; font-weight: 600; color: var(--text); }
+        #workspace-grid-close {
             width: 32px; height: 32px; border-radius: 50%;
             background: var(--surface0); border: none; color: var(--subtext1);
             font-size: 18px; line-height: 1; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
         }
-        #project-grid-close:active { background: var(--surface1); }
-        #project-grid-search-row {
+        #workspace-grid-close:active { background: var(--surface1); }
+        #workspace-grid-search-row {
             flex-shrink: 0; padding: 8px 16px 10px; border-bottom: 1px solid var(--surface0);
         }
         #pg-search {
@@ -356,57 +356,57 @@
         #pg-ptr svg { width: 20px; height: 20px; }
         #pg-ptr.spinning svg { animation: ptr-spin 0.7s linear infinite; }
         @keyframes ptr-spin { to { transform: rotate(360deg); } }
-        #project-grid-cards {
+        #workspace-grid-cards {
             flex: 1; overflow-y: auto; padding: 16px;
             display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;
             align-content: start; align-items: start;
         }
-        .proj-card {
+        .ws-card {
             background: var(--base); border: 1px solid var(--surface0); border-radius: 14px;
             padding: 14px 12px; cursor: pointer; position: relative; overflow: hidden;
             display: flex; flex-direction: column; gap: 6px; min-height: 90px;
             -webkit-tap-highlight-color: transparent;
             transition: background 100ms, transform 80ms cubic-bezier(0.34,1.4,0.64,1);
         }
-        .proj-card:active { background: var(--surface0); transform: scale(0.97); }
-        .proj-card.active-proj { border-color: var(--surface2); }
-        .proj-card-accent {
+        .ws-card:active { background: var(--surface0); transform: scale(0.97); }
+        .ws-card.active-ws { border-color: var(--surface2); }
+        .ws-card-accent {
             position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0;
         }
-        .proj-card-name { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 6px; }
-        .proj-card-dir {
+        .ws-card-name { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 6px; }
+        .ws-card-dir {
             font-size: 10px; font-family: var(--font-mono); color: var(--surface2);
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .proj-card-status { display: flex; align-items: center; gap: 5px; margin-top: auto; }
-        .proj-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--surface1); }
-        .proj-status-dot.running { background: var(--green); animation: running-glow 2.4s ease-in-out infinite; }
+        .ws-card-status { display: flex; align-items: center; gap: 5px; margin-top: auto; }
+        .ws-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--surface1); }
+        .ws-status-dot.running { background: var(--green); animation: running-glow 2.4s ease-in-out infinite; }
         @keyframes running-glow { 0%,100%{box-shadow:0 0 3px color-mix(in srgb, var(--green) 40%, transparent)} 50%{box-shadow:0 0 7px color-mix(in srgb, var(--green) 90%, transparent)} }
-        .proj-status-label { font-size: 10px; color: var(--surface1); }
-        .proj-status-dot.running + .proj-status-label { color: var(--overlay0); }
-        .proj-card-add {
+        .ws-status-label { font-size: 10px; color: var(--surface1); }
+        .ws-status-dot.running + .ws-status-label { color: var(--overlay0); }
+        .ws-card-add {
             background: transparent; border: 1.5px dashed var(--surface0); border-radius: 14px;
             min-height: 90px; cursor: pointer; display: flex; align-items: center;
             justify-content: center; flex-direction: column; gap: 6px; color: var(--surface1);
             font-size: 12px; -webkit-tap-highlight-color: transparent;
             transition: border-color 100ms, color 100ms;
         }
-        .proj-card-add:active { border-color: var(--surface2); color: var(--surface2); }
-        .proj-card-add svg { width: 20px; height: 20px; }
+        .ws-card-add:active { border-color: var(--surface2); color: var(--surface2); }
+        .ws-card-add svg { width: 20px; height: 20px; }
 
-        /* ── Add project sheet ────────────────────────────────── */
-        #add-project-backdrop {
+        /* ── Add workspace sheet ────────────────────────────────── */
+        #add-workspace-backdrop {
             position: fixed; inset: 0; z-index: 210; background: color-mix(in srgb, var(--crust) 70%, transparent);
             opacity: 0; transition: opacity 260ms ease; pointer-events: none;
         }
-        #add-project-backdrop.visible { opacity: 1; pointer-events: auto; }
-        #add-project-sheet {
+        #add-workspace-backdrop.visible { opacity: 1; pointer-events: auto; }
+        #add-workspace-sheet {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 220;
             background: var(--mantle); border-radius: 20px 20px 0 0;
             padding: 0 20px calc(20px + env(safe-area-inset-bottom));
             transform: translateY(100%); transition: transform 320ms cubic-bezier(0.34,1.12,0.64,1);
         }
-        #add-project-sheet.open { transform: translateY(0); }
+        #add-workspace-sheet.open { transform: translateY(0); }
         #ap-color-row {
             display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0;
         }
@@ -416,18 +416,36 @@
         }
         .ap-color-swatch.selected { border-color: var(--text); }
 
-        #edit-project-backdrop {
+        /* Pane picker */
+        .pane-pick-field { display: none; }
+        @media (min-width: 768px) and (min-height: 600px) {
+            .pane-pick-field { display: block; }
+        }
+        .pane-pick-row {
+            display: flex; gap: 6px; flex-wrap: wrap;
+        }
+        .pane-pick-btn {
+            width: 36px; height: 36px; border-radius: 6px;
+            border: 2px solid var(--surface1); background: var(--surface0);
+            color: var(--subtext0); cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent; transition: border-color .15s, color .15s;
+        }
+        .pane-pick-btn:hover { border-color: var(--subtext0); color: var(--text); }
+        .pane-pick-btn.active { border-color: var(--blue); color: var(--blue); }
+
+        #edit-workspace-backdrop {
             position: fixed; inset: 0; z-index: 210; background: color-mix(in srgb, var(--crust) 70%, transparent);
             opacity: 0; transition: opacity 260ms ease; pointer-events: none;
         }
-        #edit-project-backdrop.visible { opacity: 1; pointer-events: auto; }
-        #edit-project-sheet {
+        #edit-workspace-backdrop.visible { opacity: 1; pointer-events: auto; }
+        #edit-workspace-sheet {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 220;
             background: var(--mantle); border-radius: 20px 20px 0 0;
             padding: 0 20px calc(20px + env(safe-area-inset-bottom));
             transform: translateY(100%); transition: transform 320ms cubic-bezier(0.34,1.12,0.64,1);
         }
-        #edit-project-sheet.open { transform: translateY(0); }
+        #edit-workspace-sheet.open { transform: translateY(0); }
 
         /* ── Reconnect overlay ────────────────────────────────── */
         #reconnect-overlay {
@@ -1103,11 +1121,11 @@
         /* ── Desktop ──────────────────────────────────────────── */
         @media (min-width: 768px) and (min-height: 600px) {
             #panel, #bottom-nav, #shortcut-bar { display:none; }
-            /* Center vertically within the 38px project-tabs-bar; clear the settings gear */
+            /* Center vertically within the 38px workspace-tabs-bar; clear the settings gear */
             #status-indicator { top:5px; right:52px; }
-            /* Make room for settings gear at the right of the project-tabs-bar */
-            #project-tabs-bar { padding-right:44px; }
-            /* Settings gear — sits in the project-tabs-bar row, right side */
+            /* Make room for settings gear at the right of the workspace-tabs-bar */
+            #workspace-tabs-bar { padding-right:44px; }
+            /* Settings gear — sits in the workspace-tabs-bar row, right side */
             #desktop-settings-btn {
                 display:flex; align-items:center; justify-content:center;
                 position:absolute; top:0; right:0; z-index:22;
@@ -1394,18 +1412,18 @@
             animation: shimmer 1.4s ease-in-out infinite;
         }
 
-        /* ── Project card appear animation ───────────────────── */
+        /* ── Workspace card appear animation ───────────────────── */
         @keyframes card-appear { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
-        .proj-card-new { animation: card-appear 180ms cubic-bezier(0.34,1.2,0.64,1) both; }
+        .ws-card-new { animation: card-appear 180ms cubic-bezier(0.34,1.2,0.64,1) both; }
 
         /* ── Snippet tile insert flash ───────────────────────── */
         .snippet-tile.flash-insert { background: color-mix(in srgb, var(--green) 18%, transparent) !important; transition: none !important; }
 
-        /* ── Project grid empty state ────────────────────────── */
-        .proj-grid-empty { grid-column:1/-1; text-align:center; padding:36px 20px 12px; }
-        .proj-grid-empty-icon { font-size:44px; margin-bottom:12px; line-height:1; }
-        .proj-grid-empty-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:6px; letter-spacing:-.01em; }
-        .proj-grid-empty-body { font-size:13px; color:var(--overlay0); line-height:1.6; }
+        /* ── Workspace grid empty state ────────────────────────── */
+        .ws-grid-empty { grid-column:1/-1; text-align:center; padding:36px 20px 12px; }
+        .ws-grid-empty-icon { font-size:44px; margin-bottom:12px; line-height:1; }
+        .ws-grid-empty-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:6px; letter-spacing:-.01em; }
+        .ws-grid-empty-body { font-size:13px; color:var(--overlay0); line-height:1.6; }
 
         /* ── Keyboard key ripple ─────────────────────────────── */
         .kb-btn { position:relative; overflow:hidden; }
@@ -1476,7 +1494,7 @@
         @keyframes gh-spin { to { transform:rotate(360deg); } }
         .gh-spinner-icon { width:14px; height:14px; border:2px solid var(--surface0); border-top-color:var(--blue); border-radius:50%; animation:gh-spin 0.7s linear infinite; flex-shrink:0; }
 
-        /* ── Source toggle (project creation) ───────────────── */
+        /* ── Source toggle (workspace creation) ───────────────── */
         .ap-source-toggle { display:flex; gap:6px; margin-bottom:16px; }
         .ap-source-btn {
             flex:1; padding:8px; border:1px solid var(--surface0); border-radius:8px; font-size:12px;
@@ -1507,8 +1525,8 @@
         .repo-item-desc { font-size:11px; color:var(--overlay0); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .repo-private-badge { font-size:9px; padding:1px 5px; border-radius:4px; background:color-mix(in srgb, var(--mauve) 15%, transparent); color:var(--mauve); font-family:var(--font-mono); flex-shrink:0; }
 
-        /* ── GitHub badge on project card ────────────────────── */
-        .proj-card-gh-badge {
+        /* ── GitHub badge on workspace card ────────────────────── */
+        .ws-card-gh-badge {
             position:absolute; top:8px; right:6px;
             width:14px; height:14px; opacity:0.45;
         }
@@ -1563,16 +1581,16 @@
         <div id="terminal-container">
             <div id="terminal-spacer">
                 <!-- Sidebar toggle — desktop only (>=1024px) -->
-                <button id="sidebar-toggle-btn" title="Toggle project sidebar" aria-label="Toggle project sidebar">
+                <button id="sidebar-toggle-btn" title="Toggle workspace sidebar" aria-label="Toggle workspace sidebar">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
                     </svg>
                 </button>
-                <!-- Project tabs -->
-                <div id="project-tabs-bar"></div>
+                <!-- Workspace tabs -->
+                <div id="workspace-tabs-bar"></div>
                 <!-- Shell tabs -->
                 <div id="shell-tabs-bar"></div>
-                <!-- Desktop-only settings gear: sits at the right of the project-tabs-bar row -->
+                <!-- Desktop-only settings gear: sits at the right of the workspace-tabs-bar row -->
                 <button id="desktop-settings-btn" title="Settings" aria-label="Settings">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -1584,11 +1602,11 @@
                 <div class="no-shells-body">Tap below to start a new session.</div>
                 <button class="no-shells-btn" id="no-shells-add-btn">+ New Shell</button>
             </div>
-            <div id="no-project-state">
-                <img class="no-project-icon" src="/icons/icon-180.png" alt="Glade">
-                <div class="no-project-wordmark">Glade</div>
-                <div class="no-project-tagline">Your terminal, everywhere.</div>
-                <button class="no-project-btn" id="no-project-open-btn">Open Projects →</button>
+            <div id="no-workspace-state">
+                <img class="no-workspace-icon" src="/icons/icon-180.png" alt="Glade">
+                <div class="no-workspace-wordmark">Glade</div>
+                <div class="no-workspace-tagline">Your terminal, everywhere.</div>
+                <button class="no-workspace-btn" id="no-workspace-open-btn">Open Workspaces →</button>
             </div>
             <div id="status-indicator" role="status" aria-live="polite" aria-label="Connection status">
                 <span class="status-dot connected" id="status-dot"></span>
@@ -1642,7 +1660,7 @@
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
               </button>
               <div style="flex:1"></div>
-              <button class="sidebar-tab-btn" id="sidebar-projects-btn" aria-label="Projects" title="Switch project">
+              <button class="sidebar-tab-btn" id="sidebar-workspaces-btn" aria-label="Workspaces" title="Switch workspace">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
               </button>
           </div>
@@ -1840,15 +1858,15 @@
           <div class="shortcuts-row"><span class="shortcuts-desc">Next / previous tab (alt)</span><span class="shortcuts-keys"><span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">]</span> / <span class="kbd">[</span></span></div>
         </div>
         <div class="shortcuts-section">
-          <div class="shortcuts-section-title">Projects</div>
-          <div class="shortcuts-row"><span class="shortcuts-desc">Switch to project 1–9</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">1</span>–<span class="kbd">9</span></span></div>
-          <div class="shortcuts-row"><span class="shortcuts-desc">Open project switcher</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">K</span> → projects</span></div>
+          <div class="shortcuts-section-title">Workspaces</div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Switch to workspace 1–9</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">1</span>–<span class="kbd">9</span></span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Open workspace switcher</span><span class="shortcuts-keys"><span class="kbd">⌘</span><span class="kbd">K</span> → workspaces</span></div>
           <div class="shortcuts-row"><span class="shortcuts-desc">Close any overlay</span><span class="shortcuts-keys"><span class="kbd">Esc</span></span></div>
         </div>
         <div class="shortcuts-section">
           <div class="shortcuts-section-title">Terminal (iOS)</div>
           <div class="shortcuts-row"><span class="shortcuts-desc">Pinch</span><span class="shortcuts-keys">Resize font</span></div>
-          <div class="shortcuts-row"><span class="shortcuts-desc">Long-press project card</span><span class="shortcuts-keys">Action sheet</span></div>
+          <div class="shortcuts-row"><span class="shortcuts-desc">Long-press workspace card</span><span class="shortcuts-keys">Action sheet</span></div>
           <div class="shortcuts-row"><span class="shortcuts-desc">Swipe toast up</span><span class="shortcuts-keys">Dismiss</span></div>
         </div>
       </div>
@@ -1879,24 +1897,24 @@
         </div>
     </div>
 
-    <!-- Project grid overlay -->
-    <div id="project-grid-overlay">
-        <div id="project-grid-header">
-            <span>Projects</span>
-            <button id="project-grid-close">&#x2715;</button>
+    <!-- Workspace grid overlay -->
+    <div id="workspace-grid-overlay">
+        <div id="workspace-grid-header">
+            <span>Workspaces</span>
+            <button id="workspace-grid-close">&#x2715;</button>
         </div>
-        <div id="project-grid-search-row">
-            <input id="pg-search" type="search" placeholder="Search projects&#8230;"
+        <div id="workspace-grid-search-row">
+            <input id="pg-search" type="search" placeholder="Search workspaces&#8230;"
                    autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
         </div>
-        <div id="project-grid-cards"></div>
+        <div id="workspace-grid-cards"></div>
     </div>
 
-    <!-- Add project sheet -->
-    <div id="add-project-backdrop"></div>
-    <div id="add-project-sheet">
+    <!-- Add workspace sheet -->
+    <div id="add-workspace-backdrop"></div>
+    <div id="add-workspace-sheet">
         <div class="sheet-handle"></div>
-        <div class="sheet-title">New Project</div>
+        <div class="sheet-title">New Workspace</div>
         <!-- Source toggle: Local | GitHub -->
         <div class="ap-source-toggle">
             <button class="ap-source-btn active" id="ap-src-local">Local Directory</button>
@@ -1905,7 +1923,7 @@
         <div class="sheet-field">
             <label class="sheet-label" for="ap-name-input">Name</label>
             <input class="sheet-input" id="ap-name-input" type="text"
-                   autocomplete="off" autocorrect="off" spellcheck="false" placeholder="e.g. My App">
+                   autocomplete="off" autocorrect="off" spellcheck="false" placeholder="e.g. Workspace 1">
         </div>
         <!-- Local directory field -->
         <div class="sheet-field" id="ap-dir-field">
@@ -1924,17 +1942,40 @@
             <label class="sheet-label">Color</label>
             <div id="ap-color-row"></div>
         </div>
+        <div class="sheet-field pane-pick-field" id="ap-pane-field">
+            <label class="sheet-label">Panes</label>
+            <div class="pane-pick-row" id="ap-pane-row">
+                <button class="pane-pick-btn active" data-count="1" title="1 pane">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="pane-pick-btn" data-count="2" title="2 panes">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="pane-pick-btn" data-count="3" title="3 panes">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="2" x2="9" y2="22" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="22" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="pane-pick-btn" data-count="4" title="4 panes">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="pane-pick-btn" data-count="5" title="5 panes">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="2" x2="9" y2="12" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="12" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="12" x2="12" y2="22" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="pane-pick-btn" data-count="6" title="6 panes">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="2" x2="9" y2="22" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="22" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+            </div>
+        </div>
         <div class="sheet-actions">
             <button class="sheet-btn cancel" id="ap-cancel-btn">Cancel</button>
             <button class="sheet-btn save"   id="ap-create-btn">Create</button>
         </div>
     </div>
 
-    <!-- Edit project sheet -->
-    <div id="edit-project-backdrop"></div>
-    <div id="edit-project-sheet">
+    <!-- Edit workspace sheet -->
+    <div id="edit-workspace-backdrop"></div>
+    <div id="edit-workspace-sheet">
         <div class="sheet-handle"></div>
-        <div class="sheet-title">Edit Project</div>
+        <div class="sheet-title">Edit Workspace</div>
         <div class="sheet-field">
             <label class="sheet-label" for="ep-name-input">Name</label>
             <input class="sheet-input" id="ep-name-input" type="text"
@@ -2040,8 +2081,8 @@
                 <span class="settings-value">1.0.0</span>
             </div>
             <div class="settings-row">
-                <span class="settings-label">Projects</span>
-                <span class="settings-value" id="settings-project-count">—</span>
+                <span class="settings-label">Workspaces</span>
+                <span class="settings-value" id="settings-workspace-count">—</span>
             </div>
         </div>
 
@@ -2274,19 +2315,19 @@
         document.addEventListener('touchend',    function() { activeTouchCount = Math.max(0, activeTouchCount - 1); }, { passive: true });
         document.addEventListener('touchcancel', function() { activeTouchCount = 0; }, { passive: true });
 
-        // ── Project state ────────────────────────────────────────────────────
-        let projects = [];
-        let currentProjectId = null;
-        let activityBadges = {};   // projectId -> bool
-        let projFilter = '';       // text filter for project grid
+        // ── Workspace state ────────────────────────────────────────────────────
+        let workspaces = [];
+        let currentWorkspaceId = null;
+        let activityBadges = {};   // workspaceId -> bool
+        let wsFilter = '';       // text filter for workspace grid
         let shellPollTimer = null;
         let currentShells = [];    // [{index, name, active, port}] — last fetched shell list
         let currentShellIdx = null; // index of shell currently displayed in the iframe
-        const _ctrlLDone = new Set(); // project:shell combos that have had their initial clear
+        const _ctrlLDone = new Set(); // workspace:shell combos that have had their initial clear
         let _sessionWasNew = false;   // true when /start created a fresh tmux session
         let activityPollTimer = null;
-        let selectedProjectColor = '#89b4fa';
-        const PROJECT_COLORS = [
+        let selectedWorkspaceColor = '#89b4fa';
+        const WORKSPACE_COLORS = [
             '#89b4fa','#cba6f7','#a6e3a1','#fab387','#f38ba8',
             '#94e2d5','#f9e2af','#f5c2e7','#eba0ac','#b4befe',
         ];
@@ -2358,9 +2399,9 @@
         })();
 
         // ── DOM refs ────────────────────────────────────────────────────────────
-        const iframe            = document.getElementById('terminal-iframe');
+        let iframe              = document.getElementById('terminal-iframe');
         const noShellsState     = document.getElementById('no-shells-state');
-        const noProjectState    = document.getElementById('no-project-state');
+        const noWorkspaceState    = document.getElementById('no-workspace-state');
         const terminalSpacer    = document.getElementById('terminal-spacer');
         const reconnectOverlay  = document.getElementById('reconnect-overlay');
         const statusIndicator   = document.getElementById('status-indicator');
@@ -2374,7 +2415,30 @@
         const pfText            = document.getElementById('path-footer-text');
         const AP_KEY_MAP = { ArrowUp:'ap-up', ArrowDown:'ap-down', ArrowLeft:'ap-left', ArrowRight:'ap-right' };
         document.getElementById('no-shells-add-btn').addEventListener('click', function() { addShell(); });
-        document.getElementById('no-project-open-btn').addEventListener('click', function() { openProjectGrid(); });
+        document.getElementById('no-workspace-open-btn').addEventListener('click', function() { openWorkspaceGrid(); });
+
+        // ── Pane control buttons ─────────────────────────────────────────────
+        document.getElementById('pane-split-h').addEventListener('click', function() { addPane(); });
+        document.getElementById('pane-split-v').addEventListener('click', function() { addPane(); });
+        document.getElementById('pane-close').addEventListener('click', function() { removePane(); });
+
+        // Initialize pane[0] from existing DOM
+        (function() {
+            var cell0 = document.querySelector('#pane-grid .pane-cell');
+            var ifr0 = document.getElementById('terminal-iframe');
+            if (cell0 && ifr0) {
+                panes.push({
+                    cell: cell0,
+                    iframe: ifr0,
+                    port: null,
+                    shellIdx: null,
+                    terminalInstance: null,
+                    xtermTextarea: null,
+                });
+                cell0.addEventListener('click', function() { focusPane(0); });
+                cell0.addEventListener('focusin', function() { focusPane(0); });
+            }
+        })();
         // clip-path fills from tail toward tip for each direction
         const AP_CLIP = {
             ArrowUp:    function(p) { return 'inset('+pct(1-p)+'% 0 0 0)'; },   // tail=bottom, fill upward
@@ -2961,21 +3025,21 @@
                 haptic(8); navPanelAction(btn.dataset.panel);
             }, { passive: false });
         });
-        var sidebarProjectsBtn = document.getElementById('sidebar-projects-btn');
-        if (sidebarProjectsBtn) {
-            sidebarProjectsBtn.addEventListener('click', function() { haptic(8); openProjectGrid(); });
-            sidebarProjectsBtn.addEventListener('touchend', function(e) {
+        var sidebarWorkspacesBtn = document.getElementById('sidebar-workspaces-btn');
+        if (sidebarWorkspacesBtn) {
+            sidebarWorkspacesBtn.addEventListener('click', function() { haptic(8); openWorkspaceGrid(); });
+            sidebarWorkspacesBtn.addEventListener('touchend', function(e) {
                 e.preventDefault(); e.stopPropagation();
-                haptic(8); openProjectGrid();
+                haptic(8); openWorkspaceGrid();
             }, { passive: false });
         }
 
-        const navProjectsBtn = document.getElementById('nav-projects-btn');
-        if (navProjectsBtn) {
-            navProjectsBtn.addEventListener('click', function () { haptic(8); openProjectGrid(); });
-            navProjectsBtn.addEventListener('touchend', function (e) {
+        const navWorkspacesBtn = document.getElementById('nav-workspaces-btn');
+        if (navWorkspacesBtn) {
+            navWorkspacesBtn.addEventListener('click', function () { haptic(8); openWorkspaceGrid(); });
+            navWorkspacesBtn.addEventListener('touchend', function (e) {
                 e.preventDefault(); e.stopPropagation();
-                haptic(8); openProjectGrid();
+                haptic(8); openWorkspaceGrid();
             }, { passive: false });
         }
         navPanelToggleBtn.addEventListener('click', function () {
@@ -3121,7 +3185,7 @@
         function repositionPathFooter() {
             if (!pfEl) return;
             const hasContent = pfText && pfText.textContent.trim().length > 0;
-            if (!hasContent && !currentProjectId) {
+            if (!hasContent && !currentWorkspaceId) {
                 pfEl.classList.remove('pf-visible');
                 pfEl.style.bottom = '-50px';
                 updateTerminalPad();
@@ -3624,9 +3688,9 @@
                     const el = document.getElementById('settings-status-val');
                     if (el) { el.textContent = 'Offline'; el.style.color = 'var(--red)'; }
                 });
-                // Project count
-                fetch('/api/projects').then(function(r) { return r.json(); }).then(function(arr) {
-                    const el = document.getElementById('settings-project-count');
+                // Workspace count
+                fetch('/api/workspaces').then(function(r) { return r.json(); }).then(function(arr) {
+                    const el = document.getElementById('settings-workspace-count');
                     if (el) el.textContent = arr.length;
                 }).catch(function(){});
                 // Interaction count
@@ -4726,7 +4790,7 @@
         });
 
         // ════════════════════════════════════════════════════════════════════════
-        // PROJECT SYSTEM
+        // WORKSPACE SYSTEM
         // ════════════════════════════════════════════════════════════════════════
 
         // ── API helpers ────────────────────────────────────────────────────────
@@ -4742,61 +4806,61 @@
             }
         }
 
-        // ── Load & render project tabs ─────────────────────────────────────────
-        async function loadProjects() {
+        // ── Load & render workspace tabs ─────────────────────────────────────────
+        async function loadWorkspaces() {
             try {
-                projects = await apiJson('/api/projects');
+                workspaces = await apiJson('/api/workspaces');
                 hideHostUnreachable();
             } catch (e) {
                 if (isNetworkError(e)) { showHostUnreachable(); return; }
-                projects = [];
+                workspaces = [];
             }
-            renderProjectTabs();
-            const saved = localStorage.getItem('lastProjectId');
-            if (saved && projects.find(function(p){ return p.id === saved; })) {
-                if (currentProjectId !== saved) switchProject(saved);
-            } else if (!currentProjectId && projects.length > 0) {
-                switchProject(projects[0].id);
-            } else if (!currentProjectId) {
+            renderWorkspaceTabs();
+            const saved = localStorage.getItem('lastWorkspaceId');
+            if (saved && workspaces.find(function(p){ return p.id === saved; })) {
+                if (currentWorkspaceId !== saved) switchWorkspace(saved);
+            } else if (!currentWorkspaceId && workspaces.length > 0) {
+                switchWorkspace(workspaces[0].id);
+            } else if (!currentWorkspaceId) {
                 setConnectionState('connected'); // nothing to reconnect to — clear any stale overlay
                 showNoShells();
             }
 
             // On wide screens, show the sidebar alongside the terminal
             if (isSidebarLayout()) {
-                openProjectGrid();
+                openWorkspaceGrid();
             }
         }
 
-        function renderProjectTabs() {
-            const bar = document.getElementById('project-tabs-bar');
+        function renderWorkspaceTabs() {
+            const bar = document.getElementById('workspace-tabs-bar');
             if (!bar) return;
             bar.innerHTML = '';
-            projects.forEach(function(p) {
+            workspaces.forEach(function(p) {
                 const btn = document.createElement('button');
-                btn.className = 'proj-tab' + (p.id === currentProjectId ? ' active' : '') +
+                btn.className = 'ws-tab' + (p.id === currentWorkspaceId ? ' active' : '') +
                                 (activityBadges[p.id] ? ' has-activity' : '');
-                btn.dataset.projectId = p.id;
+                btn.dataset.workspaceId = p.id;
                 const dot = document.createElement('span');
-                dot.className = 'proj-dot';
+                dot.className = 'ws-dot';
                 dot.style.background = p.color || 'var(--surface2)';
                 const lbl = document.createElement('span');
                 lbl.textContent = p.name;
                 const badge = document.createElement('span');
-                badge.className = 'proj-activity-badge';
+                badge.className = 'ws-activity-badge';
                 btn.appendChild(dot); btn.appendChild(lbl); btn.appendChild(badge);
-                btn.addEventListener('click', function() { switchProject(p.id); });
+                btn.addEventListener('click', function() { switchWorkspace(p.id); });
                 bar.appendChild(btn);
             });
             // Manage button
             const mgr = document.createElement('button');
-            mgr.id = 'proj-manage-btn'; mgr.setAttribute('aria-label', 'Manage projects');
+            mgr.id = 'ws-manage-btn'; mgr.setAttribute('aria-label', 'Manage workspaces');
             mgr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>';
-            mgr.addEventListener('click', openProjectGrid);
+            mgr.addEventListener('click', openWorkspaceGrid);
             bar.appendChild(mgr);
         }
 
-        // Per-device: remember which shell tab this device last used per project.
+        // Per-device: remember which shell tab this device last used per workspace.
         function _saveShellChoice(pid, idx) {
             try { localStorage.setItem('lastShell_' + pid, idx); } catch(e) {}
         }
@@ -4809,62 +4873,65 @@
             } catch(e) { return null; }
         }
 
-        async function switchProject(pid) {
-            // Re-baseline the outgoing project before we leave so any programmatic
-            // activity (Ctrl+L clears sent on load) doesn't trigger a false orange dot.
-            if (currentProjectId && currentProjectId !== pid) {
-                markProjectViewed(currentProjectId);
+        async function switchWorkspace(pid) {
+            if (currentWorkspaceId && currentWorkspaceId !== pid) {
+                markWorkspaceViewed(currentWorkspaceId);
             }
-            // Snapshot terminal dimensions NOW before clearing terminalInstance —
-            // passed to /start so the tmux pane is pre-resized to match. This makes
-            // FitAddon's resize a no-op on reconnect, preventing SIGWINCH and stray
-            // prompt redraws (the "> " artifacts visible after switching back).
             var _preRows = (terminalInstance && terminalInstance.rows) ? terminalInstance.rows : 0;
             var _preCols = (terminalInstance && terminalInstance.cols) ? terminalInstance.cols : 0;
-            currentProjectId = pid;
-            currentShellIdx = null;  // reset — belongs to new project
-            localStorage.setItem('lastProjectId', pid);
-            renderProjectTabs();
+            currentWorkspaceId = pid;
+            currentShellIdx = null;
+            localStorage.setItem('lastWorkspaceId', pid);
+            renderWorkspaceTabs();
             stopShellPoll();
             document.getElementById('shell-tabs-bar').innerHTML = '';
-            reconnectInProgress = false; // project switch supersedes any in-flight reconnect
+            reconnectInProgress = false;
             _iframeErrorAutoRetried = false;
-            // Reset cached terminal references — they belong to the old ttyd page
             terminalInstance = null;
             xtermTextarea = null;
-            // Reset OSC 7 wire so new iframe's WebSocket gets wired on load
             window._osc7Wired = false;
             _osc7WiredSocket = null;
-            // Clear stale path footer; pre-fill with stored directory so it's visible immediately
-            const proj   = projects.find(function(p) { return p.id === pid; });
-            if (pfText) pfText.textContent = (proj && proj.directory) ? proj.directory : '';
+            // Clear all existing panes
+            panes.forEach(function(p) { if (p.cell && p.cell.parentNode) p.cell.parentNode.removeChild(p.cell); });
+            panes = [];
+            const ws = workspaces.find(function(p) { return p.id === pid; });
+            if (pfText) pfText.textContent = (ws && ws.directory) ? ws.directory : '';
             if (pfEl) pfEl.classList.remove('pf-visible');
             repositionShortcutBar();
-            // Start project & get port
             try {
+                var savedPaneCount = _loadPaneCount(pid);
                 var _startBody = (_preRows && _preCols) ? { rows: _preRows, cols: _preCols } : {};
-                const data = await apiJson('/api/projects/' + pid + '/start', { method: 'POST', body: JSON.stringify(_startBody) });
-                // Prefer this device's last-used shell; fall back to tmux's active window
-                const active = _savedShellChoice(pid, data.shells) || (data.shells || []).find(function(s) { return s.active; });
-                const port = (active && active.port) || data.port;
-                if (active) currentShellIdx = active.index;
+                if (savedPaneCount > 1) _startBody.shell_count = savedPaneCount;
+                const data = await apiJson('/api/workspaces/' + pid + '/start', { method: 'POST', body: JSON.stringify(_startBody) });
                 if (data.shells) { currentShells = data.shells; renderShellTabs(data.shells); }
                 _sessionWasNew = !!data.session_was_new;
                 hideNoShells();
-                loadShellUrl('/ttyd/' + port + '/');
+                if (isMultiPaneCapable() && savedPaneCount > 1 && data.shells && data.shells.length > 1) {
+                    initPanesFromShells(data.shells, savedPaneCount);
+                } else {
+                    // Single pane — use first shell
+                    var active = _savedShellChoice(pid, data.shells) || (data.shells || []).find(function(s) { return s.active; });
+                    var port = (active && active.port) || data.port;
+                    if (active) currentShellIdx = active.index;
+                    renderPaneGrid(1);
+                    panes[0].port = port;
+                    panes[0].shellIdx = active ? active.index : 0;
+                    loadPaneUrl(0, '/ttyd/' + port + '/');
+                    focusPane(0);
+                }
                 startShellPoll(pid);
-                markProjectViewed(pid);
-                if (isSidebarLayout() && typeof renderProjectGrid === 'function') renderProjectGrid();
+                markWorkspaceViewed(pid);
+                if (isSidebarLayout() && typeof renderWorkspaceGrid === 'function') renderWorkspaceGrid();
             } catch (e) {
-                console.warn('switchProject failed', e);
+                console.warn('switchWorkspace failed', e);
             }
         }
 
-        function markProjectViewed(pid) {
+        function markWorkspaceViewed(pid) {
             activityBadges[pid] = false;
             syncAppBadge();
-            renderProjectTabs();
-            fetch('/api/projects/' + pid + '/viewed', { method: 'PUT' }).catch(function(){});
+            renderWorkspaceTabs();
+            fetch('/api/workspaces/' + pid + '/viewed', { method: 'PUT' }).catch(function(){});
         }
 
         function syncAppBadge() {
@@ -4878,9 +4945,9 @@
 
         // ── Shell tabs ─────────────────────────────────────────────────────────
         async function refreshShells() {
-            if (!currentProjectId) return;
+            if (!currentWorkspaceId) return;
             let shells = [];
-            try { shells = await apiJson('/api/projects/' + currentProjectId + '/shells'); } catch(e) { return; }
+            try { shells = await apiJson('/api/workspaces/' + currentWorkspaceId + '/shells'); } catch(e) { return; }
             currentShells = shells;
             renderShellTabs(shells);
         }
@@ -4953,27 +5020,249 @@
         // Navigate the terminal iframe to a new ttyd URL without triggering
         // the browser's "Leave site?" dialog (ttyd sets window.onbeforeunload).
         function loadShellUrl(url) {
+            // Delegate to pane-aware loader on the focused pane
+            if (panes.length > 0) {
+                loadPaneUrl(currentFocusedPane, url);
+                return;
+            }
+            // Fallback for pre-pane init
             try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
             terminalInstance = null; xtermTextarea = null;
             window._osc7Wired = false; _osc7WiredSocket = null;
             if (window._exitSelMode) window._exitSelMode();
-            // Hide immediately so the new page never renders into a visible iframe.
-            // The load handler fades back in after the optional Ctrl+L.
             iframe.style.transition = '';
             iframe.style.opacity = '0';
             iframe.src = 'about:blank';
             setTimeout(function() {
-                // Hook load event to apply theme BEFORE the first xterm canvas render.
-                // ttyd initialises window.term synchronously (DOMContentLoaded / inline
-                // script), so by iframe `load` the Terminal object exists but RAF hasn't
-                // fired yet — setting options.theme here means the first paint is correct.
+                iframe.src = url;
+                startTerminalPoll();
+            }, 50);
+        }
+
+        function switchShell(idx) {
+            if (!currentWorkspaceId) return;
+            const shell = currentShells.find(function(s) { return s.index === idx; });
+            if (!shell) return;
+            if (currentShellIdx === idx) return; // already on this shell
+            hideNoShells();
+            currentShellIdx = idx;
+            _saveShellChoice(currentWorkspaceId, idx);
+            const bar = document.getElementById('shell-tabs-bar');
+            if (bar) {
+                bar.querySelectorAll('.shell-tab').forEach(function(t, i) {
+                    t.classList.toggle('active', currentShells[i] && currentShells[i].index === idx);
+                });
+            }
+            // Each window has its own ttyd port — load it directly in the iframe.
+            // No server-side tmux select-window: switching tabs on one device
+            // never affects another client viewing the same workspace.
+            if (shell.port) {
+                loadShellUrl('/ttyd/' + shell.port + '/');
+            }
+        }
+
+        async function addShell() {
+            if (!currentWorkspaceId) return;
+            try {
+                let result;
+                try {
+                    result = await apiJson('/api/workspaces/' + currentWorkspaceId + '/shells', { method: 'POST' });
+                } catch (e) {
+                    // Session not running — /start creates window 0, use it directly
+                    const data = await apiJson('/api/workspaces/' + currentWorkspaceId + '/start', { method: 'POST' });
+                    const existing = data.shells && data.shells.length > 0 ? data.shells[0] : null;
+                    if (existing && existing.port) {
+                        currentShellIdx = existing.index;
+                        _saveShellChoice(currentWorkspaceId, existing.index);
+                        currentShells = data.shells;
+                        renderShellTabs(data.shells);
+                        hideNoShells();
+                        loadShellUrl('/ttyd/' + existing.port + '/');
+                        startShellPoll(currentWorkspaceId);
+                        return;
+                    }
+                    // Fallback: retry creating a shell
+                    result = await apiJson('/api/workspaces/' + currentWorkspaceId + '/shells', { method: 'POST' });
+                }
+                if (result && result.index !== undefined) {
+                    hideNoShells();
+                    await refreshShells();
+                    // Per-window ttyd: each shell has its own port. Must explicitly
+                    // switch to load the new shell's URL in the iframe.
+                    switchShell(result.index);
+                } else {
+                    hideNoShells();
+                    await refreshShells();
+                }
+            } catch (e) { console.warn('addShell failed', e); }
+        }
+
+        function showNoShells() {
+            var grid = getPaneGrid();
+            if (grid) grid.style.display = 'none';
+            if (gestureOverlay) gestureOverlay.style.pointerEvents = 'none';
+            clearInterval(termPollTimer);
+            setConnectionState('connected');
+            if (!currentWorkspaceId) {
+                if (terminalSpacer) terminalSpacer.style.display = 'none';
+                if (pfText) pfText.textContent = '';
+                if (pfEl)   pfEl.classList.remove('pf-visible');
+                if (noWorkspaceState) noWorkspaceState.classList.add('visible');
+                if (noShellsState)  noShellsState.classList.remove('visible');
+            } else {
+                if (terminalSpacer) terminalSpacer.style.display = '';
+                if (noShellsState)   noShellsState.classList.add('visible');
+                if (noWorkspaceState) noWorkspaceState.classList.remove('visible');
+            }
+        }
+        function hideNoShells() {
+            var grid = getPaneGrid();
+            if (grid) grid.style.display = '';
+            if (terminalSpacer) terminalSpacer.style.display = '';
+            if (noShellsState)  noShellsState.classList.remove('visible');
+            if (noWorkspaceState) noWorkspaceState.classList.remove('visible');
+            if (gestureOverlay) gestureOverlay.style.pointerEvents = '';
+        }
+
+        async function closeAllShells() {
+            if (!currentWorkspaceId || !currentShells.length) return;
+            const indices = currentShells.map(function(s) { return s.index; });
+            currentShellIdx = null;
+            await Promise.all(indices.map(function(idx) {
+                return fetch('/api/workspaces/' + currentWorkspaceId + '/shells/' + idx, { method: 'DELETE' }).catch(function(){});
+            }));
+            await refreshShells();
+            if (currentShells.length === 0) showNoShells();
+        }
+
+        async function closeShell(index) {
+            if (!currentWorkspaceId) return;
+            try {
+                const wasDisplayed = (currentShellIdx === index);
+                await fetch('/api/workspaces/' + currentWorkspaceId + '/shells/' + index, { method: 'DELETE' });
+                if (wasDisplayed) currentShellIdx = null;
+                await refreshShells(); // updates currentShells
+                if (currentShells.length === 0) {
+                    showNoShells();
+                } else if (wasDisplayed) {
+                    const next = currentShells.find(function(s) { return s.active; }) || currentShells[0];
+                    switchShell(next.index);
+                }
+            } catch (e) { console.warn('closeShell failed', e); }
+        }
+
+        // ── Multi-pane management ────────────────────────────────────────────
+        function getPaneGrid() { return document.getElementById('pane-grid'); }
+
+        function isMultiPaneCapable() {
+            return window.innerWidth >= 768 && window.innerHeight >= 600;
+        }
+
+        function getPaneCount() { return panes.length || 1; }
+
+        function _gridClassForCount(n) { return 'panes-' + Math.max(1, Math.min(MAX_PANES, n)); }
+
+        function _savePaneCount(pid, n) {
+            if (pid) try { localStorage.setItem('paneCount_' + pid, n); } catch(e) {}
+        }
+        function _loadPaneCount(pid) {
+            if (!pid) return 1;
+            var v = parseInt(localStorage.getItem('paneCount_' + pid) || '1', 10);
+            return (v >= 1 && v <= MAX_PANES) ? v : 1;
+        }
+
+        function _createPaneCell(paneIdx) {
+            var cell = document.createElement('div');
+            cell.className = 'pane-cell';
+            cell.setAttribute('data-pane', paneIdx);
+            var ifr = document.createElement('iframe');
+            ifr.src = 'about:blank';
+            ifr.title = 'Terminal pane ' + (paneIdx + 1);
+            ifr.style.cssText = 'width:100%;height:100%;border:none;display:block;background:var(--base);';
+            cell.appendChild(ifr);
+            cell.addEventListener('click', function() { focusPane(paneIdx); });
+            cell.addEventListener('focusin', function() { focusPane(paneIdx); });
+            return { cell: cell, iframe: ifr };
+        }
+
+        function renderPaneGrid(count) {
+            var grid = getPaneGrid();
+            if (!grid) return;
+            count = Math.max(1, Math.min(MAX_PANES, count || 1));
+            // Remove old class, set new
+            for (var c = 1; c <= MAX_PANES; c++) grid.classList.remove('panes-' + c);
+            grid.classList.add(_gridClassForCount(count));
+            // Keep existing panes that still fit; add new ones; remove excess
+            while (panes.length > count) {
+                var removed = panes.pop();
+                if (removed.cell && removed.cell.parentNode) removed.cell.parentNode.removeChild(removed.cell);
+            }
+            for (var i = 0; i < count; i++) {
+                if (i < panes.length) {
+                    // Existing pane — update data-pane index
+                    panes[i].cell.setAttribute('data-pane', i);
+                } else {
+                    // New pane
+                    var created = _createPaneCell(i);
+                    panes.push({
+                        cell: created.cell,
+                        iframe: created.iframe,
+                        port: null,
+                        shellIdx: null,
+                        terminalInstance: null,
+                        xtermTextarea: null,
+                    });
+                    grid.appendChild(created.cell);
+                }
+            }
+            // Ensure focused pane is valid
+            if (currentFocusedPane >= count) currentFocusedPane = 0;
+            _updatePaneFocusClasses();
+            // When multi-pane, hide shell tabs bar; show it for single pane
+            var shellBar = document.getElementById('shell-tabs-bar');
+            if (shellBar) shellBar.style.display = (count > 1) ? 'none' : '';
+            // Update close button state
+            var closeBtn = document.getElementById('pane-close');
+            if (closeBtn) closeBtn.style.opacity = (count <= 1) ? '0.3' : '';
+        }
+
+        function _updatePaneFocusClasses() {
+            panes.forEach(function(p, i) {
+                p.cell.classList.toggle('pane-focused', i === currentFocusedPane);
+            });
+        }
+
+        function focusPane(idx) {
+            if (idx < 0 || idx >= panes.length) return;
+            currentFocusedPane = idx;
+            _updatePaneFocusClasses();
+            // Update global references so existing code (keyboard input, theme, etc.) targets the focused pane
+            var p = panes[idx];
+            if (p) {
+                iframe = p.iframe;
+                terminalInstance = p.terminalInstance;
+                xtermTextarea = p.xtermTextarea;
+                currentShellIdx = p.shellIdx;
+            }
+        }
+
+        function loadPaneUrl(paneIdx, url) {
+            if (paneIdx < 0 || paneIdx >= panes.length) return;
+            var p = panes[paneIdx];
+            var ifr = p.iframe;
+            try { ifr.contentWindow.onbeforeunload = null; } catch(e) {}
+            p.terminalInstance = null;
+            p.xtermTextarea = null;
+            ifr.style.transition = '';
+            ifr.style.opacity = '0';
+            ifr.src = 'about:blank';
+            setTimeout(function() {
                 function _onThemeLoad() {
-                    iframe.removeEventListener('load', _onThemeLoad);
-                    if (!iframe.src || !iframe.src.includes('/ttyd/')) return;
+                    ifr.removeEventListener('load', _onThemeLoad);
+                    if (!ifr.src || !ifr.src.includes('/ttyd/')) return;
                     try {
-                        var _w = iframe.contentWindow;
+                        var _w = ifr.contentWindow;
                         if (!_w) return;
-                        // Resolve active terminal theme — Base16 takes precedence over Catppuccin
                         var _termTheme = null;
                         if (currentB16Scheme) {
                             var _b16s = BASE16_SCHEMES.find(function(s) { return s.s === currentB16Scheme; });
@@ -4990,9 +5279,8 @@
                         }
                         if (_ti && typeof _ti.options === 'object') {
                             _ti.options.theme = _termTheme;
-                            if (!terminalInstance) terminalInstance = _ti;
+                            p.terminalInstance = _ti;
                         }
-                        // CSS fallback: override background before canvas paints
                         var _iDoc = _w.document;
                         if (_iDoc && _iDoc.head && !_iDoc.getElementById('glade-theme-bg')) {
                             var _s = _iDoc.createElement('style');
@@ -5001,129 +5289,88 @@
                             _iDoc.head.appendChild(_s);
                         }
                     } catch(e) {}
+                    // Fade in
+                    ifr.style.transition = 'opacity 120ms ease';
+                    ifr.style.opacity = '1';
+                    // Sync global refs if this is the focused pane
+                    if (paneIdx === currentFocusedPane) {
+                        terminalInstance = p.terminalInstance;
+                        xtermTextarea = p.xtermTextarea;
+                    }
                 }
-                iframe.addEventListener('load', _onThemeLoad);
-                iframe.src = url;
-                startTerminalPoll();
+                ifr.addEventListener('load', _onThemeLoad);
+                ifr.src = url;
+                // Also fade in after a timeout in case theme load doesn't fire
+                setTimeout(function() { ifr.style.transition = 'opacity 120ms ease'; ifr.style.opacity = '1'; }, 800);
             }, 50);
         }
 
-        function switchShell(idx) {
-            if (!currentProjectId) return;
-            const shell = currentShells.find(function(s) { return s.index === idx; });
-            if (!shell) return;
-            if (currentShellIdx === idx) return; // already on this shell
-            hideNoShells();
-            currentShellIdx = idx;
-            _saveShellChoice(currentProjectId, idx);
-            const bar = document.getElementById('shell-tabs-bar');
-            if (bar) {
-                bar.querySelectorAll('.shell-tab').forEach(function(t, i) {
-                    t.classList.toggle('active', currentShells[i] && currentShells[i].index === idx);
-                });
-            }
-            // Each window has its own ttyd port — load it directly in the iframe.
-            // No server-side tmux select-window: switching tabs on one device
-            // never affects another client viewing the same project.
-            if (shell.port) {
-                loadShellUrl('/ttyd/' + shell.port + '/');
-            }
+        async function addPane() {
+            if (!currentWorkspaceId || !isMultiPaneCapable()) return;
+            if (panes.length >= MAX_PANES) return;
+            try {
+                var result = await apiJson('/api/workspaces/' + currentWorkspaceId + '/shells', { method: 'POST' });
+                if (!result || result.index === undefined) return;
+                var newCount = panes.length + 1;
+                renderPaneGrid(newCount);
+                _savePaneCount(currentWorkspaceId, newCount);
+                await refreshShells();
+                var shell = currentShells.find(function(s) { return s.index === result.index; });
+                var newPaneIdx = panes.length - 1;
+                if (shell && shell.port) {
+                    panes[newPaneIdx].port = shell.port;
+                    panes[newPaneIdx].shellIdx = shell.index;
+                    loadPaneUrl(newPaneIdx, '/ttyd/' + shell.port + '/');
+                }
+                focusPane(newPaneIdx);
+            } catch(e) { console.warn('addPane failed', e); }
         }
 
-        async function addShell() {
-            if (!currentProjectId) return;
-            try {
-                let result;
+        async function removePane(paneIdx) {
+            if (paneIdx === undefined) paneIdx = currentFocusedPane;
+            if (panes.length <= 1) return;
+            if (paneIdx < 0 || paneIdx >= panes.length) return;
+            var p = panes[paneIdx];
+            // Kill the shell via API
+            if (currentWorkspaceId && p.shellIdx !== null) {
                 try {
-                    result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
-                } catch (e) {
-                    // Session not running — /start creates window 0, use it directly
-                    const data = await apiJson('/api/projects/' + currentProjectId + '/start', { method: 'POST' });
-                    const existing = data.shells && data.shells.length > 0 ? data.shells[0] : null;
-                    if (existing && existing.port) {
-                        currentShellIdx = existing.index;
-                        _saveShellChoice(currentProjectId, existing.index);
-                        currentShells = data.shells;
-                        renderShellTabs(data.shells);
-                        hideNoShells();
-                        loadShellUrl('/ttyd/' + existing.port + '/');
-                        startShellPoll(currentProjectId);
-                        return;
-                    }
-                    // Fallback: retry creating a shell
-                    result = await apiJson('/api/projects/' + currentProjectId + '/shells', { method: 'POST' });
-                }
-                if (result && result.index !== undefined) {
-                    hideNoShells();
-                    await refreshShells();
-                    // Per-window ttyd: each shell has its own port. Must explicitly
-                    // switch to load the new shell's URL in the iframe.
-                    switchShell(result.index);
-                } else {
-                    hideNoShells();
-                    await refreshShells();
-                }
-            } catch (e) { console.warn('addShell failed', e); }
-        }
-
-        function showNoShells() {
-            iframe.style.display = 'none';
-            if (gestureOverlay) gestureOverlay.style.pointerEvents = 'none';
-            clearInterval(termPollTimer);
-            setConnectionState('connected'); // clear any reconnect overlay
-            // Show the right empty state depending on whether a project is open
-            if (!currentProjectId) {
-                if (terminalSpacer) terminalSpacer.style.display = 'none';
-                if (pfText) pfText.textContent = '';
-                if (pfEl)   pfEl.classList.remove('pf-visible');
-                if (noProjectState) noProjectState.classList.add('visible');
-                if (noShellsState)  noShellsState.classList.remove('visible');
-            } else {
-                if (terminalSpacer) terminalSpacer.style.display = '';
-                if (noShellsState)   noShellsState.classList.add('visible');
-                if (noProjectState) noProjectState.classList.remove('visible');
+                    await fetch('/api/workspaces/' + currentWorkspaceId + '/shells/' + p.shellIdx, { method: 'DELETE' });
+                } catch(e) {}
             }
-        }
-        function hideNoShells() {
-            iframe.style.display = '';
-            if (terminalSpacer) terminalSpacer.style.display = '';
-            if (noShellsState)  noShellsState.classList.remove('visible');
-            if (noProjectState) noProjectState.classList.remove('visible');
-            if (gestureOverlay) gestureOverlay.style.pointerEvents = '';
-        }
-
-        async function closeAllShells() {
-            if (!currentProjectId || !currentShells.length) return;
-            const indices = currentShells.map(function(s) { return s.index; });
-            currentShellIdx = null;
-            await Promise.all(indices.map(function(idx) {
-                return fetch('/api/projects/' + currentProjectId + '/shells/' + idx, { method: 'DELETE' }).catch(function(){});
-            }));
+            // Remove from DOM and panes array
+            if (p.cell && p.cell.parentNode) p.cell.parentNode.removeChild(p.cell);
+            panes.splice(paneIdx, 1);
+            // Re-index remaining panes
+            panes.forEach(function(pp, i) { pp.cell.setAttribute('data-pane', i); });
+            var newCount = panes.length;
+            renderPaneGrid(newCount);
+            _savePaneCount(currentWorkspaceId, newCount);
+            if (currentFocusedPane >= newCount) currentFocusedPane = newCount - 1;
+            focusPane(currentFocusedPane);
             await refreshShells();
-            if (currentShells.length === 0) showNoShells();
         }
 
-        async function closeShell(index) {
-            if (!currentProjectId) return;
-            try {
-                const wasDisplayed = (currentShellIdx === index);
-                await fetch('/api/projects/' + currentProjectId + '/shells/' + index, { method: 'DELETE' });
-                if (wasDisplayed) currentShellIdx = null;
-                await refreshShells(); // updates currentShells
-                if (currentShells.length === 0) {
-                    showNoShells();
-                } else if (wasDisplayed) {
-                    const next = currentShells.find(function(s) { return s.active; }) || currentShells[0];
-                    switchShell(next.index);
+        function initPanesFromShells(shells, targetCount) {
+            if (!isMultiPaneCapable()) targetCount = 1;
+            targetCount = Math.max(1, Math.min(MAX_PANES, targetCount));
+            renderPaneGrid(targetCount);
+            // Assign shells to panes — one shell per pane
+            for (var i = 0; i < targetCount && i < shells.length; i++) {
+                var sh = shells[i];
+                if (sh && sh.port) {
+                    panes[i].port = sh.port;
+                    panes[i].shellIdx = sh.index;
+                    loadPaneUrl(i, '/ttyd/' + sh.port + '/');
                 }
-            } catch (e) { console.warn('closeShell failed', e); }
+            }
+            focusPane(0);
         }
 
         function startShellPoll(pid) {
             stopShellPoll();
             refreshShells();
             shellPollTimer = setInterval(function() {
-                if (currentProjectId === pid) refreshShells();
+                if (currentWorkspaceId === pid) refreshShells();
                 else stopShellPoll();
             }, 2000);
         }
@@ -5137,89 +5384,89 @@
             if (activityPollTimer) return;
             activityPollTimer = setInterval(async function() {
                 try {
-                    const data = await apiJson('/api/projects/activity');
+                    const data = await apiJson('/api/workspaces/activity');
                     let changed = false;
                     data.forEach(function(item) {
-                        if (item.id !== currentProjectId && item.hasActivity && !activityBadges[item.id]) {
+                        if (item.id !== currentWorkspaceId && item.hasActivity && !activityBadges[item.id]) {
                             activityBadges[item.id] = true; changed = true;
                         }
                     });
-                    if (changed) { renderProjectTabs(); syncAppBadge(); }
+                    if (changed) { renderWorkspaceTabs(); syncAppBadge(); }
                 } catch(e) {}
             }, 3000);
         }
 
-        // ── Project grid overlay ───────────────────────────────────────────────
+        // ── Workspace grid overlay ───────────────────────────────────────────────
         function isSidebarLayout() { return window.innerWidth >= 1024; }
 
-        async function openProjectGrid() {
-            projFilter = '';
+        async function openWorkspaceGrid() {
+            wsFilter = '';
             const srch = document.getElementById('pg-search');
             if (srch) srch.value = '';
-            const grid = document.getElementById('project-grid-cards');
+            const grid = document.getElementById('workspace-grid-cards');
             if (grid) {
                 grid.innerHTML = '<div class="grid-skeleton"></div><div class="grid-skeleton"></div><div class="grid-skeleton"></div>';
             }
             if (isSidebarLayout()) {
                 document.body.classList.add('sidebar-open');
             } else {
-                document.getElementById('project-grid-overlay').classList.add('open');
+                document.getElementById('workspace-grid-overlay').classList.add('open');
             }
-            try { projects = await apiJson('/api/projects'); } catch (e) {}
-            renderProjectGrid();
+            try { workspaces = await apiJson('/api/workspaces'); } catch (e) {}
+            renderWorkspaceGrid();
             setupPullToRefresh();
         }
 
-        function closeProjectGrid() {
+        function closeWorkspaceGrid() {
             document.body.classList.remove('sidebar-open');
-            document.getElementById('project-grid-overlay').classList.remove('open');
+            document.getElementById('workspace-grid-overlay').classList.remove('open');
         }
 
-        // Pre-encoded once — reused on every renderProjectGrid call
+        // Pre-encoded once — reused on every renderWorkspaceGrid call
         const GITHUB_BADGE_SRC = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>');
 
-        function afterDeleteProject(deletedId) {
-            if (currentProjectId === deletedId) {
-                if (projects.length > 0) {
-                    switchProject(projects[0].id);
+        function afterDeleteWorkspace(deletedId) {
+            if (currentWorkspaceId === deletedId) {
+                if (workspaces.length > 0) {
+                    switchWorkspace(workspaces[0].id);
                 } else {
-                    currentProjectId = null;
+                    currentWorkspaceId = null;
                     currentShells = [];
                     currentShellIdx = null;
-                    localStorage.removeItem('lastProjectId');
+                    localStorage.removeItem('lastWorkspaceId');
                     try { iframe.contentWindow.onbeforeunload = null; } catch(e) {}
                     iframe.src = 'about:blank';
                     setConnectionState('connected');
                     renderShellTabs([]);
                     showNoShells();
-                    openProjectGrid();
+                    openWorkspaceGrid();
                 }
             }
         }
 
-        function doDeleteProject(pid, deleteDir) {
-            apiJson('/api/projects/' + pid, {
+        function doDeleteWorkspace(pid, deleteDir) {
+            apiJson('/api/workspaces/' + pid, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ delete_dir: !!deleteDir })
             })
                 .then(function() {
-                    projects = projects.filter(function(x) { return x.id !== pid; });
-                    afterDeleteProject(pid);
-                    renderProjectGrid();
-                    renderProjectTabs();
-                    toast('Project deleted', 'success');
+                    workspaces = workspaces.filter(function(x) { return x.id !== pid; });
+                    afterDeleteWorkspace(pid);
+                    renderWorkspaceGrid();
+                    renderWorkspaceTabs();
+                    toast('Workspace deleted', 'success');
                 })
                 .catch(function() { toast('Delete failed', 'error'); });
         }
 
-        function confirmDeleteProject(p) {
+        function confirmDeleteWorkspace(p) {
             var dir = p.directory || '';
             var actions = [
-                { label: 'Delete project', style: 'danger', onConfirm: function() { doDeleteProject(p.id, false); } }
+                { label: 'Delete workspace', style: 'danger', onConfirm: function() { doDeleteWorkspace(p.id, false); } }
             ];
             if (dir) {
-                actions.unshift({ label: 'Delete project + directory', style: 'danger', onConfirm: function() { doDeleteProject(p.id, true); } });
+                actions.unshift({ label: 'Delete workspace + directory', style: 'danger', onConfirm: function() { doDeleteWorkspace(p.id, true); } });
             }
             showConfirm('Delete \u201c' + p.name + '\u201d?', dir || 'No directory set.', actions);
         }
@@ -5279,8 +5526,8 @@
         }
 
 
-        function renderProjectGrid() {
-            const grid = document.getElementById('project-grid-cards');
+        function renderWorkspaceGrid() {
+            const grid = document.getElementById('workspace-grid-cards');
             if (!grid) return;
             grid.innerHTML = '';
 
@@ -5290,43 +5537,43 @@
             ptr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>';
             grid.appendChild(ptr);
 
-            const q = projFilter.toLowerCase();
-            let displayProjects = q
-                ? projects.filter(function(p) {
+            const q = wsFilter.toLowerCase();
+            let displayWorkspaces = q
+                ? workspaces.filter(function(p) {
                     return p.name.toLowerCase().includes(q) || (p.directory || '').toLowerCase().includes(q);
                 })
-                : projects.slice();
+                : workspaces.slice();
 
-            // Running projects surface first
-            displayProjects.sort(function(a, b) {
+            // Running workspaces surface first
+            displayWorkspaces.sort(function(a, b) {
                 if (a.running && !b.running) return -1;
                 if (!a.running && b.running) return 1;
                 return 0;
             });
 
             // Update header count
-            const hdrSpan = document.querySelector('#project-grid-header span');
-            if (hdrSpan) hdrSpan.textContent = projects.length ? 'Projects\u00a0(' + projects.length + ')' : 'Projects';
+            const hdrSpan = document.querySelector('#workspace-grid-header span');
+            if (hdrSpan) hdrSpan.textContent = workspaces.length ? 'Workspaces\u00a0(' + workspaces.length + ')' : 'Workspaces';
 
-            displayProjects.forEach(function(p, i) {
+            displayWorkspaces.forEach(function(p, i) {
                 const card = document.createElement('div');
-                card.className = 'proj-card' + (p.id === currentProjectId ? ' active-proj' : '') + ' proj-card-new';
+                card.className = 'ws-card' + (p.id === currentWorkspaceId ? ' active-ws' : '') + ' ws-card-new';
                 card.style.animationDelay = (i * 30) + 'ms';
                 const accent = document.createElement('div');
-                accent.className = 'proj-card-accent';
+                accent.className = 'ws-card-accent';
                 accent.style.background = p.color || 'var(--surface2)';
-                const nm = document.createElement('div'); nm.className = 'proj-card-name'; nm.textContent = p.name;
-                const dr = document.createElement('div'); dr.className = 'proj-card-dir'; dr.textContent = p.directory || '~';
-                const st = document.createElement('div'); st.className = 'proj-card-status';
+                const nm = document.createElement('div'); nm.className = 'ws-card-name'; nm.textContent = p.name;
+                const dr = document.createElement('div'); dr.className = 'ws-card-dir'; dr.textContent = p.directory || '~';
+                const st = document.createElement('div'); st.className = 'ws-card-status';
                 const dot = document.createElement('div');
-                dot.className = 'proj-status-dot' + (p.running ? ' running' : '');
-                const lbl = document.createElement('div'); lbl.className = 'proj-status-label';
+                dot.className = 'ws-status-dot' + (p.running ? ' running' : '');
+                const lbl = document.createElement('div'); lbl.className = 'ws-status-label';
                 lbl.textContent = p.running ? 'running' : 'idle';
                 st.appendChild(dot); st.appendChild(lbl);
                 card.appendChild(accent); card.appendChild(nm); card.appendChild(dr); card.appendChild(st);
                 if (p.github_repo) {
                     const ghBadge = document.createElement('img');
-                    ghBadge.className = 'proj-card-gh-badge';
+                    ghBadge.className = 'ws-card-gh-badge';
                     ghBadge.src = GITHUB_BADGE_SRC;
                     ghBadge.setAttribute('aria-hidden', 'true');
                     card.style.position = 'relative';
@@ -5345,11 +5592,11 @@
                             p.directory || '',
                             [
                                 { label: 'Open', style: 'neutral', onConfirm: function() {
-                                    if (!isSidebarLayout()) closeProjectGrid();
-                                    switchProject(p.id);
+                                    if (!isSidebarLayout()) closeWorkspaceGrid();
+                                    switchWorkspace(p.id);
                                 }},
-                                { label: 'Edit', style: 'neutral', onConfirm: function() { openEditProjectSheet(p); }},
-                                { label: 'Delete', style: 'danger', onConfirm: function() { confirmDeleteProject(p); } }
+                                { label: 'Edit', style: 'neutral', onConfirm: function() { openEditWorkspaceSheet(p); }},
+                                { label: 'Delete', style: 'danger', onConfirm: function() { confirmDeleteWorkspace(p); } }
                             ]
                         );
                     }, 500);
@@ -5360,8 +5607,8 @@
 
                 card.addEventListener('click', function() {
                     if (lpFired) { lpFired = false; return; }
-                    if (!isSidebarLayout()) closeProjectGrid(); // sidebar stays open on desktop
-                    switchProject(p.id);
+                    if (!isSidebarLayout()) closeWorkspaceGrid(); // sidebar stays open on desktop
+                    switchWorkspace(p.id);
                 });
                 card.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
@@ -5369,39 +5616,39 @@
                         p.name,
                         p.directory || '',
                         [
-                            { label: 'Edit', style: 'neutral', onConfirm: function() { openEditProjectSheet(p); }},
-                            { label: 'Delete', style: 'danger', onConfirm: function() { confirmDeleteProject(p); } }
+                            { label: 'Edit', style: 'neutral', onConfirm: function() { openEditWorkspaceSheet(p); }},
+                            { label: 'Delete', style: 'danger', onConfirm: function() { confirmDeleteWorkspace(p); } }
                         ]
                     );
                 });
                 grid.appendChild(card);
             });
             // Empty state
-            if (displayProjects.length === 0 && !q) {
+            if (displayWorkspaces.length === 0 && !q) {
                 const empty = document.createElement('div');
-                empty.className = 'proj-grid-empty';
+                empty.className = 'ws-grid-empty';
                 empty.innerHTML =
-                    '<div class="proj-grid-empty-icon">🪴</div>' +
-                    '<div class="proj-grid-empty-title">Welcome to Glade</div>' +
-                    '<div class="proj-grid-empty-body">Each project gets its own shell,<br>snippets, and persistent session.<br>Run AI agents overnight — close<br>the laptop, the job keeps going.</div>';
+                    '<div class="ws-grid-empty-icon">🪴</div>' +
+                    '<div class="ws-grid-empty-title">Welcome to Glade</div>' +
+                    '<div class="ws-grid-empty-body">Each workspace gets its own shell,<br>snippets, and persistent session.<br>Run AI agents overnight — close<br>the laptop, the job keeps going.</div>';
                 grid.appendChild(empty);
-            } else if (displayProjects.length === 0 && q) {
+            } else if (displayWorkspaces.length === 0 && q) {
                 const empty = document.createElement('div');
-                empty.className = 'proj-grid-empty';
+                empty.className = 'ws-grid-empty';
                 empty.innerHTML =
-                    '<div class="proj-grid-empty-icon" style="font-size:28px">🔍</div>' +
-                    '<div class="proj-grid-empty-title" style="font-size:13px;color:var(--overlay0)">No projects match \u201c' + escapeHtml(q) + '\u201d</div>';
+                    '<div class="ws-grid-empty-icon" style="font-size:28px">🔍</div>' +
+                    '<div class="ws-grid-empty-title" style="font-size:13px;color:var(--overlay0)">No workspaces match \u201c' + escapeHtml(q) + '\u201d</div>';
                 grid.appendChild(empty);
             }
             // Add card
             const addCard = document.createElement('div');
-            addCard.className = 'proj-card-add';
-            addCard.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>New project</span>';
-            addCard.addEventListener('click', openAddProjectSheet);
+            addCard.className = 'ws-card-add';
+            addCard.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>New workspace</span>';
+            addCard.addEventListener('click', openAddWorkspaceSheet);
             grid.appendChild(addCard);
         }
 
-        document.getElementById('project-grid-close').addEventListener('click', closeProjectGrid);
+        document.getElementById('workspace-grid-close').addEventListener('click', closeWorkspaceGrid);
 
         // Sidebar toggle button (desktop >= 1024px)
         (function() {
@@ -5409,9 +5656,9 @@
             if (!btn) return;
             btn.addEventListener('click', function() {
                 if (document.body.classList.contains('sidebar-open')) {
-                    closeProjectGrid();
+                    closeWorkspaceGrid();
                 } else {
-                    openProjectGrid();
+                    openWorkspaceGrid();
                 }
             });
             // On resize: if crossing the 1024px threshold, adapt layout
@@ -5419,20 +5666,20 @@
                 if (!isSidebarLayout() && document.body.classList.contains('sidebar-open')) {
                     // Switched to mobile — convert sidebar to overlay
                     document.body.classList.remove('sidebar-open');
-                    document.getElementById('project-grid-overlay').classList.add('open');
+                    document.getElementById('workspace-grid-overlay').classList.add('open');
                 }
             });
         })();
 
         document.getElementById('pg-search').addEventListener('input', function() {
-            projFilter = this.value.trim();
-            renderProjectGrid();
+            wsFilter = this.value.trim();
+            renderWorkspaceGrid();
         });
 
-        // ── Pull-to-refresh for project grid ──────────────────────────────────
+        // ── Pull-to-refresh for workspace grid ──────────────────────────────────
         let ptrActive = false, ptrStartY = 0, ptrRefreshing = false;
         function setupPullToRefresh() {
-            const grid = document.getElementById('project-grid-cards');
+            const grid = document.getElementById('workspace-grid-cards');
             if (!grid || grid._ptrSetup) return;
             grid._ptrSetup = true;
             grid.addEventListener('touchstart', function(e) {
@@ -5452,30 +5699,44 @@
                 ptrRefreshing = true;
                 ptr.classList.add('spinning');
                 haptic(5);
-                try { projects = await apiJson('/api/projects'); } catch(e) {}
+                try { workspaces = await apiJson('/api/workspaces'); } catch(e) {}
                 ptrRefreshing = false;
                 if (ptr) { ptr.classList.remove('pulling', 'spinning'); }
-                renderProjectGrid();
+                renderWorkspaceGrid();
             }, { passive: true });
         }
 
-        // ── Add project sheet ──────────────────────────────────────────────────
-        const apBackdrop = document.getElementById('add-project-backdrop');
-        const apSheet    = document.getElementById('add-project-sheet');
+        // ── Add workspace sheet ──────────────────────────────────────────────────
+        const apBackdrop = document.getElementById('add-workspace-backdrop');
+        const apSheet    = document.getElementById('add-workspace-sheet');
         const apNameIn   = document.getElementById('ap-name-input');
         const apDirIn    = document.getElementById('ap-dir-input');
         const apColorRow = document.getElementById('ap-color-row');
         const apCancelBtn= document.getElementById('ap-cancel-btn');
         const apCreateBtn= document.getElementById('ap-create-btn');
 
+        // Pane-count picker
+        var _apSelectedPanes = 1;
+        var _apPanePicker = document.getElementById('ap-pane-row');
+        if (_apPanePicker) {
+            _apPanePicker.querySelectorAll('.pane-pick-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    _apSelectedPanes = parseInt(btn.dataset.count, 10);
+                    _apPanePicker.querySelectorAll('.pane-pick-btn').forEach(function(b) {
+                        b.classList.toggle('active', parseInt(b.dataset.count, 10) === _apSelectedPanes);
+                    });
+                });
+            });
+        }
+
         function buildColorSwatches() {
             apColorRow.innerHTML = '';
-            PROJECT_COLORS.forEach(function(c) {
+            WORKSPACE_COLORS.forEach(function(c) {
                 const sw = document.createElement('button');
-                sw.className = 'ap-color-swatch' + (c === selectedProjectColor ? ' selected' : '');
+                sw.className = 'ap-color-swatch' + (c === selectedWorkspaceColor ? ' selected' : '');
                 sw.style.background = c;
                 sw.addEventListener('click', function() {
-                    selectedProjectColor = c;
+                    selectedWorkspaceColor = c;
                     apColorRow.querySelectorAll('.ap-color-swatch').forEach(function(s) {
                         s.classList.toggle('selected', s.style.background === c ||
                             rgbToHex(s.style.background) === c);
@@ -5493,14 +5754,31 @@
             }).join('');
         }
 
-        function openAddProjectSheet() {
-            apNameIn.value = ''; apDirIn.value = '/mnt';
+        function _nextWorkspaceName() {
+            var max = 0;
+            (workspaces || []).forEach(function(p) {
+                var m = /^Workspace\s+(\d+)$/i.exec(p.name);
+                if (m) max = Math.max(max, parseInt(m[1], 10));
+            });
+            return 'Workspace ' + (max + 1);
+        }
+
+        function openAddWorkspaceSheet() {
+            apNameIn.value = _nextWorkspaceName();
+            apDirIn.value = '/root';
             if (apRepoInput) apRepoInput.value = '';
             if (apRepoDropdown) apRepoDropdown.style.display = 'none';
             selectedRepo = null;
-            setProjectSource('local');
-            selectedProjectColor = PROJECT_COLORS[0];
+            setWorkspaceSource('local');
+            selectedWorkspaceColor = WORKSPACE_COLORS[0];
             buildColorSwatches();
+            // Reset pane picker to 1
+            if (_apPanePicker) {
+                _apSelectedPanes = 1;
+                _apPanePicker.querySelectorAll('.pane-pick-btn').forEach(function(b) {
+                    b.classList.toggle('active', parseInt(b.dataset.count, 10) === 1);
+                });
+            }
             apBackdrop.classList.add('visible');
             apSheet.classList.add('open');
             apCreateBtn.disabled = false;
@@ -5508,31 +5786,31 @@
             setTimeout(function(){ apNameIn.focus(); }, 300);
         }
 
-        function closeAddProjectSheet() {
+        function closeAddWorkspaceSheet() {
             sheetClose(apBackdrop, apSheet, { keepBackdrop: true, after: function() {
                 apCreateBtn.disabled = false;
                 apCreateBtn.textContent = 'Create';
             }});
         }
 
-        apBackdrop.addEventListener('click', closeAddProjectSheet);
-        attachSwipeToDismiss(apSheet.querySelector('.sheet-handle'), apSheet, closeAddProjectSheet, apBackdrop);
-        apCancelBtn.addEventListener('click', closeAddProjectSheet);
+        apBackdrop.addEventListener('click', closeAddWorkspaceSheet);
+        attachSwipeToDismiss(apSheet.querySelector('.sheet-handle'), apSheet, closeAddWorkspaceSheet, apBackdrop);
+        apCancelBtn.addEventListener('click', closeAddWorkspaceSheet);
 
-        // ── Edit project sheet ───────────────────────────────────────────
-        var epBackdrop  = document.getElementById('edit-project-backdrop');
-        var epSheet     = document.getElementById('edit-project-sheet');
+        // ── Edit workspace sheet ───────────────────────────────────────────
+        var epBackdrop  = document.getElementById('edit-workspace-backdrop');
+        var epSheet     = document.getElementById('edit-workspace-sheet');
         var epNameIn    = document.getElementById('ep-name-input');
         var epDirIn     = document.getElementById('ep-dir-input');
         var epColorRow  = document.getElementById('ep-color-row');
         var epCancelBtn = document.getElementById('ep-cancel-btn');
         var epSaveBtn   = document.getElementById('ep-save-btn');
-        var editingProjectId   = null;
-        var selectedEditColor  = PROJECT_COLORS[0];
+        var editingWorkspaceId   = null;
+        var selectedEditColor  = WORKSPACE_COLORS[0];
 
         function buildEditColorSwatches(current) {
             epColorRow.innerHTML = '';
-            PROJECT_COLORS.forEach(function(c) {
+            WORKSPACE_COLORS.forEach(function(c) {
                 var sw = document.createElement('button');
                 sw.className = 'ap-color-swatch' + (c === current ? ' selected' : '');
                 sw.style.background = c;
@@ -5546,11 +5824,11 @@
             });
         }
 
-        function openEditProjectSheet(p) {
-            editingProjectId  = p.id;
+        function openEditWorkspaceSheet(p) {
+            editingWorkspaceId  = p.id;
             epNameIn.value    = p.name || '';
             epDirIn.value     = p.directory || '';
-            selectedEditColor = p.color || PROJECT_COLORS[0];
+            selectedEditColor = p.color || WORKSPACE_COLORS[0];
             buildEditColorSwatches(selectedEditColor);
             epSaveBtn.disabled   = false;
             epSaveBtn.textContent = 'Save';
@@ -5559,14 +5837,14 @@
             setTimeout(function(){ epNameIn.focus(); }, 320);
         }
 
-        function closeEditProjectSheet() {
+        function closeEditWorkspaceSheet() {
             sheetClose(epBackdrop, epSheet);
-            editingProjectId = null;
+            editingWorkspaceId = null;
         }
 
-        epBackdrop.addEventListener('click', closeEditProjectSheet);
-        attachSwipeToDismiss(epSheet.querySelector('.sheet-handle'), epSheet, closeEditProjectSheet, epBackdrop);
-        epCancelBtn.addEventListener('click', closeEditProjectSheet);
+        epBackdrop.addEventListener('click', closeEditWorkspaceSheet);
+        attachSwipeToDismiss(epSheet.querySelector('.sheet-handle'), epSheet, closeEditWorkspaceSheet, epBackdrop);
+        epCancelBtn.addEventListener('click', closeEditWorkspaceSheet);
 
         epSaveBtn.addEventListener('click', async function() {
             var name = epNameIn.value.trim();
@@ -5575,17 +5853,17 @@
             epSaveBtn.disabled    = true;
             epSaveBtn.textContent = 'Saving…';
             try {
-                await apiJson('/api/projects/' + editingProjectId, {
+                await apiJson('/api/workspaces/' + editingWorkspaceId, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: name, directory: dir, color: selectedEditColor }),
                 });
-                var proj = projects.find(function(p) { return p.id === editingProjectId; });
-                if (proj) { proj.name = name; proj.directory = dir; proj.color = selectedEditColor; }
+                var ws = workspaces.find(function(p) { return p.id === editingWorkspaceId; });
+                if (ws) { ws.name = name; ws.directory = dir; ws.color = selectedEditColor; }
                 haptic(15);
-                closeEditProjectSheet();
-                renderProjectTabs();
-                renderProjectGrid();
+                closeEditWorkspaceSheet();
+                renderWorkspaceTabs();
+                renderWorkspaceGrid();
             } catch(e) {
                 epSaveBtn.disabled    = false;
                 epSaveBtn.textContent = 'Save';
@@ -5651,7 +5929,7 @@
                         toast('GitHub connected', 'success');
                         if (ghPendingSourceSwitch) {
                             ghPendingSourceSwitch = false;
-                            setProjectSource('github');
+                            setWorkspaceSource('github');
                         }
                     }
                 }).catch(function(){});
@@ -5733,7 +6011,7 @@
                 .catch(function(){ toast('Disconnect failed', 'error'); });
         });
 
-        // ── Project source toggle & repo search ──────────────────────────
+        // ── Workspace source toggle & repo search ──────────────────────────
         var apSrcLocal   = document.getElementById('ap-src-local');
         var apSrcGithub  = document.getElementById('ap-src-github');
         var apDirField   = document.getElementById('ap-dir-field');
@@ -5743,7 +6021,7 @@
         var selectedRepo = null;  // { nameWithOwner, name }
         var repoSearchTimer = null;
 
-        function setProjectSource(src) {
+        function setWorkspaceSource(src) {
             if (src === 'local') {
                 apSrcLocal.classList.add('active');
                 apSrcGithub.classList.remove('active');
@@ -5759,10 +6037,10 @@
             }
         }
 
-        if (apSrcLocal) apSrcLocal.addEventListener('click', function(){ setProjectSource('local'); });
+        if (apSrcLocal) apSrcLocal.addEventListener('click', function(){ setWorkspaceSource('local'); });
         if (apSrcGithub) apSrcGithub.addEventListener('click', function(){
             if (ghConnected) {
-                setProjectSource('github');
+                setWorkspaceSource('github');
             } else {
                 startGhAuth(true);  // start auth; switch to github mode on completion
             }
@@ -5787,7 +6065,7 @@
                     selectedRepo = { nameWithOwner: el.dataset.repo, name: el.dataset.name };
                     apRepoInput.value = selectedRepo.nameWithOwner;
                     apRepoDropdown.style.display = 'none';
-                    // Pre-fill project name if empty
+                    // Pre-fill workspace name if empty
                     var nameIn = document.getElementById('ap-name-input');
                     if (nameIn && !nameIn.value.trim()) nameIn.value = selectedRepo.name;
                 });
@@ -5811,7 +6089,7 @@
                         .then(function(r){ return r.json(); }).then(renderRepoDrop).catch(function(){});
                 }, 300);
             });
-            // Auto-fill project name for direct owner/repo or URL entry
+            // Auto-fill workspace name for direct owner/repo or URL entry
             apRepoInput.addEventListener('blur', function() {
                 var q = apRepoInput.value.trim();
                 if (!q || !q.includes('/')) return;
@@ -5840,30 +6118,34 @@
             if (isGithub) {
                 const repo = selectedRepo ? selectedRepo.nameWithOwner : (apRepoInput ? apRepoInput.value.trim() : '');
                 if (!repo) { if (apRepoInput) apRepoInput.focus(); return; }
-                body = { name: name, github_repo: repo, color: selectedProjectColor };
+                body = { name: name, github_repo: repo, color: selectedWorkspaceColor };
                 apCreateBtn.disabled = true;
                 apCreateBtn.textContent = 'Cloning…';
             } else {
                 const dir = apDirIn.value.trim();
-                body = { name: name, directory: dir || '/mnt', color: selectedProjectColor };
+                body = { name: name, directory: dir || '/root', color: selectedWorkspaceColor };
             }
             try {
-                const proj = await apiJson('/api/projects', {
+                const ws = await apiJson('/api/workspaces', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
                 });
-                projects.push(proj);
+                workspaces.push(ws);
                 haptic(20);
-                closeAddProjectSheet();
-                renderProjectTabs();
-                renderProjectGrid();
-                switchProject(proj.id);
-                closeProjectGrid();
+                closeAddWorkspaceSheet();
+                renderWorkspaceTabs();
+                renderWorkspaceGrid();
+                var requestedPanes = _apSelectedPanes || 1;
+                if (requestedPanes > 1) {
+                    localStorage.setItem('paneCount_' + ws.id, requestedPanes);
+                }
+                switchWorkspace(ws.id);
+                closeWorkspaceGrid();
             } catch(e) {
                 apCreateBtn.disabled = false;
                 apCreateBtn.textContent = 'Create';
-                alert('Failed to create project: ' + (e.message || e));
+                alert('Failed to create workspace: ' + (e.message || e));
             }
         });
 
@@ -5957,6 +6239,13 @@
                 }
                 return !!xtermTextarea;
             } catch (e) { return false; }
+            finally {
+                // Sync terminal instance back to the focused pane
+                if (panes[currentFocusedPane]) {
+                    panes[currentFocusedPane].terminalInstance = terminalInstance;
+                    panes[currentFocusedPane].xtermTextarea = xtermTextarea;
+                }
+            }
         }
         function findWebSockets(win) {
             const sockets = [];
@@ -6525,14 +6814,20 @@
             });
             // Apply terminal theme
             var termTheme = _b16term(scheme.p);
+            // Apply to all panes
+            panes.forEach(function(p) {
+                if (p.terminalInstance && typeof p.terminalInstance.options === 'object') {
+                    try { p.terminalInstance.options.theme = termTheme; } catch(e) {}
+                }
+                try {
+                    var iDoc = p.iframe.contentWindow && p.iframe.contentWindow.document;
+                    var styleEl = iDoc && iDoc.getElementById('glade-theme-bg');
+                    if (styleEl) styleEl.textContent = '.xterm-viewport,.xterm-screen{background:#' + scheme.p[0] + '!important}';
+                } catch(e) {}
+            });
             if (terminalInstance && typeof terminalInstance.options === 'object') {
                 try { terminalInstance.options.theme = termTheme; } catch(e) {}
             }
-            try {
-                var iDoc = iframe.contentWindow && iframe.contentWindow.document;
-                var styleEl = iDoc && iDoc.getElementById('glade-theme-bg');
-                if (styleEl) styleEl.textContent = '.xterm-viewport,.xterm-screen{background:#' + scheme.p[0] + '!important}';
-            } catch(e) {}
             if (syncApp) {
                 fetch('/api/settings/term-theme', {
                     method: 'PUT',
@@ -6762,19 +7057,23 @@
             if (!def) return;
             currentTermTheme = themeId;
             localStorage.setItem('termTheme', themeId);
-            // Update xterm.js terminal colors
+            // Apply to all panes
+            panes.forEach(function(p) {
+                if (p.terminalInstance && typeof p.terminalInstance.options === 'object') {
+                    try { p.terminalInstance.options.theme = def.theme; } catch(e) {}
+                }
+                try {
+                    var iDoc = p.iframe.contentWindow && p.iframe.contentWindow.document;
+                    var styleEl = iDoc && iDoc.getElementById('glade-theme-bg');
+                    if (styleEl) {
+                        styleEl.textContent = '.xterm-viewport,.xterm-screen{background:' + def.theme.background + '!important}';
+                    }
+                } catch(e) {}
+            });
+            // Fallback: also apply to global terminalInstance (for single-pane backward compat)
             if (terminalInstance && typeof terminalInstance.options === 'object') {
                 try { terminalInstance.options.theme = def.theme; } catch(e) {}
             }
-            // Keep the injected viewport style tag in sync — it's written once at iframe
-            // load time so without this update the old background persists as a border
-            try {
-                const iDoc = iframe.contentWindow && iframe.contentWindow.document;
-                const styleEl = iDoc && iDoc.getElementById('glade-theme-bg');
-                if (styleEl) {
-                    styleEl.textContent = '.xterm-viewport,.xterm-screen{background:' + def.theme.background + '!important}';
-                }
-            } catch(e) {}
             // Apply app-wide chrome colors
             var root = document.documentElement;
             if (def.appVars) {
@@ -6954,7 +7253,7 @@
         var _notifyPollTimer = null;
 
         function requestNotifyWhenDone() {
-            if (!currentProjectId) { toast('No active project', 'error'); return; }
+            if (!currentWorkspaceId) { toast('No active workspace', 'error'); return; }
             if (!('Notification' in window)) {
                 toast('Notifications not supported', 'error'); return;
             }
@@ -6992,8 +7291,8 @@
                 toast('Will notify when shell is idle', 'success', 3000);
                 var attempts = 0;
                 function poll() {
-                    if (!currentProjectId) return;
-                    fetch('/api/projects/' + currentProjectId + '/shell-idle')
+                    if (!currentWorkspaceId) return;
+                    fetch('/api/workspaces/' + currentWorkspaceId + '/shell-idle')
                         .then(function(r) { return r.json(); })
                         .then(function(d) {
                             attempts++;
@@ -7243,8 +7542,8 @@
                         if (r.ok) {
                             hideHostUnreachable();
                             reconnectInProgress = false;
-                            loadProjects().then(function() {
-                                if (currentProjectId) forceReconnect();
+                            loadWorkspaces().then(function() {
+                                if (currentWorkspaceId) forceReconnect();
                             }).catch(function(){});
                         }
                     }).catch(function(){});
@@ -7294,9 +7593,9 @@
         function updateDisconnectedElapsed() {
             if (!_disconnectedAt || connectionState === 'connected') return;
             var elapsed = formatElapsed(Date.now() - _disconnectedAt);
-            var activeProj = projects && currentProjectId && projects.find(function(p) { return p.id === currentProjectId; });
-            var projName = activeProj ? activeProj.name : 'terminal';
-            if (reconnectHint) reconnectHint.textContent = 'Retrying ' + projName + ' \u00b7 ' + elapsed;
+            var activeWs = workspaces && currentWorkspaceId && workspaces.find(function(p) { return p.id === currentWorkspaceId; });
+            var wsName = activeWs ? activeWs.name : 'terminal';
+            if (reconnectHint) reconnectHint.textContent = 'Retrying ' + wsName + ' \u00b7 ' + elapsed;
         }
 
 
@@ -7325,15 +7624,15 @@
             consecutiveFailures = 0;
             _iframeErrorAutoRetried = false;
             const _myReconnectId = ++_forceReconnectId;
-            // Use currentProjectId or fall back to last known project from localStorage
-            const pid = currentProjectId || localStorage.getItem('lastProjectId');
+            // Use currentWorkspaceId or fall back to last known workspace from localStorage
+            const pid = currentWorkspaceId || localStorage.getItem('lastWorkspaceId');
             if (!pid) { reconnectInProgress = false; location.reload(); return; }
             if (reconnectTitle) reconnectTitle.textContent = 'Reconnecting\u2026';
             terminalInstance = null; xtermTextarea = null;
             // Call /start (idempotent) to ensure all ttyd processes are alive.
             // /start returns the port for window 0 AND a full shell list with per-shell ports.
             // We reconnect to whichever shell was last active.
-            apiJson('/api/projects/' + pid + '/start', { method: 'POST' })
+            apiJson('/api/workspaces/' + pid + '/start', { method: 'POST' })
                 .then(function (data) {
                     if (_myReconnectId !== _forceReconnectId) { reconnectInProgress = false; return; }
                     // Prefer this device's saved shell, then in-memory idx, then tmux's active flag
@@ -7413,7 +7712,7 @@
                 }
                 // Resume polls
                 startActivityPoll();
-                if (currentProjectId) startShellPoll(currentProjectId);
+                if (currentWorkspaceId) startShellPoll(currentWorkspaceId);
                 if (!_checkConnTimer) _checkConnTimer = setInterval(checkConnection, 2000);
                 if (!_checkUpdTimer)  _checkUpdTimer  = setInterval(checkForUpdates, 30000);
                 // Re-acquire WakeLock — browser releases it automatically when page hides
@@ -7464,12 +7763,12 @@
                 reconnectOverlay.classList.add('visible');
                 reconnectOverlay.classList.toggle('disconnected', state === 'disconnected');
                 reconnectTitle.textContent = state === 'disconnected' ? 'Disconnected' : 'Reconnecting...';
-                var activeProj = projects && currentProjectId && projects.find(function(p) { return p.id === currentProjectId; });
+                var activeWs = workspaces && currentWorkspaceId && workspaces.find(function(p) { return p.id === currentWorkspaceId; });
                 if (state === 'disconnected') {
                     reconnectHint.textContent = 'Checking connection\u2026';
                 } else {
-                    reconnectHint.textContent = activeProj
-                        ? 'Reconnecting to ' + activeProj.name + '\u2026'
+                    reconnectHint.textContent = activeWs
+                        ? 'Reconnecting to ' + activeWs.name + '\u2026'
                         : 'Reconnecting\u2026';
                 }
                 if (stateChanged) {
@@ -7543,22 +7842,22 @@
         let _reconnectingStuckTimer = null;
         const MAX_FAIL_RECONNECTING = 2, MAX_FAIL_DISCONNECTED = 6;
         function checkConnection() {
-            if (reconnectInProgress) return; // don't fight an active reconnect
-            if (!currentProjectId) { consecutiveFailures = 0; return; } // no project — nothing to connect to
-            try {
-                const doc = iframe.contentWindow && iframe.contentWindow.document;
-                if (doc && doc.body && doc.body.children.length > 0) {
-                    consecutiveFailures = 0; setConnectionState('connected'); findTerminal(); return;
-                }
-            } catch (e) {}
+            if (reconnectInProgress) return;
+            if (!currentWorkspaceId) { consecutiveFailures = 0; return; }
+            // Check all panes — if any has content, we're connected
+            var anyAlive = false;
+            for (var pi = 0; pi < panes.length; pi++) {
+                try {
+                    var doc = panes[pi].iframe.contentWindow && panes[pi].iframe.contentWindow.document;
+                    if (doc && doc.body && doc.body.children.length > 0) { anyAlive = true; break; }
+                } catch(e) {}
+            }
+            if (anyAlive) {
+                consecutiveFailures = 0; setConnectionState('connected'); findTerminal(); return;
+            }
             consecutiveFailures++;
             if      (consecutiveFailures >= MAX_FAIL_DISCONNECTED)  setConnectionState('disconnected');
             else if (consecutiveFailures >= MAX_FAIL_RECONNECTING)   setConnectionState('reconnecting');
-            // Only call forceReconnect() after sustained failure (MAX_FAIL_DISCONNECTED
-            // consecutive empty checks = 12 s). Brief blanks during project switching or
-            // initial page load must not trigger a forced reload. The cache-bust fix handles
-            // the common case (visibilitychange → forceReconnect directly); this is a
-            // belt-and-suspenders fallback for any path where the iframe stays blank.
             if (consecutiveFailures >= MAX_FAIL_DISCONNECTED) forceReconnect();
         }
         let _checkConnTimer = setInterval(checkConnection, 2000);
@@ -7574,9 +7873,9 @@
             // opacity:0 keeps layout/dimensions intact so FitAddon measures correctly.
             iframe.style.transition = '';
             iframe.style.opacity = '0';
-            // Snapshot project/shell NOW — before any async work — so the key is stable
-            // even if the user switches projects during the 500 ms init window.
-            var _ctrlLKey = (currentProjectId || '') + ':' + (currentShellIdx !== null ? currentShellIdx : 0);
+            // Snapshot workspace/shell NOW — before any async work — so the key is stable
+            // even if the user switches workspaces during the 500 ms init window.
+            var _ctrlLKey = (currentWorkspaceId || '') + ':' + (currentShellIdx !== null ? currentShellIdx : 0);
             var _isFirstVisit = _sessionWasNew && !_ctrlLDone.has(_ctrlLKey);
             // Mark done immediately so any re-entrant load (e.g. slow WS) doesn't re-clear.
             _ctrlLDone.add(_ctrlLKey);
@@ -7596,7 +7895,7 @@
                 // to redraw AND zsh SIGWINCH to fire — both print the prompt, leaving a stray
                 // extra line. On the *first* connect for each shell, Ctrl+L clears the artifact
                 // and we fade in so the user never sees the flash. On return visits (switching
-                // projects and back) we skip the Ctrl+L so existing terminal content is preserved.
+                // workspaces and back) we skip the Ctrl+L so existing terminal content is preserved.
                 var ctrlLAttempts = 0;
                 function tryClearScreen() {
                     findTerminal();
@@ -7747,7 +8046,7 @@
             }, { passive: false });
         }
         makeHorizScroll(shortcutBar);
-        makeHorizScroll(document.getElementById('project-tabs-bar'));
+        makeHorizScroll(document.getElementById('workspace-tabs-bar'));
         makeHorizScroll(document.getElementById('shell-tabs-bar'));
 
         // ── Focus Mode ───────────────────────────────────────────────────────────
@@ -7824,7 +8123,7 @@
             { id:'ctrl-e',    label:'Line end (^E)',          desc:'Jump to end of line',             fn:function(){ sendKey('e',{ctrl:true}); } },
             { id:'ctrl-w',    label:'Delete word (^W)',       desc:'Delete word before cursor',       fn:function(){ sendKey('w',{ctrl:true}); } },
             { id:'ctrl-r',    label:'History search (^R)',   desc:'Reverse history search',          fn:function(){ sendKey('r',{ctrl:true}); } },
-            { id:'new-shell', label:'New shell tab',         desc:'Open another shell in this project', fn:function(){ if(currentProjectId) addShell(); } },
+            { id:'new-shell', label:'New shell tab',         desc:'Open another shell in this workspace', fn:function(){ if(currentWorkspaceId) addShell(); } },
             { id:'close-shell',label:'Close current tab',    desc:'Close the active shell tab',      fn:function(){
                 if(currentShellIdx !== null) {
                     var idx = currentShellIdx;
@@ -8146,15 +8445,15 @@
             renderKeyboard();
             snippets = serverSnippets;
 
-            // Load projects after layout/snippets ready
-            await loadProjects();
+            // Load workspaces after layout/snippets ready
+            await loadWorkspaces();
             startActivityPoll();
 
-            // Handle home screen shortcut actions (?action=new-project, ?action=palette)
+            // Handle home screen shortcut actions (?action=new-workspace, ?action=palette)
             const _urlAction = new URLSearchParams(window.location.search).get('action');
             if (_urlAction) history.replaceState({}, '', '/');
-            if (_urlAction === 'new-project') {
-                setTimeout(function() { openProjectGrid(); setTimeout(openAddProjectSheet, 300); }, 400);
+            if (_urlAction === 'new-workspace') {
+                setTimeout(function() { openWorkspaceGrid(); setTimeout(openAddWorkspaceSheet, 300); }, 400);
             } else if (_urlAction === 'palette') {
                 setTimeout(openPalette, 400);
             }
@@ -8166,11 +8465,11 @@
                 const sharedText = (_shareParams.get('text') || _shareParams.get('url') || '').trim();
                 if (sharedText) {
                     setTimeout(function() {
-                        if (currentProjectId) {
+                        if (currentWorkspaceId) {
                             sendTextToTerminal(sharedText);
                             toast('Shared text pasted to terminal', 'success');
                         } else {
-                            toast('Open a project first, then share again', 'error', 4000);
+                            toast('Open a workspace first, then share again', 'error', 4000);
                         }
                     }, 600);
                 }
@@ -8232,7 +8531,7 @@
                 stateDump.textContent = [
                     'connectionState : ' + connectionState,
                     'reconnectInProgress: ' + reconnectInProgress,
-                    'currentProjectId : ' + (currentProjectId || '(none)'),
+                    'currentWorkspaceId : ' + (currentWorkspaceId || '(none)'),
                     'keyboardState    : ' + keyboardState,
                     'keyboardMode     : ' + keyboardMode,
                     'consecutiveFails : ' + consecutiveFailures,
@@ -8270,7 +8569,7 @@
             });
 
             // Toast tests
-            document.getElementById('dbg-toast-success').onclick   = function () { toast('Project saved',  'success'); };
+            document.getElementById('dbg-toast-success').onclick   = function () { toast('Workspace saved',  'success'); };
             document.getElementById('dbg-toast-error').onclick     = function () { toast('Upload failed',   'error'); };
             document.getElementById('dbg-toast-default').onclick   = function () { toast('Something happened'); };
             document.getElementById('dbg-toast-long').onclick      = function () { toast('This is a really quite long toast message to test wrapping', 'success'); };
@@ -8279,7 +8578,7 @@
                 var items = [
                     { msg: 'Snippet copied',    type: 'success' },
                     { msg: 'Upload failed',     type: 'error'   },
-                    { msg: 'Project saved',     type: 'success' },
+                    { msg: 'Workspace saved',     type: 'success' },
                     { msg: 'GitHub connected',  type: 'success' },
                 ];
                 items.forEach(function (t, i) {
@@ -8331,7 +8630,7 @@
         // Cmd+K                — open command palette (desktop)
         // Cmd+T                — new shell tab
         // Cmd+W                — close current shell tab (with confirm)
-        // Cmd+1-9              — switch to nth project
+        // Cmd+1-9              — switch to nth workspace
         // Ctrl+`               — toggle bottom panel (desktop)
         // ?                    — keyboard shortcuts help
         document.addEventListener('keydown', function (e) {
@@ -8342,11 +8641,11 @@
                     ['key-editor-sheet',     closeKeyEditor],
                     ['snippet-editor-sheet', closeSnippetEditor],
                     ['snippet-fill-sheet',   closeFillSheet],
-                    ['add-project-sheet',    closeAddProjectSheet],
+                    ['add-workspace-sheet',    closeAddWorkspaceSheet],
                     ['cmd-palette-sheet',    closePalette],
                     ['shortcuts-backdrop',   closeShortcuts],
                     ['settings-overlay',     function(){ document.getElementById('settings-overlay').classList.remove('open'); }],
-                    ['project-grid-overlay', closeProjectGrid],
+                    ['workspace-grid-overlay', closeWorkspaceGrid],
                 ];
                 for (var mi = 0; mi < modalChecks.length; mi++) {
                     var mel = document.getElementById(modalChecks[mi][0]);
@@ -8411,26 +8710,42 @@
             // Cmd+T — new shell tab ──────────────────────────────────────────────
             if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyT') {
                 e.preventDefault(); e.stopImmediatePropagation();
-                if (currentProjectId) addShell();
+                if (currentWorkspaceId) addShell();
                 return;
             }
 
-            // Cmd+W — close current shell tab ────────────────────────────────────
+            // Cmd+D — split pane (horizontal) ────────────────────────────────────
+            if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyD') {
+                e.preventDefault(); e.stopImmediatePropagation();
+                if (currentWorkspaceId && isMultiPaneCapable()) addPane();
+                return;
+            }
+
+            // Cmd+Shift+D — split pane (vertical) ────────────────────────────────
+            if (e.metaKey && !e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+                e.preventDefault(); e.stopImmediatePropagation();
+                if (currentWorkspaceId && isMultiPaneCapable()) addPane();
+                return;
+            }
+
+            // Cmd+W — close pane (multi-pane) or close shell (single pane) ───────
             if (e.metaKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyW') {
                 e.preventDefault(); e.stopImmediatePropagation();
-                if (currentShellIdx !== null) {
+                if (panes.length > 1) {
+                    removePane();
+                } else if (currentShellIdx !== null) {
                     var idx = currentShellIdx;
                     confirmCloseShell(idx);
                 }
                 return;
             }
 
-            // Cmd+1-9 — switch to nth project ────────────────────────────────────
+            // Cmd+1-9 — switch to nth workspace ────────────────────────────────────
             if (e.metaKey && !e.ctrlKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
                 var n = parseInt(e.code.slice(5), 10) - 1;
-                if (projects && projects[n]) {
+                if (workspaces && workspaces[n]) {
                     e.preventDefault(); e.stopImmediatePropagation();
-                    switchProject(projects[n].id);
+                    switchWorkspace(workspaces[n].id);
                 }
                 return;
             }
