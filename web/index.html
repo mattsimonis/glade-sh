@@ -2496,10 +2496,21 @@
                     terminalInstance: null,
                     xtermTextarea: null,
                 });
-                cell0.addEventListener('click', function() { focusPane(0); });
-                cell0.addEventListener('focusin', function() { focusPane(0); });
+                ifr0.addEventListener('focus', function() { focusPane(0); });
             }
         })();
+
+        // Detect pane focus — when main window blurs, an iframe got focus.
+        // Check which pane's iframe is the active element.
+        window.addEventListener('blur', function() {
+            setTimeout(function() {
+                if (panes.length <= 1) return;
+                var active = document.activeElement;
+                for (var i = 0; i < panes.length; i++) {
+                    if (panes[i].iframe === active) { focusPane(i); return; }
+                }
+            }, 0);
+        });
         // clip-path fills from tail toward tip for each direction
         const AP_CLIP = {
             ArrowUp:    function(p) { return 'inset('+pct(1-p)+'% 0 0 0)'; },   // tail=bottom, fill upward
@@ -5224,10 +5235,21 @@
         function _gridClassForCount(n) { return 'panes-' + Math.max(1, Math.min(MAX_PANES, n)); }
 
         function _savePaneCount(pid, n) {
-            if (pid) try { localStorage.setItem('paneCount_' + pid, n); } catch(e) {}
+            if (!pid) return;
+            try { localStorage.setItem('paneCount_' + pid, n); } catch(e) {}
+            // Persist to server
+            fetch('/api/workspaces/' + pid, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pane_count: n }),
+            }).catch(function() {});
         }
         function _loadPaneCount(pid) {
             if (!pid) return 1;
+            // Prefer server-side value from workspace data
+            var ws = (workspaces || []).find(function(w) { return w.id === pid; });
+            if (ws && ws.pane_count > 1) return Math.min(ws.pane_count, MAX_PANES);
+            // Fallback to localStorage
             var v = parseInt(localStorage.getItem('paneCount_' + pid) || '1', 10);
             return (v >= 1 && v <= MAX_PANES) ? v : 1;
         }
@@ -5241,8 +5263,12 @@
             ifr.title = 'Terminal pane ' + (paneIdx + 1);
             ifr.style.cssText = 'width:100%;height:100%;border:none;display:block;background:var(--base);';
             cell.appendChild(ifr);
-            cell.addEventListener('click', function() { focusPane(paneIdx); });
-            cell.addEventListener('focusin', function() { focusPane(paneIdx); });
+            // iframe eats click/focusin on the cell — detect pane focus via
+            // the iframe element's own focus event plus a pointerdown overlay
+            ifr.addEventListener('focus', function() { focusPane(paneIdx); });
+            ifr.addEventListener('mouseenter', function(e) {
+                if (e.buttons > 0) focusPane(paneIdx);
+            });
             return { cell: cell, iframe: ifr };
         }
 
@@ -6207,7 +6233,8 @@
                 renderWorkspaceGrid();
                 var requestedPanes = _apSelectedPanes || 1;
                 if (requestedPanes > 1) {
-                    localStorage.setItem('paneCount_' + ws.id, requestedPanes);
+                    _savePaneCount(ws.id, requestedPanes);
+                    ws.pane_count = requestedPanes;
                 }
                 switchWorkspace(ws.id);
                 closeWorkspaceGrid();

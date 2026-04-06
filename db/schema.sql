@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS workspaces (
     color      TEXT DEFAULT '#89b4fa',
     sort_order INTEGER DEFAULT 0,
     last_active DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    pane_count INTEGER DEFAULT 1
 );
 
 -- Snippets: named terminal commands, sent on tap

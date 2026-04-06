@@ -221,6 +221,11 @@ def ensure_tables():
             conn.execute("ALTER TABLE workspaces ADD COLUMN github_repo TEXT")
         except Exception:
             pass
+        # Migrate: add pane_count column if it doesn't exist yet
+        try:
+            conn.execute("ALTER TABLE workspaces ADD COLUMN pane_count INTEGER DEFAULT 1")
+        except Exception:
+            pass
 
 
 # ---- tmux helpers -----------------------------------------------------------
@@ -704,7 +709,7 @@ class Handler(BaseHTTPRequestHandler):
     def _list_workspaces(self):
         with open_db() as conn:
             rows = conn.execute(
-                "SELECT id,name,directory,color,sort_order,created_at,last_active,github_repo "
+                "SELECT id,name,directory,color,sort_order,created_at,last_active,github_repo,pane_count "
                 "FROM workspaces ORDER BY sort_order, created_at"
             ).fetchall()
         result = []
@@ -782,7 +787,7 @@ class Handler(BaseHTTPRequestHandler):
         if err:
             return
         fields, vals = [], []
-        for col in ("name", "directory", "color", "sort_order"):
+        for col in ("name", "directory", "color", "sort_order", "pane_count"):
             if col in data:
                 fields.append(f"{col}=?")
                 vals.append(data[col])
